@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#4CAF50">
+    <title>VroomVroom - Gestion de Véhicules</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/StylePopUp.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <div id="offlineBanner" class="offline-banner" style="display:none">
+        📵 Mode hors-ligne — Données en lecture seule
+    </div>
+    <div id="offlineQueueBanner" class="offline-queue-banner" style="display:none">
+        ⏳ <span id="offlineQueueCount">0</span> plein(s) en attente de synchronisation
+    </div>
+    <header>
+        <div class="container">
+            <h1><i class="icon-car"></i> Gestion de Véhicules</h1>
+            <nav>
+                <button id="addVehicleBtn" class="btn btn-primary">
+                    <i class="icon-plus"></i> Ajouter un véhicule
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        <!-- Loading spinner -->
+        <div id="loadingSpinner" class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Chargement des véhicules...</p>
+        </div>
+
+        <!-- Message d'erreur -->
+        <div id="errorMessage" class="error-message" style="display: none;">
+            <p>Erreur lors du chargement des véhicules. Veuillez réessayer.</p>
+            <button id="retryBtn" class="btn btn-secondary">Réessayer</button>
+        </div>
+
+        <!-- Message aucun véhicule -->
+        <div id="noVehiclesMessage" class="no-vehicles" style="display: none;">
+            <div class="no-vehicles-content">
+                <i class="icon-car-outline"></i>
+                <h3>Aucun véhicule trouvé</h3>
+                <p>Commencez par ajouter votre premier véhicule</p>
+                <button class="btn btn-primary" onclick="document.getElementById('addVehicleBtn').click()">
+                    <i class="icon-plus"></i> Ajouter un véhicule
+                </button>
+            </div>
+        </div>
+
+        <!-- Grille des véhicules -->
+        <div id="vehiclesGrid" class="vehicles-grid"></div>
+    </main>
+
+    <script type="module" src="js/Dashboard.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+    </script>
+</body>
+</html>

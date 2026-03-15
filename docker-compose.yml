@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:11.2
+    container_name: vroomvroom-mariadb
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: vehicle_management
+      MYSQL_USER: mathis
+      MYSQL_PASSWORD: mathis
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./backend/migrations/init_database.sql:/docker-entrypoint-initdb.d/init_database.sql
+    restart: unless-stopped
+    networks:
+      - vroomvroom-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vroomvroom-backend
+    ports:
+      - "8055:8000"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/.env.local:/app/.env
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - vroomvroom-network
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: vroomvroom-frontend
+  #   ports:
+  #     - "3056:3000"
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - vroomvroom-network
+
+  frontend-react:
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
+    container_name: vroomvroom-frontend-react
+    ports:
+      - "3055:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - vroomvroom-network
+
+networks:
+  vroomvroom-network:
+    driver: bridge
+
+volumes:
+  backend-data:
+    driver: local
+  mariadb-data:
+    driver: local

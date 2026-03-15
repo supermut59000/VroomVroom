@@ -1,0 +1,1442 @@
+/* Overlay pour les popups */
+.popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 10px;
+}
+
+.popup-overlay.show {
+    display: flex;
+}
+
+/* Container du popup */
+.popup-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    animation: popupSlideIn 0.3s ease-out;
+}
+
+@keyframes popupSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Header du popup */
+.popup-header {
+    padding: 20px 20px 10px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.popup-title {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.popup-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.popup-close:hover {
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+/* Corps du popup */
+.popup-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Footer du popup */
+.popup-footer {
+    padding: 15px 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: stretch;
+    border-top: 1px solid #eee;
+    background: white;
+    flex-shrink: 0;
+}
+
+.popup-footer .btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 48px;
+    font-size: 16px;
+}
+
+/* Formulaire dans le popup */
+.popup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-weight: 500;
+    color: #333;
+    font-size: 14px;
+}
+
+.form-group input:not([type="checkbox"]),
+.form-group select,
+.form-group textarea {
+    padding: 12px 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    min-height: 48px;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.form-group select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+.form-group textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Checkbox styling */
+.form-group-checkbox {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 16px;
+    min-height: 44px;
+    width: 100%;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    accent-color: #007bff;
+    flex-shrink: 0;
+}
+
+.form-hint {
+    display: block;
+    font-size: 13px;
+    color: #6c757d;
+    margin-top: 0;
+    padding-left: 36px;
+}
+
+/* Boutons */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+/* Messages */
+.message {
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    display: none;
+}
+
+.message.show {
+    display: block;
+}
+
+.message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Styles spécifiques pour le popup de détails véhicule */
+.vehicle-details-popup .popup-container {
+    max-width: 800px;
+    width: 95%;
+}
+
+.vehicle-details-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.details-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.details-section.system-info {
+    background: #f1f3f4;
+    border-color: #d1d5db;
+}
+
+.section-title {
+    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+}
+
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.detail-item label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    font-size: 1rem;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Badges pour types de carburant */
+.fuel-type-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.fuel-essence { background: #e3f2fd; color: #1565c0; }
+.fuel-diesel { background: #f3e5f5; color: #7b1fa2; }
+.fuel-electrique { background: #e8f5e8; color: #2e7d32; }
+.fuel-hybride { background: #fff3e0; color: #ef6c00; }
+.fuel-gpl { background: #fce4ec; color: #c2185b; }
+
+/* Badge de statut */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Grille des statistiques */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-item {
+    text-align: center;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+/* Description */
+.description-content {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Message pour absence de stats */
+.no-stats {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Spinner de chargement */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 15px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Icônes (vous pouvez utiliser Font Awesome ou créer vos propres icônes) */
+.icon-car::before { content: "🚗"; margin-right: 5px; }
+.icon-settings::before { content: "⚙️"; margin-right: 5px; }
+.icon-euro::before { content: "💰"; margin-right: 5px; }
+.icon-fuel::before { content: "⛽"; margin-right: 5px; }
+.icon-info::before { content: "ℹ️"; margin-right: 5px; }
+.icon-clock::before { content: "🕐"; margin-right: 5px; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .vehicle-details-popup .popup-container {
+        width: 98%;
+        margin: 10px;
+    }
+}
+
+/* Container spécifique pour la vue carburant */
+.fuel-view-container {
+    max-width: 900px;
+    max-height: 90vh;
+}
+
+/* Statistiques */
+.fuel-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #495057;
+}
+
+/* Cost breakdown section */
+.cost-breakdown {
+    margin-bottom: 20px;
+}
+
+.breakdown-section h3 {
+    font-size: 16px;
+    color: #495057;
+    margin: 0 0 12px 0;
+}
+
+.breakdown-year {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+}
+
+.breakdown-year-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.breakdown-year-label {
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+}
+
+.breakdown-year-total {
+    font-size: 16px;
+    font-weight: 700;
+    color: #dc3545;
+}
+
+.breakdown-months {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.breakdown-month {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    border-radius: 6px;
+    padding: 6px 12px;
+    min-width: 120px;
+    flex: 1 1 auto;
+    border: 1px solid #e9ecef;
+}
+
+.breakdown-month-label {
+    font-size: 13px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.breakdown-month-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+}
+
+/* En-tête des entrées */
+.entries-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.entries-header h3 {
+    margin: 0;
+    color: #495057;
+}
+
+.entries-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sort-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sort-controls label {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.sort-controls select {
+    padding: 5px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+/* Liste des entrées */
+.fuel-entries-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.fuel-entries-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.fuel-entries-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.fuel-entries-list::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+/* Cartes d'entrées */
+.fuel-entry-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.fuel-entry-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+/* Partial fill styling */
+.fuel-entry-card.partial-fill {
+    border-left: 4px solid #ffc107;
+}
+
+.partial-badge {
+    display: inline-block;
+    background: #fff3cd;
+    color: #856404;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+.entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px 10px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.entry-date {
+    font-weight: 600;
+    color: #495057;
+}
+
+.entry-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 4px;
+    transition: background-color 0.3s;
+}
+
+.btn-icon:hover {
+    background: rgba(0,0,0,0.1);
+}
+
+.entry-content {
+    padding: 15px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.entry-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.entry-field.total {
+    grid-column: 1 / -1;
+    padding-top: 10px;
+    border-top: 1px solid #e9ecef;
+    font-size: 16px;
+}
+
+.field-label {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.field-value {
+    font-weight: 600;
+    color: #495057;
+}
+
+.fuel-type {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+/* Message quand aucune entrée */
+.no-entries {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.no-entries p {
+    margin: 0;
+    font-size: 16px;
+}
+
+/* Total calculé dans le formulaire de modification */
+.calculated-total {
+    text-align: center;
+    padding: 15px;
+    background: #e8f5e8;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.calculated-total span {
+    font-size: 18px;
+    color: #28a745;
+}
+
+/* Popup de modification imbriqué */
+.edit-fuel-overlay {
+    z-index: 10001;
+    background: rgba(0, 0, 0, 0.6);
+}
+
+.edit-fuel-overlay .popup-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Animation pour masquer les popups */
+.popup-overlay.hiding {
+    opacity: 0;
+    transform: scale(0.95);
+    transition: all 0.3s ease;
+}
+
+.popup-overlay.hiding .popup-container {
+    transform: scale(0.95);
+}
+
+/* =============================================
+   MOBILE RESPONSIVE DESIGN
+   ============================================= */
+
+@media (max-width: 768px) {
+    /* Reset overlay padding on mobile */
+    .popup-overlay {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    /* Full screen popups on mobile - use flexbox for proper layout */
+    .popup-container {
+        max-width: 100%;
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        min-height: 100vh;
+        min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+        border-radius: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Popup header mobile - not sticky, part of scroll */
+    .popup-header {
+        padding: 16px;
+        padding-top: calc(16px + env(safe-area-inset-top));
+        background: white;
+        z-index: 10;
+        flex-shrink: 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .popup-title {
+        font-size: 1.2rem;
+    }
+
+    .popup-close {
+        width: 44px;
+        height: 44px;
+        font-size: 28px;
+    }
+
+    /* Popup body mobile - scrollable area */
+    .popup-body {
+        padding: 16px;
+        padding-bottom: 100px; /* Space for fixed footer */
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Fixed footer on mobile */
+    .popup-footer {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom));
+        background: white;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        z-index: 100;
+    }
+
+    .popup-footer .btn {
+        min-height: 52px;
+        font-size: 17px;
+        font-weight: 600;
+        border-radius: 12px;
+    }
+
+    /* Form improvements mobile */
+    .popup-form {
+        gap: 16px;
+    }
+
+    .form-group {
+        gap: 8px;
+    }
+
+    .form-group label {
+        font-size: 15px;
+    }
+
+    .form-group input:not([type="checkbox"]),
+    .form-group select,
+    .form-group textarea {
+        padding: 14px 16px;
+        font-size: 17px;
+        min-height: 52px;
+        border-radius: 10px;
+    }
+
+    /* Checkbox mobile */
+    .form-group-checkbox {
+        padding: 14px;
+    }
+
+    .checkbox-label {
+        font-size: 17px;
+        min-height: 48px;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+        width: 28px;
+        height: 28px;
+    }
+
+    .form-hint {
+        font-size: 14px;
+        padding-left: 40px;
+    }
+
+    /* Fuel view container mobile */
+    .fuel-view-container {
+        height: 100%;
+        min-height: 100vh;
+        min-height: 100dvh;
+        max-height: none;
+        border-radius: 0;
+        margin: 0;
+    }
+
+    /* Stats grid mobile */
+    .fuel-stats {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        padding: 12px;
+        margin-bottom: 16px;
+    }
+
+    .stat-card {
+        padding: 10px;
+    }
+
+    .stat-label {
+        font-size: 11px;
+    }
+
+    .stat-value {
+        font-size: 16px;
+    }
+
+    /* Entries header mobile */
+    .entries-header {
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    .entries-header h3 {
+        text-align: center;
+        font-size: 1.1rem;
+    }
+
+    .entries-toolbar {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .entries-toolbar .btn {
+        width: 100%;
+        min-height: 44px;
+    }
+
+    .sort-controls {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .sort-controls select {
+        min-height: 44px;
+        font-size: 15px;
+        padding: 8px 12px;
+        flex: 1;
+    }
+
+    /* Fuel entries list mobile */
+    .fuel-entries-list {
+        max-height: none;
+        padding-right: 0;
+        padding-bottom: 80px;
+    }
+
+    /* Fuel entry card mobile */
+    .fuel-entry-card {
+        margin-bottom: 12px;
+        border-radius: 12px;
+    }
+
+    .entry-header {
+        padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .entry-date {
+        font-size: 14px;
+        flex: 1;
+    }
+
+    .entry-actions {
+        gap: 8px;
+    }
+
+    .btn-icon {
+        width: 44px;
+        height: 44px;
+        font-size: 18px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+    }
+
+    .entry-content {
+        padding: 12px 16px;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+
+    .entry-field {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .field-label {
+        font-size: 12px;
+    }
+
+    .field-value {
+        font-size: 15px;
+    }
+
+    .entry-field.total {
+        grid-column: 1 / -1;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 12px;
+        margin-top: 4px;
+    }
+
+    .entry-field.total .field-label,
+    .entry-field.total .field-value {
+        font-size: 16px;
+    }
+
+    /* Partial badge mobile */
+    .partial-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+
+    /* Edit overlay mobile */
+    .edit-fuel-overlay .popup-container {
+        margin: 0;
+        max-height: none;
+        height: 100%;
+        min-height: 100vh;
+        min-height: 100dvh;
+        border-radius: 0;
+    }
+
+    /* Chart section mobile */
+    .fuel-chart-section {
+        margin-bottom: 16px;
+    }
+
+    .fuel-chart-container {
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .chart-header {
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+    }
+
+    .chart-header h3 {
+        font-size: 1rem;
+    }
+
+    .chart-wrapper canvas {
+        max-height: 250px;
+    }
+
+    .chart-info {
+        padding: 10px 12px;
+    }
+
+    .chart-info .info-text {
+        font-size: 0.8rem;
+    }
+
+    /* Vehicle details popup mobile */
+    .vehicle-details-popup .popup-container {
+        width: 100%;
+        margin: 0;
+        border-radius: 0;
+        height: 100%;
+        min-height: 100vh;
+        min-height: 100dvh;
+        max-height: none;
+    }
+
+    .details-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .details-section {
+        padding: 16px;
+        border-radius: 12px;
+    }
+
+    .section-title {
+        font-size: 1rem;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-item {
+        padding: 12px;
+    }
+
+    /* Calculated total mobile */
+    .calculated-total {
+        padding: 12px;
+        border-radius: 10px;
+    }
+
+    .calculated-total span {
+        font-size: 20px;
+    }
+
+    /* Messages mobile */
+    .message {
+        padding: 12px;
+        font-size: 14px;
+        border-radius: 10px;
+    }
+}
+
+/* Extra small devices (phones in portrait) */
+@media (max-width: 375px) {
+    .popup-title {
+        font-size: 1.1rem;
+    }
+
+    .entry-content {
+        grid-template-columns: 1fr;
+    }
+
+    .fuel-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .stat-value {
+        font-size: 14px;
+    }
+
+    .popup-footer .btn {
+        font-size: 15px;
+        min-height: 48px;
+    }
+}
+
+/* Messages d'état */
+.message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.message.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+/* États des boutons */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Chart Filter Styles */
+.chart-filter-section {
+    margin-bottom: 20px;
+}
+
+.chart-filter-container {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 16px 20px;
+}
+
+.filter-title {
+    margin: 0 0 12px 0;
+    font-size: 1rem;
+    color: #495057;
+    font-weight: 600;
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 120px;
+}
+
+.filter-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.filter-input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    min-height: 40px;
+    background: white;
+}
+
+.filter-input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: 40px;
+    border-radius: 6px;
+}
+
+/* Fuel Chart Styles */
+.fuel-chart-section {
+    margin-bottom: 25px;
+}
+
+.fuel-chart-container {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.chart-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #007bff;
+}
+
+.chart-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.chart-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.chart-wrapper canvas {
+    max-height: 400px;
+}
+
+.chart-info {
+    background: #f8f9fa;
+    border-radius: 6px;
+    padding: 12px 15px;
+    margin-top: 15px;
+}
+
+.chart-info .info-text {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.chart-info .icon-info::before {
+    flex-shrink: 0;
+}
+
+/* No data message for chart */
+.no-data-message {
+    text-align: center;
+    padding: 40px 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px dashed #dee2e6;
+}
+
+.no-data-message i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.no-data-message h3 {
+    margin: 10px 0;
+    color: #495057;
+    font-size: 1.2rem;
+}
+
+.no-data-message p {
+    margin: 10px 0 0;
+    color: #6c757d;
+    font-size: 0.95rem;
+}
+
+/* Responsive chart styles */
+@media (max-width: 768px) {
+    .fuel-chart-container {
+        padding: 15px;
+    }
+
+    .chart-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .chart-wrapper canvas {
+        max-height: 300px;
+    }
+
+    .chart-info .info-text {
+        font-size: 0.85rem;
+    }
+
+    .chart-filter-container {
+        padding: 12px 15px;
+    }
+
+    .filter-controls {
+        flex-direction: column;
+    }
+
+    .filter-group {
+        min-width: 100%;
+    }
+
+    .filter-input {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    .filter-actions {
+        width: 100%;
+    }
+
+    .filter-actions .btn-sm {
+        flex: 1;
+        min-height: 44px;
+    }
+
+    .pagination {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .pagination-btn {
+        min-height: 44px;
+        width: 100%;
+    }
+}
+
+/* Pagination controls */
+.pagination-controls {
+    margin-top: 15px;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+    color: #555;
+    white-space: nowrap;
+}
+
+.pagination-btn {
+    min-width: 110px;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* GPS input row */
+.input-with-btn {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.input-with-btn input {
+    flex: 1;
+}
+
+.btn-gps {
+    flex-shrink: 0;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 14px;
+    font-size: 18px;
+    cursor: pointer;
+    min-height: 48px;
+    transition: background 0.2s;
+}
+
+.btn-gps:hover { background: #0056b3; }
+.btn-gps:disabled { background: #6c757d; cursor: not-allowed; }
+
+.gps-status {
+    display: block;
+    font-size: 13px;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+/* Leaflet stations map */
+#stationsMap {
+    height: 320px;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    z-index: 0;
+}
+
+@media (max-width: 768px) {
+    .btn-gps {
+        padding: 0 12px;
+        min-height: 52px;
+    }
+
+    #stationsMap {
+        height: 250px;
+    }
+}

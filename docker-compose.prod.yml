@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vroomvroom-backend
+    ports:
+      - "8055:8000"
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/.env:/app/.env
+    environment:
+      - PYTHONPATH=/app
+    restart: unless-stopped
+    networks:
+      - vroomvroom-network
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: vroomvroom-frontend
+  #   ports:
+  #     - "3056:3000"
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
+  #   networks:
+  #     - vroomvroom-network
+
+  frontend-react:
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
+    container_name: vroomvroom-frontend-react
+    ports:
+      - "3055:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - vroomvroom-network
+
+networks:
+  vroomvroom-network:
+    driver: bridge

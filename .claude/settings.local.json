@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(truncate:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker logs:*)",
+      "Bash(python3:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker-compose build:*)",
+      "mcp__context7__resolve-library-id",
+      "WebFetch(domain:mapcn.vercel.app)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(bun create vite frontend-react --template react-ts)",
+      "Bash(node --version)",
+      "Bash(bash)",
+      "Bash(export PATH=\"$HOME/.bun/bin:$PATH\")",
+      "Bash(bun --version)",
+      "Bash(bun install)",
+      "Bash(bun add react-router-dom @tanstack/react-query react-hook-form @hookform/resolvers zod recharts lucide-react sonner)",
+      "Bash(bun add tailwindcss @tailwindcss/vite)",
+      "Bash(bunx --bun shadcn@latest init -d)",
+      "Bash(bunx --bun shadcn@latest add button card dialog badge input select form table skeleton separator tooltip sonner chart alert-dialog label checkbox textarea)",
+      "Bash(bunx --bun shadcn@latest add @mapcn/map)",
+      "Bash(bun run build)",
+      "Bash(bun add zod@3.24.0)",
+      "Bash(bun add @hookform/resolvers@3.10.0)",
+      "Bash(npx shadcn@latest add sheet --yes)",
+      "Bash(npm install radix-ui)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

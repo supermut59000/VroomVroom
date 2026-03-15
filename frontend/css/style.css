@@ -1,0 +1,762 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Offline mode banner */
+.offline-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: #fd7e14;
+    color: white;
+    text-align: center;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Offline queue pending banner */
+.offline-queue-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9998;
+    background: #6f42c1;
+    color: white;
+    text-align: center;
+    padding: 10px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Vehicle card monthly cost section */
+.vehicle-monthly-costs {
+    margin: 0 16px 12px;
+    padding: 10px 14px;
+    background: #f0f4ff;
+    border-radius: 8px;
+    border: 1px solid #d0d9f5;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.monthly-cost-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.monthly-cost-label {
+    font-size: 12px;
+    color: #5a6a9a;
+    font-weight: 500;
+}
+
+.monthly-cost-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: #3d52a0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #f5f5f7;
+    color: #1d1d1f;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Header */
+header {
+    background: white;
+    border-bottom: 1px solid #e5e5e7;
+    padding: 1rem 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    color: #1d1d1f;
+    font-size: 1.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Icons */
+.icon-car::before { content: "🚗"; }
+.icon-plus::before { content: "➕"; }
+.icon-fuel::before { content: "⛽"; }
+.icon-calendar::before { content: "📅"; }
+.icon-stats::before { content: "📊"; }
+.icon-car-outline::before { content: "🚗"; font-size: 3rem; opacity: 0.3; }
+
+/* Buttons */
+.btn {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: #007aff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056cc;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #f2f2f7;
+    color: #1d1d1f;
+}
+
+.btn-secondary:hover {
+    background: #e5e5ea;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Filters */
+.filters-section {
+    margin: 2rem 0;
+}
+
+.filters {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    padding: 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filters select {
+    padding: 8px 12px;
+    border: 1px solid #d1d1d6;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.checkbox-container input {
+    margin: 0;
+}
+
+/* Loading */
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007aff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Error Message */
+.error-message {
+    text-align: center;
+    padding: 2rem;
+    color: #ff3b30;
+}
+
+/* No vehicles */
+.no-vehicles {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.no-vehicles-content h3 {
+    margin: 1rem 0;
+    color: #8e8e93;
+}
+
+.no-vehicles-content p {
+    margin-bottom: 2rem;
+    color: #8e8e93;
+}
+
+/* Vehicles Grid */
+.vehicles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 24px;
+    margin-bottom: 2rem;
+    max-width: 1600px; /* Limite pour 3 colonnes maximum */
+}
+
+@media (min-width: 1200px) {
+    .vehicles-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Vehicle Card */
+.vehicle-card {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 1px solid #e5e5e7;
+    margin-top: 24px;
+}
+
+.vehicle-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.vehicle-card.inactive {
+    opacity: 0.6;
+    border-color: #ff9500;
+}
+
+.vehicle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.vehicle-title {
+    flex: 1;
+}
+
+.vehicle-title h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 4px;
+}
+
+.vehicle-subtitle {
+    color: #8e8e93;
+    font-size: 14px;
+}
+
+.vehicle-status {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-active {
+    background: #d1f2eb;
+    color: #00c853;
+}
+
+.status-inactive {
+    background: #fff3cd;
+    color: #ff9500;
+}
+
+.vehicle-info {
+    margin: 16px 0;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #f2f2f7;
+}
+
+.info-row:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    color: #8e8e93;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.info-value {
+    font-weight: 500;
+    color: #1d1d1f;
+}
+
+.fuel-type {
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.fuel-essence { background: #e3f2fd; color: #1976d2; }
+.fuel-diesel { background: #f3e5f5; color: #7b1fa2; }
+.fuel-electrique { background: #e8f5e8; color: #388e3c; }
+.fuel-hybride { background: #fff3e0; color: #f57c00; }
+.fuel-gpl { background: #fce4ec; color: #c2185b; }
+
+.vehicle-stats {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #007aff;
+    display: block;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #8e8e93;
+    margin-top: 2px;
+}
+
+.vehicle-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.vehicle-actions .btn {
+    flex: 1;
+    justify-content: center;
+}
+
+/* =============================================
+   MOBILE RESPONSIVE DESIGN
+   ============================================= */
+
+@media (max-width: 768px) {
+    /* Base container */
+    .container {
+        padding: 0 12px;
+    }
+
+    /* Header mobile */
+    header {
+        padding: 12px 0;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    header .container {
+        flex-direction: row;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    header h1 {
+        font-size: 1.3rem;
+    }
+
+    /* Add vehicle button mobile */
+    header .btn {
+        padding: 10px 14px;
+        font-size: 14px;
+        min-height: 44px;
+        border-radius: 10px;
+    }
+
+    /* Filters mobile */
+    .filters-section {
+        margin: 1rem 0;
+    }
+
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 12px;
+    }
+
+    .filters select {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 10px 14px;
+        border-radius: 8px;
+    }
+
+    .checkbox-container {
+        min-height: 44px;
+        font-size: 16px;
+        padding: 8px 0;
+    }
+
+    .checkbox-container input {
+        width: 22px;
+        height: 22px;
+    }
+
+    /* Vehicles grid mobile */
+    .vehicles-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 1rem;
+    }
+
+    /* Vehicle card mobile */
+    .vehicle-card {
+        border-radius: 16px;
+        padding: 16px;
+        margin-top: 0;
+    }
+
+    .vehicle-header {
+        margin-bottom: 12px;
+    }
+
+    .vehicle-title h3 {
+        font-size: 1.2rem;
+    }
+
+    .vehicle-subtitle {
+        font-size: 13px;
+    }
+
+    .vehicle-status {
+        font-size: 11px;
+        padding: 4px 10px;
+    }
+
+    /* Vehicle info mobile */
+    .vehicle-info {
+        margin: 12px 0;
+    }
+
+    .info-row {
+        padding: 10px 0;
+    }
+
+    .info-label {
+        font-size: 13px;
+    }
+
+    .info-value {
+        font-size: 14px;
+    }
+
+    /* Vehicle stats mobile */
+    .vehicle-stats {
+        padding: 14px;
+        border-radius: 12px;
+        margin: 12px 0;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .stat-item {
+        padding: 8px;
+    }
+
+    .stat-value {
+        font-size: 1.1rem;
+    }
+
+    .stat-label {
+        font-size: 11px;
+    }
+
+    /* Vehicle actions - keep horizontal on mobile */
+    .vehicle-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 14px;
+    }
+
+    /* Circular buttons mobile */
+    .btn-circle {
+        width: 48px;
+        height: 48px;
+        font-size: 18px;
+    }
+
+    /* Disable tooltip on touch devices */
+    .btn-circle::after {
+        display: none;
+    }
+
+    /* No vehicles message mobile */
+    .no-vehicles {
+        padding: 3rem 1.5rem;
+    }
+
+    .no-vehicles-content h3 {
+        font-size: 1.1rem;
+    }
+
+    .no-vehicles-content p {
+        font-size: 14px;
+        margin-bottom: 1.5rem;
+    }
+
+    .no-vehicles .btn {
+        width: 100%;
+        justify-content: center;
+        min-height: 48px;
+        font-size: 16px;
+    }
+
+    /* Loading spinner mobile */
+    .loading-spinner {
+        padding: 2rem;
+    }
+
+    .spinner {
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Error message mobile */
+    .error-message {
+        padding: 1.5rem;
+        font-size: 14px;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 375px) {
+    header h1 {
+        font-size: 1.1rem;
+    }
+
+    header .btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+
+    .vehicle-title h3 {
+        font-size: 1.1rem;
+    }
+
+    .btn-circle {
+        width: 44px;
+        height: 44px;
+        font-size: 16px;
+    }
+
+    .stat-value {
+        font-size: 1rem;
+    }
+}
+
+/* Touch device specific - larger touch targets */
+@media (hover: none) and (pointer: coarse) {
+    .btn {
+        min-height: 44px;
+    }
+
+    .btn-circle {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    select, input, textarea {
+        min-height: 44px;
+    }
+
+    .checkbox-container input {
+        width: 24px;
+        height: 24px;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.vehicle-card {
+    animation: fadeIn 0.5s ease;
+}
+
+
+/* Boutons d'actions circulaires */
+.vehicle-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.btn-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 16px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Effet hover pour tous les boutons */
+.btn-circle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Styles spécifiques pour chaque type de bouton */
+.btn-circle.fuel-btn {
+    border-color: #28a745;
+    color: #28a745;
+}
+
+.btn-circle.fuel-btn:hover {
+    background: #28a745;
+    color: white;
+}
+
+.btn-circle.stats-btn {
+    border-color: #17a2b8;
+    color: #17a2b8;
+}
+
+.btn-circle.stats-btn:hover {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-circle.edit-btn {
+    border-color: #ffc107;
+    color: #ffc107;
+}
+
+.btn-circle.edit-btn:hover {
+    background: #ffc107;
+    color: white;
+}
+
+.btn-circle.delete-btn {
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.btn-circle.delete-btn:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.btn-circle.maintenance-btn {
+    border-color: #6f42c1;
+    color: #6f42c1;
+}
+
+.btn-circle.maintenance-btn:hover {
+    background: #6f42c1;
+    color: white;
+}
+
+/* Tooltip pour expliquer l'action */
+.btn-circle::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+    z-index: 10;
+}
+
+.btn-circle:hover::after {
+    opacity: 1;
+}
+
+/* Mobile btn-circle is handled in main responsive section above */
