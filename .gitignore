@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Environment files (contain credentials)
+.env
+.env.local
+.env.production
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+.next/
+
+# Build artifacts
+frontend-react/dist/
+
+# IDE / tools
+.idea/
+.vscode/
+*.swp
+
+# Claude Code
+.claude/
+
+# Syncthing
+.stfolder/
+.stignore
+
+# Docker volumes / local data
+backend/data/
