@@ -95,7 +95,7 @@ export function VehicleCard({
         {stats && (
           <>
             {/* Key stats */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[3fr_2fr] gap-3">
               <div className="flex items-center gap-2 text-sm">
                 <Gauge className="h-4 w-4 text-muted-foreground" />
                 <span className="text-muted-foreground">Compteur:</span>

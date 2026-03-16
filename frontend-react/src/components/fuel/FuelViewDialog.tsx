@@ -154,7 +154,7 @@ export function FuelViewDialog({ vehicleId, onClose }: FuelViewDialogProps) {
             </Select>
 
             <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1) }}>
-              <SelectTrigger className="w-full sm:w-28">
+              <SelectTrigger className="w-full sm:w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
