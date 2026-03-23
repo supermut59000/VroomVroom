@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS `vehicles` (
     -- Technical information
     `initial_odometer` FLOAT NOT NULL DEFAULT 0.0,
     `tank_capacity` FLOAT NULL,
-    `fuel_type` ENUM('essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85') NOT NULL,
+    `fuel_type` VARCHAR(20) NOT NULL,
 
     -- Acquisition information
     `acquisition_date` DATE NULL,
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS `fuel_entries` (
     `vehicle_id` INT NOT NULL,
 
     -- Fuel details
-    `fuel_type` ENUM('essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85') NOT NULL,
+    `fuel_type` ENUM('GASOLINE','DIESEL','ELECTRIC','HYBRID','LPG','E85') NOT NULL,
     `liters` FLOAT NOT NULL,
     `price_per_liter` FLOAT NOT NULL,
     `total_cost` FLOAT NOT NULL,

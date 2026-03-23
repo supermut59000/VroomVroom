@@ -1,9 +1,10 @@
 -- Migration: Add E85 support and FlexFuel conversion tracking
 -- Date: 2026-03-23
 
--- 1. Add 'e85' to fuel_type ENUM in vehicles and fuel_entries
-ALTER TABLE `vehicles` MODIFY `fuel_type` ENUM('essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85') NOT NULL;
-ALTER TABLE `fuel_entries` MODIFY `fuel_type` ENUM('essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85') NOT NULL;
+-- 1. Add 'E85' to fuel_type ENUM in fuel_entries
+-- Note: vehicles.fuel_type is VARCHAR(20), no ALTER needed
+-- Note: SQLAlchemy stores enum member NAMES (uppercase), not values
+ALTER TABLE `fuel_entries` MODIFY `fuel_type` ENUM('GASOLINE','DIESEL','ELECTRIC','HYBRID','LPG','E85') NOT NULL;
 
 -- 2. Create flexfuel_conversions table (one per vehicle)
 CREATE TABLE IF NOT EXISTS `flexfuel_conversions` (
