@@ -18,25 +18,23 @@ import {
 } from '@/hooks/use-flexfuel'
 
 interface E10ReferencePriceDialogProps {
-  vehicleId: number | null
   open: boolean
   onClose: () => void
 }
 
 export function E10ReferencePriceDialog({
-  vehicleId,
   open,
   onClose,
 }: E10ReferencePriceDialogProps) {
-  const { data: prices } = useE10ReferencePrices(vehicleId)
+  const { data: prices } = useE10ReferencePrices()
   const createPrice = useCreateE10ReferencePrice()
-  const deletePrice = useDeleteE10ReferencePrice(vehicleId ?? 0)
+  const deletePrice = useDeleteE10ReferencePrice()
 
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
   const [price, setPrice] = useState('')
 
   const handleAdd = async () => {
-    if (!vehicleId || !date || !price) return
+    if (!date || !price) return
     const priceNum = parseFloat(price)
     if (isNaN(priceNum) || priceNum <= 0) {
       toast.error('Prix invalide')
@@ -44,7 +42,6 @@ export function E10ReferencePriceDialog({
     }
     try {
       await createPrice.mutateAsync({
-        vehicle_id: vehicleId,
         reference_date: date,
         price_per_liter: priceNum,
       })

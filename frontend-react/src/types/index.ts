@@ -256,10 +256,9 @@ export interface FlexfuelConversionUpdate {
   notes?: string | null
 }
 
-// E10 Reference Price
+// E10 Reference Price (global, not per-vehicle)
 export interface E10ReferencePrice {
   id: number
-  vehicle_id: number
   reference_date: string
   price_per_liter: number
   notes: string | null
@@ -268,7 +267,6 @@ export interface E10ReferencePrice {
 }
 
 export interface E10ReferencePriceCreate {
-  vehicle_id: number
   reference_date: string
   price_per_liter: number
   notes?: string | null

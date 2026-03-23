@@ -166,11 +166,8 @@ CREATE TABLE IF NOT EXISTS `flexfuel_conversions` (
 CREATE TABLE IF NOT EXISTS `e10_reference_prices` (
     `id` INT PRIMARY KEY AUTO_INCREMENT,
 
-    -- Vehicle reference
-    `vehicle_id` INT NOT NULL,
-
-    -- Price details
-    `reference_date` DATE NOT NULL,
+    -- Price details (global, not per-vehicle)
+    `reference_date` DATE NOT NULL UNIQUE,
     `price_per_liter` FLOAT NOT NULL,
     `notes` TEXT NULL,
 
@@ -178,10 +175,7 @@ CREATE TABLE IF NOT EXISTS `e10_reference_prices` (
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-    -- One price per vehicle per date
-    UNIQUE KEY `uq_vehicle_date` (`vehicle_id`, `reference_date`),
-    FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles`(`id`) ON DELETE CASCADE,
-    INDEX `idx_vehicle_date` (`vehicle_id`, `reference_date`)
+    INDEX `idx_reference_date` (`reference_date`)
 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

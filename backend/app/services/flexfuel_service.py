@@ -67,7 +67,6 @@ class FlexfuelService:
 
     def create_e10_price(self, data: E10ReferencePriceCreate) -> E10ReferencePrice:
         price = E10ReferencePrice(
-            vehicle_id=data.vehicle_id,
             reference_date=data.reference_date,
             price_per_liter=data.price_per_liter,
             notes=data.notes,
@@ -77,10 +76,9 @@ class FlexfuelService:
         self.db.refresh(price)
         return price
 
-    def get_e10_prices(self, vehicle_id: int) -> List[E10ReferencePrice]:
+    def get_e10_prices(self) -> List[E10ReferencePrice]:
         return (
             self.db.query(E10ReferencePrice)
-            .filter(E10ReferencePrice.vehicle_id == vehicle_id)
             .order_by(desc(E10ReferencePrice.reference_date))
             .all()
         )
@@ -104,14 +102,11 @@ class FlexfuelService:
         self.db.commit()
         return True
 
-    def get_latest_e10_price_at_date(self, vehicle_id: int, target_date: date) -> Optional[float]:
+    def get_latest_e10_price_at_date(self, target_date: date) -> Optional[float]:
         """Get the most recent E10 reference price on or before target_date."""
         price = (
             self.db.query(E10ReferencePrice)
-            .filter(
-                E10ReferencePrice.vehicle_id == vehicle_id,
-                E10ReferencePrice.reference_date <= target_date,
-            )
+            .filter(E10ReferencePrice.reference_date <= target_date)
             .order_by(desc(E10ReferencePrice.reference_date))
             .first()
         )
@@ -143,7 +138,7 @@ class FlexfuelService:
         break_even_date = None
 
         for entry in e85_entries:
-            e10_ref_price = self.get_latest_e10_price_at_date(vehicle_id, entry.fueling_date)
+            e10_ref_price = self.get_latest_e10_price_at_date(entry.fueling_date)
             if e10_ref_price is None:
                 continue  # Skip fills with no E10 reference price
 

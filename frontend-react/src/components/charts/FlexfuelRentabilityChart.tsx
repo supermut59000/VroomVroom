@@ -131,7 +131,7 @@ export function FlexfuelRentabilityChart({ data }: FlexfuelRentabilityChartProps
               <LineChart data={cumulativeData} margin={{ left: 10, right: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} unit=" €" />
+                <YAxis tick={{ fontSize: 11 }} unit=" €" domain={[0, Math.ceil(Math.max(data.kit_cost, data.total_savings) * 1.1)]} />
                 <Tooltip
                   formatter={(value: number) => [`${value.toFixed(2)} €`, 'Économie cumulée']}
                 />

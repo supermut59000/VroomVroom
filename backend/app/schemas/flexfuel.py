@@ -46,7 +46,7 @@ class E10ReferencePriceBase(BaseModel):
 
 
 class E10ReferencePriceCreate(E10ReferencePriceBase):
-    vehicle_id: int = Field(..., ge=1)
+    pass
 
 
 class E10ReferencePriceUpdate(BaseModel):
@@ -57,7 +57,6 @@ class E10ReferencePriceUpdate(BaseModel):
 
 class E10ReferencePriceResponse(E10ReferencePriceBase):
     id: int
-    vehicle_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
 

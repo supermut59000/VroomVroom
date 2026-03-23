@@ -82,32 +82,30 @@ def delete_conversion(vehicle_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Aucune conversion FlexFuel trouvée")
 
 
-# ---- E10 Reference Price endpoints ----
+# ---- E10 Reference Price endpoints (global, not per-vehicle) ----
 
 @router.post(
-    "/vehicles/{vehicle_id}/e10-prices",
+    "/e10-prices",
     response_model=E10ReferencePriceResponse,
     status_code=status.HTTP_201_CREATED,
 )
 def create_e10_price(
-    vehicle_id: int,
     data: E10ReferencePriceCreate,
     db: Session = Depends(get_db),
 ):
-    """Add an E10 reference price."""
-    data.vehicle_id = vehicle_id
+    """Add a global E10 reference price."""
     service = FlexfuelService(db)
     return service.create_e10_price(data)
 
 
 @router.get(
-    "/vehicles/{vehicle_id}/e10-prices",
+    "/e10-prices",
     response_model=List[E10ReferencePriceResponse],
 )
-def get_e10_prices(vehicle_id: int, db: Session = Depends(get_db)):
-    """List E10 reference prices for a vehicle."""
+def get_e10_prices(db: Session = Depends(get_db)):
+    """List all E10 reference prices."""
     service = FlexfuelService(db)
-    return service.get_e10_prices(vehicle_id)
+    return service.get_e10_prices()
 
 
 @router.put(

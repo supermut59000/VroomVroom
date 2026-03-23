@@ -74,16 +74,12 @@ export function useDeleteFlexfuelConversion(vehicleId: number) {
   })
 }
 
-// ---- E10 Reference Prices ----
+// ---- E10 Reference Prices (global) ----
 
-export function useE10ReferencePrices(vehicleId: number | null) {
+export function useE10ReferencePrices() {
   return useQuery({
-    queryKey: ['e10ReferencePrices', vehicleId],
-    queryFn: () =>
-      api.get<E10ReferencePrice[]>(
-        `/flexfuel/vehicles/${vehicleId}/e10-prices`,
-      ),
-    enabled: vehicleId !== null,
+    queryKey: ['e10ReferencePrices'],
+    queryFn: () => api.get<E10ReferencePrice[]>('/flexfuel/e10-prices'),
   })
 }
 
@@ -91,33 +87,22 @@ export function useCreateE10ReferencePrice() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: E10ReferencePriceCreate) =>
-      api.post<E10ReferencePrice>(
-        `/flexfuel/vehicles/${data.vehicle_id}/e10-prices`,
-        data,
-      ),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ['e10ReferencePrices', variables.vehicle_id],
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['flexfuelRentability', variables.vehicle_id],
-      })
+      api.post<E10ReferencePrice>('/flexfuel/e10-prices', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['e10ReferencePrices'] })
+      queryClient.invalidateQueries({ queryKey: ['flexfuelRentability'] })
     },
   })
 }
 
-export function useDeleteE10ReferencePrice(vehicleId: number) {
+export function useDeleteE10ReferencePrice() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (priceId: number) =>
       api.delete(`/flexfuel/e10-prices/${priceId}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['e10ReferencePrices', vehicleId],
-      })
-      queryClient.invalidateQueries({
-        queryKey: ['flexfuelRentability', vehicleId],
-      })
+      queryClient.invalidateQueries({ queryKey: ['e10ReferencePrices'] })
+      queryClient.invalidateQueries({ queryKey: ['flexfuelRentability'] })
     },
   })
 }

@@ -318,7 +318,6 @@ export function VehicleDetailsDialog({
         onClose={() => setConversionDialogOpen(false)}
       />
       <E10ReferencePriceDialog
-        vehicleId={vehicleId}
         open={e10PriceDialogOpen}
         onClose={() => setE10PriceDialogOpen(false)}
       />
