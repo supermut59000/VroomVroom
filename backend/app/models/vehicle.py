@@ -43,6 +43,8 @@ class Vehicle(Base):
     # Relations
     fuel_entries = relationship("FuelEntry", back_populates="vehicle", cascade="all, delete-orphan")
     maintenances = relationship("Maintenance", back_populates="vehicle", cascade="all, delete-orphan")
+    flexfuel_conversion = relationship("FlexfuelConversion", back_populates="vehicle", uselist=False, cascade="all, delete-orphan")
+    e10_reference_prices = relationship("E10ReferencePrice", back_populates="vehicle", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<Vehicle(id={self.id}, brand='{self.brand}', model='{self.model}', license_plate='{self.license_plate}')>"

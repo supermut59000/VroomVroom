@@ -13,11 +13,13 @@ import { Separator } from '@/components/ui/separator'
 import { useAllFuelEntries, useConsumptionHistory } from '@/hooks/use-fuel-entries'
 import { useMaintenances } from '@/hooks/use-maintenances'
 import { useVehicle } from '@/hooks/use-vehicles'
+import { useFlexfuelConversion, useFlexfuelRentability } from '@/hooks/use-flexfuel'
 import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
 import { PriceChart } from '@/components/charts/PriceChart'
 import { OdometerChart } from '@/components/charts/OdometerChart'
 import { CostPerKmChart } from '@/components/charts/CostPerKmChart'
 import { StationsMap } from '@/components/charts/StationsMap'
+import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilityChart'
 
 interface FuelChartsProps {
   vehicleId: number
@@ -30,6 +32,10 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
   const { data: allEntries } = useAllFuelEntries(vehicleId)
   const { data: consumptionHistory } = useConsumptionHistory(vehicleId)
   const { data: maintenances } = useMaintenances(vehicleId)
+  const { data: flexfuelConversion } = useFlexfuelConversion(vehicleId)
+  const { data: rentability } = useFlexfuelRentability(
+    flexfuelConversion ? vehicleId : null,
+  )
 
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
@@ -127,6 +133,14 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <OdometerChart entries={filteredEntries} />
           <CostPerKmChart entries={filteredEntries} maintenances={filteredMaintenances} />
           <StationsMap entries={filteredEntries} />
+
+          {/* FlexFuel E85 Rentability */}
+          {rentability && (
+            <>
+              <Separator />
+              <FlexfuelRentabilityChart data={rentability} />
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -15,12 +16,20 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useVehicle } from '@/hooks/use-vehicles'
 import {
   useCreateFuelEntry,
   useLatestFuelEntry,
   useStationSuggestions,
 } from '@/hooks/use-fuel-entries'
+import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { useOffline } from '@/hooks/use-offline'
 
@@ -29,7 +38,7 @@ const schema = z.object({
   odometer_reading: z.coerce.number().int().min(0, 'Compteur requis'),
   liters: z.coerce.number().positive('Quantité requise'),
   price_per_liter: z.coerce.number().positive('Prix requis'),
-  fuel_type: z.enum(['essence', 'diesel', 'electrique', 'hybride', 'gpl']),
+  fuel_type: z.enum(['essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85']),
   is_full_tank: z.boolean(),
   station_name: z.string().optional().or(z.literal('')),
   location: z.string().optional().or(z.literal('')),
@@ -47,9 +56,13 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const { data: vehicle } = useVehicle(vehicleId)
   const { data: latestEntry } = useLatestFuelEntry(vehicleId)
   const { data: stations } = useStationSuggestions(vehicleId)
+  const { data: flexfuelConversion } = useFlexfuelConversion(vehicleId)
   const createFuelEntry = useCreateFuelEntry()
   const geo = useGeolocation()
   const { isOnline, addToQueue } = useOffline()
+
+  // Vehicle has a FlexFuel conversion — show fuel type selector
+  const isFlexfuel = !!flexfuelConversion
 
   const form = useForm<FormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +79,16 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       notes: '',
     },
   })
+
+  // Auto-fill fuel_type from last fill for FlexFuel vehicles
+  useEffect(() => {
+    if (isFlexfuel && latestEntry) {
+      const lastType = latestEntry.fuel_type
+      if (lastType === 'e85' || lastType === 'essence') {
+        form.setValue('fuel_type', lastType)
+      }
+    }
+  }, [isFlexfuel, latestEntry, form])
 
   const liters = form.watch('liters')
   const pricePerLiter = form.watch('price_per_liter')
@@ -84,7 +107,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
 
     const payload = {
       vehicle_id: vehicleId,
-      fuel_type: vehicle?.fuel_type ?? data.fuel_type,
+      fuel_type: isFlexfuel ? data.fuel_type : (vehicle?.fuel_type ?? data.fuel_type),
       liters: data.liters,
       price_per_liter: data.price_per_liter,
       odometer_reading: data.odometer_reading,
@@ -150,6 +173,24 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
               <Input id="fuel-odometer" type="number" {...form.register('odometer_reading')} />
             </div>
           </div>
+
+          {isFlexfuel && (
+            <div className="space-y-2">
+              <Label>Type de carburant *</Label>
+              <Select
+                value={form.watch('fuel_type')}
+                onValueChange={(v) => form.setValue('fuel_type', v as FormData['fuel_type'])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="e85">E85</SelectItem>
+                  <SelectItem value="essence">Essence (E10)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">

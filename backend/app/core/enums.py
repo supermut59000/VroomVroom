@@ -7,3 +7,4 @@ class FuelType(str, Enum):
     ELECTRIC = "electrique"
     HYBRID = "hybride"
     LPG = "gpl"
+    E85 = "e85"

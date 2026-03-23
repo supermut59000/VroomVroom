@@ -1,5 +1,5 @@
 // Enums
-export type FuelType = 'essence' | 'diesel' | 'electrique' | 'hybride' | 'gpl'
+export type FuelType = 'essence' | 'diesel' | 'electrique' | 'hybride' | 'gpl' | 'e85'
 
 // Preset values — backend now accepts any string (VARCHAR 100)
 export type MaintenanceType = string
@@ -221,4 +221,86 @@ export interface MaintenanceStatistics {
   average_cost: number
   last_maintenance_date: string | null
   next_maintenance_date: string | null
+}
+
+// FlexFuel Conversion
+export interface FlexfuelConversion {
+  id: number
+  vehicle_id: number
+  conversion_date: string
+  kit_cost: number
+  overconsumption_pct: number
+  kit_brand: string | null
+  installer: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface FlexfuelConversionCreate {
+  vehicle_id: number
+  conversion_date: string
+  kit_cost: number
+  overconsumption_pct?: number
+  kit_brand?: string | null
+  installer?: string | null
+  notes?: string | null
+}
+
+export interface FlexfuelConversionUpdate {
+  conversion_date?: string
+  kit_cost?: number
+  overconsumption_pct?: number
+  kit_brand?: string | null
+  installer?: string | null
+  notes?: string | null
+}
+
+// E10 Reference Price
+export interface E10ReferencePrice {
+  id: number
+  vehicle_id: number
+  reference_date: string
+  price_per_liter: number
+  notes: string | null
+  created_at: string
+  updated_at: string | null
+}
+
+export interface E10ReferencePriceCreate {
+  vehicle_id: number
+  reference_date: string
+  price_per_liter: number
+  notes?: string | null
+}
+
+// FlexFuel Rentability
+export interface FlexfuelSavingsDataPoint {
+  date: string
+  e85_liters: number
+  e85_cost: number
+  equivalent_e10_liters: number
+  e10_reference_price: number
+  e10_equivalent_cost: number
+  savings: number
+  cumulative_savings: number
+}
+
+export interface FlexfuelMonthlySavings {
+  month: string
+  savings: number
+}
+
+export interface FlexfuelRentabilitySummary {
+  vehicle_id: number
+  kit_cost: number
+  overconsumption_pct: number
+  conversion_date: string
+  total_e85_fills: number
+  total_savings: number
+  break_even_reached: boolean
+  break_even_date: string | null
+  monthly_average_savings: number | null
+  data_points: FlexfuelSavingsDataPoint[]
+  monthly_savings: FlexfuelMonthlySavings[]
 }

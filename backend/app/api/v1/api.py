@@ -4,6 +4,7 @@ from app.api.deps import verify_api_key
 from app.api.v1.endpoints import vehicles
 from app.api.v1.endpoints import fuel_entries
 from app.api.v1.endpoints import maintenances
+from app.api.v1.endpoints import flexfuel
 
 api_router = APIRouter(dependencies=[Depends(verify_api_key)])
 
@@ -24,4 +25,10 @@ api_router.include_router(
     maintenances.router,
     prefix="/maintenances",
     tags=["maintenances"]
+)
+
+api_router.include_router(
+    flexfuel.router,
+    prefix="/flexfuel",
+    tags=["flexfuel"]
 )

@@ -6,6 +6,7 @@ export const FUEL_TYPE_LABELS: Record<FuelType, string> = {
   electrique: 'Électrique',
   hybride: 'Hybride',
   gpl: 'GPL',
+  e85: 'E85',
 }
 
 export const FUEL_TYPE_COLORS: Record<FuelType, { bg: string; text: string }> = {
@@ -14,6 +15,7 @@ export const FUEL_TYPE_COLORS: Record<FuelType, { bg: string; text: string }> = 
   electrique: { bg: 'bg-green-100', text: 'text-green-700' },
   hybride: { bg: 'bg-orange-100', text: 'text-orange-700' },
   gpl: { bg: 'bg-pink-100', text: 'text-pink-700' },
+  e85: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
 }
 
 // The DB stores the human-readable label directly (e.g. "Vidange", not "vidange")
@@ -21,7 +23,7 @@ export function getMaintenanceLabel(type: string): string {
   return type
 }
 
-export const FUEL_TYPES: FuelType[] = ['essence', 'diesel', 'electrique', 'hybride', 'gpl']
+export const FUEL_TYPES: FuelType[] = ['essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85']
 
 // Preset suggestions shown in the type input datalist — stored as-is in the DB
 export const MAINTENANCE_TYPES: string[] = [

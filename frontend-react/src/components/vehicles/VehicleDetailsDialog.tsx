@@ -1,4 +1,5 @@
-import { Pencil } from 'lucide-react'
+import { useState } from 'react'
+import { Pencil, Leaf, DollarSign } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -12,8 +13,11 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useVehicle, useVehicleStats } from '@/hooks/use-vehicles'
 import { useFuelStats } from '@/hooks/use-fuel-entries'
+import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { FUEL_TYPE_LABELS, FUEL_TYPE_COLORS } from '@/lib/constants'
 import { CostOfOwnershipSection } from './CostOfOwnershipSection'
+import { FlexfuelConversionDialog } from '@/components/flexfuel/FlexfuelConversionDialog'
+import { E10ReferencePriceDialog } from '@/components/flexfuel/E10ReferencePriceDialog'
 
 interface VehicleDetailsDialogProps {
   vehicleId: number | null
@@ -29,6 +33,10 @@ export function VehicleDetailsDialog({
   const { data: vehicle, isLoading: vehicleLoading } = useVehicle(vehicleId)
   const { data: stats } = useVehicleStats(vehicleId)
   const { data: fuelStats } = useFuelStats(vehicleId)
+  const { data: flexfuelConversion } = useFlexfuelConversion(vehicleId)
+
+  const [conversionDialogOpen, setConversionDialogOpen] = useState(false)
+  const [e10PriceDialogOpen, setE10PriceDialogOpen] = useState(false)
 
   const open = vehicleId !== null
 
@@ -201,6 +209,65 @@ export function VehicleDetailsDialog({
                 </section>
               )}
 
+              {/* FlexFuel E85 */}
+              <Separator />
+              <section>
+                <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
+                  Conversion FlexFuel E85
+                </h4>
+                {flexfuelConversion ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Date conversion:</span>{' '}
+                        {new Date(flexfuelConversion.conversion_date).toLocaleDateString('fr-FR')}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Coût kit:</span>{' '}
+                        {flexfuelConversion.kit_cost.toFixed(0)} &euro;
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Surconsommation:</span>{' '}
+                        {flexfuelConversion.overconsumption_pct}%
+                      </div>
+                      {flexfuelConversion.kit_brand && (
+                        <div>
+                          <span className="text-muted-foreground">Boîtier:</span>{' '}
+                          {flexfuelConversion.kit_brand}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setConversionDialogOpen(true)}
+                      >
+                        <Leaf className="mr-1 h-3.5 w-3.5" />
+                        Modifier
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setE10PriceDialogOpen(true)}
+                      >
+                        <DollarSign className="mr-1 h-3.5 w-3.5" />
+                        Prix E10
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setConversionDialogOpen(true)}
+                  >
+                    <Leaf className="mr-1 h-3.5 w-3.5" />
+                    Ajouter une conversion E85
+                  </Button>
+                )}
+              </section>
+
               {/* Cost of ownership */}
               <Separator />
               <CostOfOwnershipSection vehicleId={vehicleId!} />
@@ -243,6 +310,18 @@ export function VehicleDetailsDialog({
           </>
         )}
       </DialogContent>
+
+      {/* FlexFuel dialogs */}
+      <FlexfuelConversionDialog
+        vehicleId={vehicleId}
+        open={conversionDialogOpen}
+        onClose={() => setConversionDialogOpen(false)}
+      />
+      <E10ReferencePriceDialog
+        vehicleId={vehicleId}
+        open={e10PriceDialogOpen}
+        onClose={() => setE10PriceDialogOpen(false)}
+      />
     </Dialog>
   )
 }
