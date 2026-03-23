@@ -31,7 +31,7 @@ const schema = z.object({
   model: z.string().min(1, 'Modèle requis').max(50),
   year: z.coerce.number().min(1900).max(2030),
   license_plate: z.string().min(2, 'Plaque requise').max(20),
-  fuel_type: z.enum(['essence', 'diesel', 'electrique', 'hybride', 'gpl']),
+  fuel_type: z.enum(['essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85']),
   initial_odometer: z.coerce.number().min(0),
   tank_capacity: z.coerce.number().positive().optional().or(z.literal('')),
   acquisition_date: z.string().optional().or(z.literal('')),
