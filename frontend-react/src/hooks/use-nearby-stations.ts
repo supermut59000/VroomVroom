@@ -80,6 +80,7 @@ export function useNearbyStations(): UseNearbyStationsReturn {
     lat: number,
     lon: number,
     fuelType?: FuelType | keyof StationPrices,
+    radiusKm: number = 5,
   ) => {
     setLoading(true)
     setError(null)
@@ -99,7 +100,7 @@ export function useNearbyStations(): UseNearbyStationsReturn {
     ].join(',')
 
     const params = new URLSearchParams({
-      where: `within_distance(geom, geom'POINT(${lon} ${lat})', 5km)`,
+      where: `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km)`,
       select,
       limit: '25',
     })

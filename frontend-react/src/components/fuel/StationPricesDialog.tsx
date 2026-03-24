@@ -29,6 +29,7 @@ type SortMode = 'price' | 'distance'
 export function StationPricesDialog({ open, onClose }: StationPricesDialogProps) {
   const [fuelKey, setFuelKey] = useState<keyof StationPrices>('e10')
   const [sortMode, setSortMode] = useState<SortMode>('price')
+  const [radiusKm, setRadiusKm] = useState(5)
   const geo = useGeolocation()
   const { stations, loading, error, fetch, clear } = useNearbyStations()
 
@@ -46,10 +47,10 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
   // Fetch stations when GPS is ready
   useEffect(() => {
     if (geo.status === 'success' && geo.latitude != null && geo.longitude != null) {
-      fetch(geo.latitude, geo.longitude, fuelKey)
+      fetch(geo.latitude, geo.longitude, fuelKey, radiusKm)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geo.status, geo.latitude, geo.longitude, fuelKey])
+  }, [geo.status, geo.latitude, geo.longitude, fuelKey, radiusKm])
 
   const sorted = [...stations].sort((a, b) => {
     if (sortMode === 'price') {
@@ -86,6 +87,17 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                 <SelectItem key={o.key} value={o.key}>
                   {o.label}
                 </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={String(radiusKm)} onValueChange={(v) => setRadiusKm(Number(v))}>
+            <SelectTrigger className="h-9 w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[2, 5, 10, 20, 50].map((r) => (
+                <SelectItem key={r} value={String(r)}>{r} km</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -142,7 +154,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
         {!loading && sorted.length > 0 && (
           <div className="flex-1 overflow-y-auto">
             <p className="mb-2 text-xs text-muted-foreground">
-              {sorted.length} stations dans un rayon de 5 km — {fuelLabel}
+              {sorted.length} stations dans un rayon de {radiusKm} km — {fuelLabel}
             </p>
             <div className="space-y-1">
               {sorted.map((s, idx) => {
@@ -197,7 +209,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
 
         {!loading && !error && sorted.length === 0 && geo.status === 'success' && (
           <p className="py-4 text-center text-sm text-muted-foreground">
-            Aucune station trouvée dans un rayon de 5 km.
+            Aucune station trouvée dans un rayon de {radiusKm} km.
           </p>
         )}
       </DialogContent>
