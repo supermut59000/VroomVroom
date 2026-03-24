@@ -1,6 +1,6 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-03-24 (session 2)
+Last updated: 2026-03-24 (session 3)
 
 ---
 
@@ -34,12 +34,14 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 
 **Station Price Map**
 - Fuel pump icon in the header opens a global station price dialog (no vehicle required)
-- Auto-requests GPS on open, shows nearby stations within 5km (data.economie.gouv.fr API)
+- Auto-requests GPS on open, adjustable radius: 2 / 5 / 10 / 20 / 50 km (default 5km)
 - Fuel type selector: E10, SP95, SP98, Diesel, E85, GPL
 - Toggle sort: by price (cheapest first, green "moins cher" badge) or by distance
 - Each row shows the selected fuel price prominently + all other available prices inline
-- In FuelAddDialog: GPS capture also shows a "Stations proches" panel — click any station to auto-fill station name, location, and price/L in the form
-- FuelEditDialog now also has station, location, GPS capture, and the nearby stations panel
+- Data source: data.economie.gouv.fr API (`prix-des-carburants-en-france-flux-instantane-v2`), updated every 10 minutes
+- API field notes: no `name` field — uses `adresse` as station name; prices are doubles (€/L); geo field is `geom` (geo_point_2d → `{lat, lon}`)
+- In FuelAddDialog: GPS capture shows a "Stations proches" panel (fixed 5km) — click any station to auto-fill station name, location, and price/L
+- FuelEditDialog also has station autocomplete, location, GPS capture, and nearby stations panel
 
 **FlexFuel E85 Conversion Tracking**
 - Record FlexFuel conversion per vehicle (date, kit cost, overconsumption %, brand, installer)
@@ -331,6 +333,17 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 - E10 equivalent cost = equivalent E10 liters × latest E10 reference price at fill date
 - Savings per fill = E10 equivalent cost - actual E85 cost
 - Break-even = when cumulative savings >= kit cost
+
+---
+
+## What Was Done (Session of 2026-03-24, part 3)
+
+### Station price fixes (from real API schema)
+- Removed non-existent `name` field from select — dataset only has `adresse` + `ville`
+- Prices confirmed as `double` (€/L), removed erroneous `/1000` heuristic
+- Fixed station display: `adresse` as primary name, `cp + ville` as subtitle
+- Added adjustable radius (2/5/10/20/50 km) to standalone dialog only
+- Fixed TS build error: `radiusKm` param was missing from the `fetch` type in the interface
 
 ---
 
