@@ -103,7 +103,6 @@ export function useNearbyStations(): UseNearbyStationsReturn {
     const params = new URLSearchParams({
       where: `within_distance(geom, geom'POINT(${lon} ${lat})', 5km)`,
       select,
-      order_by: `dist(geom, geom'POINT(${lon} ${lat})')`,
       limit: '25',
     })
 
