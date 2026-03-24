@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { MapPin, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useNearbyStations } from '@/hooks/use-nearby-stations'
 import type { FuelType } from '@/types'
