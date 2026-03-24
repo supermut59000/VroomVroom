@@ -72,16 +72,13 @@ export function NearbyStationsList({
                   type="button"
                   className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-muted"
                   onClick={() => {
-                    const location = [s.address, s.cp, s.city]
-                      .filter(Boolean)
-                      .join(', ')
-                    onSelect(s.name, location, s.price)
+                    onSelect(s.name, [s.name, s.address].filter(Boolean).join(', '), s.price)
                   }}
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{s.name}</p>
                     <p className="truncate text-xs text-muted-foreground">
-                      {s.address && `${s.address}, `}{s.cp} {s.city}
+                      {s.address}
                     </p>
                   </div>
                   <div className="ml-2 shrink-0 text-right">

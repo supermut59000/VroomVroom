@@ -163,7 +163,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                         )}
                       </div>
                       <p className="truncate text-xs text-muted-foreground">
-                        {s.address && `${s.address}, `}{s.cp} {s.city}
+                        {s.address}
                       </p>
                       {/* Other prices inline */}
                       <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">

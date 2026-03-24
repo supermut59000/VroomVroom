@@ -60,9 +60,7 @@ function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): num
 function parsePrice(raw: unknown): number | null {
   if (raw == null) return null
   const n = Number(raw)
-  if (isNaN(n)) return null
-  // API may return price as float (1.659) or integer millièmes (1659)
-  return n > 10 ? n / 1000 : n
+  return isNaN(n) ? null : n
 }
 
 interface UseNearbyStationsReturn {
@@ -95,7 +93,7 @@ export function useNearbyStations(): UseNearbyStationsReturn {
         : (fuelType as keyof StationPrices)
 
     const select = [
-      'id', 'name', 'adresse', 'ville', 'cp',
+      'id', 'adresse', 'ville', 'cp',
       'e10_prix', 'sp95_prix', 'sp98_prix', 'gazole_prix', 'e85_prix', 'gplc_prix',
       'geom',
     ].join(',')
@@ -130,9 +128,9 @@ export function useNearbyStations(): UseNearbyStationsReturn {
           const price = priceKey ? prices[priceKey] : null
 
           return {
-            id: String(r.id ?? r.name ?? Math.random()),
-            name: r.name ?? r.adresse ?? 'Station',
-            address: r.adresse ?? '',
+            id: String(r.id ?? Math.random()),
+            name: r.adresse ?? 'Station',
+            address: [r.cp, r.ville].filter(Boolean).join(' '),
             city: r.ville ?? '',
             cp: r.cp ?? '',
             latitude: stationLat,
