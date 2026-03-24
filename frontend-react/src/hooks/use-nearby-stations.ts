@@ -67,7 +67,7 @@ interface UseNearbyStationsReturn {
   stations: NearbyStation[]
   loading: boolean
   error: string | null
-  fetch: (lat: number, lon: number, fuelType?: FuelType | keyof StationPrices) => Promise<void>
+  fetch: (lat: number, lon: number, fuelType?: FuelType | keyof StationPrices, radiusKm?: number) => Promise<void>
   clear: () => void
 }
 
