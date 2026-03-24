@@ -32,6 +32,7 @@ import {
 import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { useOffline } from '@/hooks/use-offline'
+import { NearbyStationsList } from './NearbyStationsList'
 
 const schema = z.object({
   fueling_date: z.string().min(1, 'Date requise'),
@@ -262,6 +263,19 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
               <p className="text-xs text-destructive">{geo.error}</p>
             )}
           </div>
+
+          {geo.status === 'success' && geo.latitude != null && geo.longitude != null && (
+            <NearbyStationsList
+              latitude={geo.latitude}
+              longitude={geo.longitude}
+              fuelType={form.watch('fuel_type')}
+              onSelect={(stationName, location, price) => {
+                form.setValue('station_name', stationName)
+                form.setValue('location', location)
+                if (price != null) form.setValue('price_per_liter', price)
+              }}
+            />
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="fuel-notes">Notes</Label>

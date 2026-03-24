@@ -1,6 +1,6 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-03-12
+Last updated: 2026-03-24 (session 2)
 
 ---
 
@@ -31,6 +31,36 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 - Next maintenance fields: next_maintenance_date, next_maintenance_odometer
 - Reminder system checks for overdue (past date or exceeded km) and upcoming (within 30 days or 1000 km)
 - CSV export
+
+**Station Price Map**
+- Fuel pump icon in the header opens a global station price dialog (no vehicle required)
+- Auto-requests GPS on open, shows nearby stations within 5km (data.economie.gouv.fr API)
+- Fuel type selector: E10, SP95, SP98, Diesel, E85, GPL
+- Toggle sort: by price (cheapest first, green "moins cher" badge) or by distance
+- Each row shows the selected fuel price prominently + all other available prices inline
+- In FuelAddDialog: GPS capture also shows a "Stations proches" panel — click any station to auto-fill station name, location, and price/L in the form
+- FuelEditDialog now also has station, location, GPS capture, and the nearby stations panel
+
+**FlexFuel E85 Conversion Tracking**
+- Record FlexFuel conversion per vehicle (date, kit cost, overconsumption %, brand, installer)
+- Fuel entries support E85 type — auto-fills from last fill type for converted vehicles
+- Global E10 reference prices: log the E10 price you see at the station over time
+- Rentability calculation per E85 fill: compares actual E85 cost vs what E10 would have cost
+  - Equivalent E10 liters = E85 liters / (1 + overconsumption%)
+  - Savings = (equivalent E10 liters × E10 ref price) - actual E85 cost
+  - Uses the most recent E10 price on or before each fill date
+- Charts (in graphs popup):
+  - Summary cards: total savings, kit cost, break-even date or remaining, monthly average
+  - Cumulative savings line chart with kit cost threshold (red dashed line)
+  - Monthly savings bar chart
+- Y axis auto-scales to max(kit cost, total savings) × 1.1
+
+**Charts & Analytics (in graphs popup)**
+- Consumption chart, price chart, cost/km chart (existing)
+- Monthly cost chart: stacked bar — fuel (blue) + maintenance (orange) per month
+- Distance chart: monthly km bars (purple) + average reference line + projected annual km badge
+- Stations map: Leaflet map of past fill locations with GPS
+- FlexFuel rentability charts (for converted vehicles)
 
 **Dark Mode**
 - Toggle in header (Sun/Moon icon)
@@ -103,12 +133,18 @@ VroomVroom/
 │   │   │       └── endpoints/
 │   │   │           ├── vehicles.py       # incl. /stats/batch
 │   │   │           ├── fuel_entries.py
-│   │   │           └── maintenances.py
+│   │   │           ├── maintenances.py
+│   │   │           └── flexfuel.py       # Conversion, E10 prices, rentability
 │   │   ├── core/
 │   │   │   ├── config.py           # Settings from .env
 │   │   │   ├── database.py         # SQLAlchemy engine/session
 │   │   │   └── enums.py            # FuelType enum (single source)
 │   │   ├── models/                 # SQLAlchemy models with FK + relationships
+│   │   │   ├── vehicle.py
+│   │   │   ├── fuel_entry.py
+│   │   │   ├── maintenance.py
+│   │   │   ├── flexfuel_conversion.py
+│   │   │   └── e10_reference_price.py
 │   │   ├── schemas/                # Pydantic v2 schemas
 │   │   ├── services/               # Business logic
 │   │   └── utils/
@@ -128,12 +164,21 @@ VroomVroom/
 │   │   │   ├── layout/Header.tsx   # Dark mode toggle
 │   │   │   ├── vehicles/VehicleCard.tsx  # Maintenance reminder badges
 │   │   │   ├── fuel/FuelViewDialog.tsx   # CSV export button
-│   │   │   └── maintenance/MaintenanceViewDialog.tsx  # CSV export button
+│   │   │   ├── maintenance/MaintenanceViewDialog.tsx  # CSV export button
+│   │   │   ├── flexfuel/FlexfuelConversionDialog.tsx  # Create/edit conversion
+│   │   │   ├── flexfuel/E10ReferencePriceDialog.tsx   # Global E10 prices
+│   │   │   ├── fuel/NearbyStationsList.tsx            # Inline station list (in Add/Edit)
+│   │   │   ├── fuel/StationPricesDialog.tsx           # Standalone station price search
+│   │   │   ├── charts/FlexfuelRentabilityChart.tsx    # Savings charts
+│   │   │   ├── charts/MonthlyCostChart.tsx            # Stacked fuel+maintenance per month
+│   │   │   └── charts/DistanceChart.tsx               # Monthly km + projected annual
 │   │   ├── hooks/
 │   │   │   ├── use-vehicles.ts     # Batch stats + initialData pattern
 │   │   │   ├── use-fuel-entries.ts
 │   │   │   ├── use-maintenances.ts
-│   │   │   └── use-maintenance-reminders.ts  # Reminder logic
+│   │   │   ├── use-maintenance-reminders.ts  # Reminder logic
+│   │   │   ├── use-flexfuel.ts     # Conversion, E10 prices, rentability
+│   │   │   └── use-nearby-stations.ts  # prix-carburant API hook
 │   │   ├── lib/
 │   │   │   ├── api.ts
 │   │   │   └── csv.ts              # CSV export utility
@@ -250,6 +295,20 @@ VroomVroom/
 | GET | `/vehicle/{id}` | All maintenances for vehicle |
 | GET | `/vehicle/{id}/statistics` | Maintenance statistics |
 
+### FlexFuel (`/api/v1/flexfuel`)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/vehicles/{id}/conversion` | Record FlexFuel conversion |
+| GET | `/vehicles/{id}/conversion` | Get conversion for vehicle |
+| PUT | `/vehicles/{id}/conversion` | Update conversion |
+| DELETE | `/vehicles/{id}/conversion` | Delete conversion |
+| POST | `/e10-prices` | Add global E10 reference price |
+| GET | `/e10-prices` | List all E10 reference prices |
+| PUT | `/e10-prices/{id}` | Update E10 price |
+| DELETE | `/e10-prices/{id}` | Delete E10 price |
+| GET | `/vehicles/{id}/rentability` | Calculate E85 rentability |
+
 ---
 
 ## Key Formulas
@@ -266,6 +325,48 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 **Cost Stats (frontend):**
 - This month: sum of fuel + maintenance costs for current month
 - Monthly average: annual cost / 12
+
+**FlexFuel E85 Rentability:**
+- Equivalent E10 liters = E85 liters / (1 + overconsumption_pct / 100)
+- E10 equivalent cost = equivalent E10 liters × latest E10 reference price at fill date
+- Savings per fill = E10 equivalent cost - actual E85 cost
+- Break-even = when cumulative savings >= kit cost
+
+---
+
+## What Was Done (Session of 2026-03-24, part 2)
+
+### Station Price Map
+- `use-nearby-stations.ts`: calls data.economie.gouv.fr prix-carburants API, returns all 6 fuel prices per station + distance
+- `NearbyStationsList.tsx`: inline collapsible panel in FuelAddDialog/FuelEditDialog — appears after GPS capture, click to auto-fill form
+- `StationPricesDialog.tsx`: standalone dialog, auto-requests GPS on open, sort by price or distance, fuel type selector, "moins cher" badge on cheapest
+- Header: added Fuel icon button to open the standalone dialog
+
+### FuelEditDialog improvements
+- Added station name (with autocomplete), location, and GPS capture
+- If GPS recaptured: shows NearbyStationsList, preserves existing lat/lon if GPS not used
+
+### New Charts
+- `MonthlyCostChart.tsx`: stacked bar (fuel + maintenance) per month
+- `DistanceChart.tsx`: monthly km bars + average dashed line + projected annual km badge (based on last 3 months)
+- Both added to FuelCharts popup
+
+---
+
+## What Was Done (Session of 2026-03-23/24)
+
+### Feature: FlexFuel E85 Conversion & Rentability
+- Full-stack feature: backend model/service/endpoints + frontend dialogs/hooks/charts
+- One conversion per vehicle (UNIQUE on vehicle_id)
+- E10 reference prices are global (shared across vehicles), with time-series lookups
+- Fuel entries now support E85 fuel type — added to all Zod schemas, backend enum, DB ENUM
+- Rentability charts integrated into the graphs popup (Recharts)
+- Cumulative savings Y axis scales to max(kit cost, total savings) to always show the break-even line
+
+### DB Migration Notes
+- `fuel_entries.fuel_type` ENUM uses uppercase names (`GASOLINE`, `DIESEL`, etc.) — SQLAlchemy stores enum member names, not values
+- `e10_reference_prices` table has no `vehicle_id` (global)
+- Migration files: `add_flexfuel_e85.sql` (incremental), `init_database.sql` (fresh install)
 
 ---
 
