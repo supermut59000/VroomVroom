@@ -56,6 +56,22 @@ export function useConsumptionHistory(vehicleId: number | null) {
   })
 }
 
+export function useNearestStation(
+  vehicleId: number | null,
+  lat: number | null,
+  lon: number | null,
+) {
+  return useQuery({
+    queryKey: ['nearestStation', vehicleId, lat, lon],
+    queryFn: () =>
+      api.get<{ station_name: string; location: string | null; distance_m: number }>(
+        `/fuel-entries/vehicle/${vehicleId}/nearest-station?lat=${lat}&lon=${lon}`,
+      ),
+    enabled: vehicleId !== null && lat !== null && lon !== null,
+    retry: false, // 404 = no known station nearby, that's fine
+  })
+}
+
 export function useStationSuggestions(vehicleId: number | null) {
   return useQuery({
     queryKey: ['stationSuggestions', vehicleId],

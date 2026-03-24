@@ -137,6 +137,26 @@ class FuelService:
         results = query.distinct().order_by(FuelEntry.station_name).all()
         return [r.station_name for r in results]
 
+    def get_nearest_station(self, vehicle_id: int, lat: float, lon: float, radius_m: float = 250) -> Optional[dict]:
+        """Return station_name + location from the most recent past fill within radius_m metres."""
+        from app.utils.calculations import haversine_m
+        entries = (
+            self.db.query(FuelEntry)
+            .filter(
+                FuelEntry.vehicle_id == vehicle_id,
+                FuelEntry.latitude.isnot(None),
+                FuelEntry.longitude.isnot(None),
+                FuelEntry.station_name.isnot(None),
+            )
+            .order_by(desc(FuelEntry.fueling_date), desc(FuelEntry.odometer_reading))
+            .all()
+        )
+        for entry in entries:
+            d = haversine_m(lat, lon, entry.latitude, entry.longitude)
+            if d <= radius_m:
+                return {"station_name": entry.station_name, "location": entry.location, "distance_m": round(d)}
+        return None
+
     def get_latest_fuel_entry_by_vehicle(self, vehicle_id: int) -> Optional[FuelEntry]:
         """Get the latest fuel entry for a vehicle"""
         return (

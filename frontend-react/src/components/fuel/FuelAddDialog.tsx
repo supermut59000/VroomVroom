@@ -28,6 +28,7 @@ import {
   useCreateFuelEntry,
   useLatestFuelEntry,
   useStationSuggestions,
+  useNearestStation,
 } from '@/hooks/use-fuel-entries'
 import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
@@ -61,8 +62,12 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const createFuelEntry = useCreateFuelEntry()
   const geo = useGeolocation()
   const { isOnline, addToQueue } = useOffline()
+  const { data: nearestStation } = useNearestStation(
+    vehicleId,
+    geo.latitude ?? null,
+    geo.longitude ?? null,
+  )
 
-  // Vehicle has a FlexFuel conversion — show fuel type selector
   const isFlexfuel = !!flexfuelConversion
 
   const form = useForm<FormData>({
@@ -81,15 +86,22 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
     },
   })
 
-  // Auto-fill fuel_type from last fill for FlexFuel vehicles
+  // Auto-fill fuel_type from last fill
   useEffect(() => {
-    if (isFlexfuel && latestEntry) {
-      const lastType = latestEntry.fuel_type
-      if (lastType === 'e85' || lastType === 'essence') {
-        form.setValue('fuel_type', lastType)
-      }
+    if (latestEntry?.fuel_type) {
+      form.setValue('fuel_type', latestEntry.fuel_type as FormData['fuel_type'])
+    } else if (vehicle?.fuel_type) {
+      form.setValue('fuel_type', vehicle.fuel_type as FormData['fuel_type'])
     }
-  }, [isFlexfuel, latestEntry, form])
+  }, [latestEntry, vehicle, form])
+
+  // Auto-fill station from nearest past fill (backend calculation)
+  useEffect(() => {
+    if (nearestStation) {
+      if (nearestStation.station_name) form.setValue('station_name', nearestStation.station_name)
+      if (nearestStation.location) form.setValue('location', nearestStation.location)
+    }
+  }, [nearestStation, form])
 
   const liters = form.watch('liters')
   const pricePerLiter = form.watch('price_per_liter')
@@ -157,41 +169,85 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
 
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-1 flex-col overflow-hidden">
           <div className="flex-1 space-y-4 overflow-y-auto pr-1">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+          {/* Row 1: date + odometer + GPS button */}
+          <div className="grid grid-cols-[1fr_1fr_auto] gap-2 items-end">
             <div className="space-y-2">
               <Label htmlFor="fuel-date">Date *</Label>
               <Input id="fuel-date" type="date" {...form.register('fueling_date')} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="fuel-odometer">
-                Compteur (km) *
+                Compteur *
                 {latestEntry && (
                   <span className="ml-1 text-xs text-muted-foreground">
-                    (dernier: {latestEntry.odometer_reading.toLocaleString('fr-FR')})
+                    ({latestEntry.odometer_reading.toLocaleString('fr-FR')})
                   </span>
                 )}
               </Label>
               <Input id="fuel-odometer" type="number" {...form.register('odometer_reading')} />
             </div>
+            <Button
+              type="button"
+              variant={geo.status === 'success' ? 'default' : 'outline'}
+              size="icon"
+              onClick={geo.capture}
+              disabled={geo.status === 'loading'}
+              title="Capturer ma position GPS"
+            >
+              {geo.status === 'loading' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <MapPin className="h-4 w-4" />
+              )}
+            </Button>
           </div>
-
-          {isFlexfuel && (
-            <div className="space-y-2">
-              <Label>Type de carburant *</Label>
-              <Select
-                value={form.watch('fuel_type')}
-                onValueChange={(v) => form.setValue('fuel_type', v as FormData['fuel_type'])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="e85">E85</SelectItem>
-                  <SelectItem value="essence">Essence (E10)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {geo.status === 'error' && (
+            <p className="text-xs text-destructive">{geo.error}</p>
           )}
+
+          {/* Nearby stations list (appears after GPS capture) */}
+          {geo.status === 'success' && geo.latitude != null && geo.longitude != null && (
+            <NearbyStationsList
+              latitude={geo.latitude}
+              longitude={geo.longitude}
+              fuelType={form.watch('fuel_type')}
+              onSelect={(stationName, location, price) => {
+                form.setValue('station_name', stationName)
+                form.setValue('location', location)
+                if (price != null) form.setValue('price_per_liter', price)
+              }}
+            />
+          )}
+
+          {/* Fuel type — always shown, pre-filled from last fill */}
+          <div className="space-y-2">
+            <Label>Type de carburant *</Label>
+            <Select
+              value={form.watch('fuel_type')}
+              onValueChange={(v) => form.setValue('fuel_type', v as FormData['fuel_type'])}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {isFlexfuel ? (
+                  <>
+                    <SelectItem value="e85">E85</SelectItem>
+                    <SelectItem value="essence">Essence (E10)</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="essence">Essence</SelectItem>
+                    <SelectItem value="diesel">Diesel</SelectItem>
+                    <SelectItem value="gpl">GPL</SelectItem>
+                    <SelectItem value="electrique">Électrique</SelectItem>
+                    <SelectItem value="hybride">Hybride</SelectItem>
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">
@@ -224,6 +280,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
             <Input
               id="fuel-station"
               list="station-suggestions"
+              placeholder={nearestStation ? `${nearestStation.station_name} (${nearestStation.distance_m}m)` : ''}
               {...form.register('station_name')}
             />
             {stations && stations.length > 0 && (
@@ -237,45 +294,8 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
 
           <div className="space-y-2">
             <Label htmlFor="fuel-location">Localisation</Label>
-            <div className="flex gap-2">
-              <Input id="fuel-location" {...form.register('location')} className="flex-1" />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={geo.capture}
-                disabled={geo.status === 'loading'}
-                title="Capturer ma position GPS"
-              >
-                {geo.status === 'loading' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <MapPin className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            {geo.status === 'success' && (
-              <p className="text-xs text-green-600">
-                Position capturée ({geo.latitude?.toFixed(5)}, {geo.longitude?.toFixed(5)})
-              </p>
-            )}
-            {geo.status === 'error' && (
-              <p className="text-xs text-destructive">{geo.error}</p>
-            )}
+            <Input id="fuel-location" {...form.register('location')} />
           </div>
-
-          {geo.status === 'success' && geo.latitude != null && geo.longitude != null && (
-            <NearbyStationsList
-              latitude={geo.latitude}
-              longitude={geo.longitude}
-              fuelType={form.watch('fuel_type')}
-              onSelect={(stationName, location, price) => {
-                form.setValue('station_name', stationName)
-                form.setValue('location', location)
-                if (price != null) form.setValue('price_per_liter', price)
-              }}
-            />
-          )}
 
           <div className="space-y-2">
             <Label htmlFor="fuel-notes">Notes</Label>

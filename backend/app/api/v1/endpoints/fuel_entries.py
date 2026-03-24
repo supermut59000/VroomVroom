@@ -134,6 +134,22 @@ def delete_fuel_entry(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fuel entry not found")
 
 
+@router.get("/vehicle/{vehicle_id}/nearest-station")
+def get_nearest_station(
+    vehicle_id: int = Path(..., description="Vehicle ID"),
+    lat: float = Query(..., description="Current latitude"),
+    lon: float = Query(..., description="Current longitude"),
+    radius_m: float = Query(250, description="Search radius in metres"),
+    db: Session = Depends(get_db),
+):
+    """Return station name from the closest past fill within radius_m metres."""
+    fuel_service = FuelService(db)
+    result = fuel_service.get_nearest_station(vehicle_id, lat, lon, radius_m)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune station connue à proximité")
+    return result
+
+
 @router.get("/vehicle/{vehicle_id}", response_model=List[FuelEntryResponse])
 def get_fuel_entries_by_vehicle(
     vehicle_id: int = Path(..., description="Vehicle ID"),
