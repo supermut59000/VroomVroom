@@ -16,6 +16,14 @@ function getApiUrl(): string {
 
 export const API_URL = getApiUrl()
 
+function getHeaders(withBody = false): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (withBody) headers['Content-Type'] = 'application/json'
+  const apiKey = import.meta.env.VITE_API_KEY
+  if (apiKey) headers['X-API-Key'] = apiKey
+  return headers
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -43,13 +51,13 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export const api = {
   get<T>(path: string): Promise<T> {
-    return fetch(`${API_URL}${path}`).then((r) => handleResponse<T>(r))
+    return fetch(`${API_URL}${path}`, { headers: getHeaders() }).then((r) => handleResponse<T>(r))
   },
 
   post<T>(path: string, body: unknown): Promise<T> {
     return fetch(`${API_URL}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify(body),
     }).then((r) => handleResponse<T>(r))
   },
@@ -57,7 +65,7 @@ export const api = {
   put<T>(path: string, body: unknown): Promise<T> {
     return fetch(`${API_URL}${path}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(true),
       body: JSON.stringify(body),
     }).then((r) => handleResponse<T>(r))
   },
@@ -65,6 +73,7 @@ export const api = {
   delete<T = void>(path: string): Promise<T> {
     return fetch(`${API_URL}${path}`, {
       method: 'DELETE',
+      headers: getHeaders(),
     }).then((r) => handleResponse<T>(r))
   },
 }

@@ -1,3 +1,5 @@
+import { fetchApi } from '../config.js';
+
 class FuelAdd {
     constructor(baseURL, onFuelAdded) {
         this.baseURL = baseURL;
@@ -139,7 +141,7 @@ class FuelAdd {
 
     async loadStationSuggestions(vehicleId) {
         try {
-            const response = await fetch(`${this.baseURL}/fuel-entries/stations?vehicle_id=${vehicleId}`);
+            const response = await fetchApi(`${this.baseURL}/fuel-entries/stations?vehicle_id=${vehicleId}`);
             if (!response.ok) return;
             const stations = await response.json();
             const datalist = document.getElementById('stationSuggestions');
@@ -151,7 +153,7 @@ class FuelAdd {
 
     async loadLatestEntry(vehicleId) {
         try {
-            const response = await fetch(`${this.baseURL}/fuel-entries/vehicle/${vehicleId}/latest`);
+            const response = await fetchApi(`${this.baseURL}/fuel-entries/vehicle/${vehicleId}/latest`);
             if (!response.ok) return;
             this.latestEntry = await response.json();
             // Show last odometer as placeholder hint
@@ -266,7 +268,7 @@ class FuelAdd {
         };
 
         try {
-            const response = await fetch(`${this.baseURL}/fuel-entries/`, {
+            const response = await fetchApi(`${this.baseURL}/fuel-entries/`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(fuelData)

@@ -3,6 +3,21 @@
  * This file manages API URLs for different environments
  */
 
+export const API_KEY = '';
+
+export function getHeaders(withBody = false) {
+    const headers = {};
+    if (withBody) headers['Content-Type'] = 'application/json';
+    if (API_KEY) headers['X-API-Key'] = API_KEY;
+    return headers;
+}
+
+export function fetchApi(url, options = {}) {
+    const isBody = options.body !== undefined;
+    const headers = { ...getHeaders(isBody), ...options.headers };
+    return fetch(url, { ...options, headers });
+}
+
 export const config = {
     /**
      * API configuration for different environments

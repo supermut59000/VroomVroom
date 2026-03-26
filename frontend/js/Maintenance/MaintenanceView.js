@@ -1,3 +1,5 @@
+import { fetchApi } from '../config.js';
+
 class MaintenanceView {
     constructor(baseURL, onMaintenanceUpdated) {
         this.baseURL = baseURL;
@@ -33,14 +35,14 @@ class MaintenanceView {
             this.showLoadingMessage('Chargement des données de maintenance...');
 
             // Charger les données du véhicule
-            const vehicleResponse = await fetch(`${this.baseURL}/vehicles/${vehicleId}`);
+            const vehicleResponse = await fetchApi(`${this.baseURL}/vehicles/${vehicleId}`);
             if (!vehicleResponse.ok) {
                 throw new Error('Erreur lors du chargement du véhicule');
             }
             this.currentVehicle = await vehicleResponse.json();
 
             // Charger les entrées de maintenance
-            const maintenanceResponse = await fetch(`${this.baseURL}/maintenances/vehicle/${vehicleId}`);
+            const maintenanceResponse = await fetchApi(`${this.baseURL}/maintenances/vehicle/${vehicleId}`);
             if (!maintenanceResponse.ok) {
                 throw new Error('Erreur lors du chargement des maintenances');
             }
@@ -368,7 +370,7 @@ class MaintenanceView {
         }
 
         try {
-            const response = await fetch(`${this.baseURL}/maintenances/${entryId}`, {
+            const response = await fetchApi(`${this.baseURL}/maintenances/${entryId}`, {
                 method: 'DELETE'
             });
 
@@ -525,7 +527,7 @@ class MaintenanceView {
                 }
             }
 
-            const response = await fetch(`${this.baseURL}/maintenances/${entryId}`, {
+            const response = await fetchApi(`${this.baseURL}/maintenances/${entryId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)

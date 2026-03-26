@@ -5,7 +5,7 @@ import FuelAdd from './Fuel/FuelAdd.js';
 import FuelView from './Fuel/FuelView.js';
 import MaintenanceAdd from './Maintenance/MaintenanceAdd.js';
 import MaintenanceView from './Maintenance/MaintenanceView.js';
-import config from './config.js';
+import config, { fetchApi } from './config.js';
 
 class Dashboard {
     constructor() {
@@ -45,7 +45,7 @@ class Dashboard {
 
         for (const item of queue) {
             try {
-                const response = await fetch(`${this.baseURL}/fuel-entries/`, {
+                const response = await fetchApi(`${this.baseURL}/fuel-entries/`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(item.data)
@@ -138,7 +138,7 @@ class Dashboard {
     async loadVehicles() {
         try {
             this.showLoading();
-            const response = await fetch(`${this.baseURL}/vehicles/`);
+            const response = await fetchApi(`${this.baseURL}/vehicles/`);
             if (!response.ok) throw new Error('Erreur lors du chargement des véhicules');
             this.vehicles = await response.json();
             await this.loadVehicleStats();
@@ -310,7 +310,7 @@ class Dashboard {
         if (!confirm(`Êtes-vous sûr de vouloir supprimer ${vehicleName} ?\n\nCette action supprimera également tous les pleins et maintenances associés.`)) return;
 
         try {
-            const response = await fetch(`${this.baseURL}/vehicles/${vehicleId}?force=true`, { method: 'DELETE' });
+            const response = await fetchApi(`${this.baseURL}/vehicles/${vehicleId}?force=true`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Erreur lors de la suppression');
             this.loadVehicles();
         } catch (error) {

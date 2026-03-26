@@ -16,5 +16,6 @@ if __name__ == "__main__":
         port=8000,
         reload=settings.DEBUG,
         log_level=settings.LOG_LEVEL.lower(),
-        access_log=True
+        access_log=True,
+        timeout_graceful_shutdown=5,
     )

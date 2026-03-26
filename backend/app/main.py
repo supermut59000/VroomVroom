@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 import uvicorn
 
 from app.core.config import settings
+from app.core.database import SessionLocal
 from app.api.v1.api import api_router
 
 # Créer l'application FastAPI
@@ -39,7 +41,13 @@ async def root():
 
 @app.get("/health")
 async def health_check():
-    return {"status": "healthy"}
+    try:
+        db = SessionLocal()
+        db.execute(text("SELECT 1"))
+        db.close()
+        return {"status": "healthy"}
+    except Exception:
+        return {"status": "unhealthy", "db": "unreachable"}
 
 
 if __name__ == "__main__":

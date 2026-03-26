@@ -1,4 +1,5 @@
 import FuelCharts from './FuelCharts.js';
+import { fetchApi } from '../config.js';
 
 class FuelView {
     constructor(baseURL, onFuelUpdated) {
@@ -36,14 +37,14 @@ class FuelView {
 
             this.pagination = { total: 0, page: 1, perPage: 20, pages: 0 };
 
-            const vehicleResponse = await fetch(`${this.baseURL}/vehicles/${vehicleId}`);
+            const vehicleResponse = await fetchApi(`${this.baseURL}/vehicles/${vehicleId}`);
             if (!vehicleResponse.ok) {
                 throw new Error('Erreur lors du chargement du véhicule');
             }
             this.currentVehicle = await vehicleResponse.json();
 
             // Fetch ALL entries for statistics and charts
-            const allFuelResponse = await fetch(`${this.baseURL}/fuel-entries/vehicle/${vehicleId}?per_page=10000`);
+            const allFuelResponse = await fetchApi(`${this.baseURL}/fuel-entries/vehicle/${vehicleId}?per_page=10000`);
             if (!allFuelResponse.ok) {
                 throw new Error('Erreur lors du chargement des entrées de carburant');
             }
@@ -52,7 +53,7 @@ class FuelView {
             // Fetch maintenance entries for cost/km chart (non-blocking)
             this.allMaintenanceEntries = [];
             try {
-                const maintResponse = await fetch(`${this.baseURL}/maintenances/vehicle/${vehicleId}`);
+                const maintResponse = await fetchApi(`${this.baseURL}/maintenances/vehicle/${vehicleId}`);
                 if (maintResponse.ok) {
                     this.allMaintenanceEntries = await maintResponse.json();
                 }
@@ -94,7 +95,7 @@ class FuelView {
         });
 
         try {
-            const response = await fetch(`${this.baseURL}/fuel-entries/?${params}`);
+            const response = await fetchApi(`${this.baseURL}/fuel-entries/?${params}`);
             if (!response.ok) throw new Error('Erreur lors du chargement des entrées');
 
             const data = await response.json();
@@ -491,7 +492,7 @@ class FuelView {
 
             if (!this.validateFuelEntryData(entryData)) return;
 
-            const response = await fetch(`${this.baseURL}/fuel-entries/${entryId}`, {
+            const response = await fetchApi(`${this.baseURL}/fuel-entries/${entryId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(entryData)
@@ -526,7 +527,7 @@ class FuelView {
         if (!confirm('Êtes-vous sûr de vouloir supprimer cette entrée de carburant ?')) return;
 
         try {
-            const response = await fetch(`${this.baseURL}/fuel-entries/${entryId}`, { method: 'DELETE' });
+            const response = await fetchApi(`${this.baseURL}/fuel-entries/${entryId}`, { method: 'DELETE' });
             if (!response.ok) throw new Error('Erreur lors de la suppression');
 
             await this.reloadAllEntries();
@@ -542,7 +543,7 @@ class FuelView {
         const vid = this.currentVehicle?.id;
         if (!vid) return;
 
-        const allFuelResponse = await fetch(`${this.baseURL}/fuel-entries/vehicle/${vid}?per_page=10000`);
+        const allFuelResponse = await fetchApi(`${this.baseURL}/fuel-entries/vehicle/${vid}?per_page=10000`);
         if (allFuelResponse.ok) {
             this.allFuelEntries = await allFuelResponse.json();
         }

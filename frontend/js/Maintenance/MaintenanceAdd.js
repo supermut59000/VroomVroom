@@ -1,3 +1,5 @@
+import { fetchApi } from '../config.js';
+
 class MaintenanceAdd {
     constructor(baseURL, onMaintenanceAdded) {
         this.baseURL = baseURL;
@@ -185,7 +187,7 @@ class MaintenanceAdd {
         };
 
         try {
-            const response = await fetch(`${this.baseURL}/maintenances/`, {
+            const response = await fetchApi(`${this.baseURL}/maintenances/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

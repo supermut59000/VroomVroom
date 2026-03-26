@@ -1,3 +1,5 @@
+import { fetchApi } from '../config.js';
+
 class VehicleDetails {
     constructor(baseURL, onVehicleEdited) {
         this.baseURL = baseURL;
@@ -88,7 +90,7 @@ class VehicleDetails {
     }
 
     async loadVehicleDetails(vehicleId) {
-        const response = await fetch(`${this.baseURL}/vehicles/${vehicleId}`);
+        const response = await fetchApi(`${this.baseURL}/vehicles/${vehicleId}`);
         if (!response.ok) {
             throw new Error('Erreur lors du chargement du véhicule');
         }
@@ -97,7 +99,7 @@ class VehicleDetails {
 
     async loadVehicleStats(vehicleId) {
         try {
-            const response = await fetch(`${this.baseURL}/vehicles/${vehicleId}/stats`);
+            const response = await fetchApi(`${this.baseURL}/vehicles/${vehicleId}/stats`);
             if (response.ok) {
                 this.vehicleStats = await response.json();
             }
@@ -549,7 +551,7 @@ class VehicleDetails {
                 return;
             }
 
-            const response = await fetch(`${this.baseURL}/vehicles/${this.currentVehicle.id}`, {
+            const response = await fetchApi(`${this.baseURL}/vehicles/${this.currentVehicle.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(vehicleData)

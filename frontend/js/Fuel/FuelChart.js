@@ -1,4 +1,4 @@
-import config from '../config.js';
+import config, { fetchApi } from '../config.js';
 
 export class FuelChart {
     constructor(vehicleId) {
@@ -9,7 +9,7 @@ export class FuelChart {
 
     async fetchConsumptionData() {
         try {
-            const response = await fetch(`${this.apiUrl}/fuel-entries/vehicle/${this.vehicleId}/consumption-history`);
+            const response = await fetchApi(`${this.apiUrl}/fuel-entries/vehicle/${this.vehicleId}/consumption-history`);
 
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

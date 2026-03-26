@@ -1,3 +1,5 @@
+import { fetchApi } from '../config.js';
+
 class VehicleModif {
     constructor(baseURL, onVehicleModified) {
         this.baseURL = baseURL;
@@ -30,7 +32,7 @@ class VehicleModif {
         try {
             this.showLoadingMessage('Chargement des données du véhicule...');
             
-            const response = await fetch(`${this.baseURL}/vehicles/${vehicleId}`);
+            const response = await fetchApi(`${this.baseURL}/vehicles/${vehicleId}`);
             if (!response.ok) {
                 throw new Error('Erreur lors du chargement du véhicule');
             }
@@ -265,7 +267,7 @@ class VehicleModif {
             }
 
             // Envoyer les modifications au serveur
-            const response = await fetch(`${this.baseURL}/vehicles/${this.currentVehicle.id}`, {
+            const response = await fetchApi(`${this.baseURL}/vehicles/${this.currentVehicle.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

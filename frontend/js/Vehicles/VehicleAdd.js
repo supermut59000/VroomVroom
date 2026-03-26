@@ -1,3 +1,5 @@
+import { fetchApi } from '../config.js';
+
 class VehicleAdd {
     constructor(baseURL, onVehicleAdded) {
         this.baseURL = baseURL;
@@ -168,7 +170,7 @@ class VehicleAdd {
         };
 
         try {
-            const response = await fetch(`${this.baseURL}/vehicles/`, {
+            const response = await fetchApi(`${this.baseURL}/vehicles/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
