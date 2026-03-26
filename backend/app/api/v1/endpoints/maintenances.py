@@ -1,3 +1,5 @@
+import logging
+from enum import Enum
 from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
@@ -14,7 +16,17 @@ from app.schemas.maintenance import (
 )
 from app.models.maintenance import Maintenance
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
+
+
+class MaintenanceOrderBy(str, Enum):
+    maintenance_date = "maintenance_date"
+    created_at = "created_at"
+    odometer_reading = "odometer_reading"
+    cost = "cost"
+    next_maintenance_date = "next_maintenance_date"
 
 
 @router.post("/", response_model=MaintenanceResponse, status_code=status.HTTP_201_CREATED)
@@ -28,29 +40,29 @@ def create_maintenance(
     try:
         db_maintenance = maintenance_service.create_maintenance(maintenance)
         return db_maintenance
-    except Exception as e:
+    except Exception:
+        logger.exception("Unexpected error creating maintenance entry")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error creating maintenance entry: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de la création de l'entrée de maintenance"
         )
 
 
 @router.get("/", response_model=MaintenanceListResponse)
 def get_maintenances(
-    vehicle_id: Optional[str] = Query(None, description="Filter by vehicle ID"),
+    vehicle_id: Optional[int] = Query(None, description="Filter by vehicle ID"),
     maintenance_type: Optional[str] = Query(None, description="Filter by maintenance type"),
     start_date: Optional[date] = Query(None, description="Filter by start date"),
     end_date: Optional[date] = Query(None, description="Filter by end date"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    order_by: str = Query("maintenance_date", description="Order by field"),
+    order_by: MaintenanceOrderBy = Query(MaintenanceOrderBy.maintenance_date, description="Order by field"),
     order: str = Query("desc", regex="^(asc|desc)$", description="Order direction"),
     db: Session = Depends(get_db)
 ):
     """Get maintenance entries with optional filters and pagination"""
     maintenance_service = MaintenanceService(db)
 
-    # Calculate skip value for pagination
     skip = (page - 1) * per_page
 
     try:
@@ -61,7 +73,7 @@ def get_maintenances(
             end_date=end_date,
             skip=skip,
             limit=per_page,
-            order_by=order_by,
+            order_by=order_by.value,
             order=order
         )
 
@@ -72,7 +84,7 @@ def get_maintenances(
             end_date=end_date
         )
 
-        pages = (total + per_page - 1) // per_page  # Ceiling division
+        pages = (total + per_page - 1) // per_page
 
         return MaintenanceListResponse(
             entries=entries,
@@ -81,10 +93,11 @@ def get_maintenances(
             per_page=per_page,
             pages=pages
         )
-    except Exception as e:
+    except Exception:
+        logger.exception("Unexpected error fetching maintenance entries")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error fetching maintenance entries: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de la récupération des entrées de maintenance"
         )
 
 
@@ -114,19 +127,13 @@ def update_maintenance(
     """Update a maintenance entry"""
     maintenance_service = MaintenanceService(db)
 
-    try:
-        db_maintenance = maintenance_service.update_maintenance(maintenance_id, maintenance_update)
-        if not db_maintenance:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Maintenance entry not found"
-            )
-        return db_maintenance
-    except Exception as e:
+    db_maintenance = maintenance_service.update_maintenance(maintenance_id, maintenance_update)
+    if not db_maintenance:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error updating maintenance entry: {str(e)}"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Maintenance entry not found"
         )
+    return db_maintenance
 
 
 @router.delete("/{maintenance_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -146,7 +153,7 @@ def delete_maintenance(
 
 @router.get("/vehicle/{vehicle_id}", response_model=List[MaintenanceResponse])
 def get_maintenances_by_vehicle(
-    vehicle_id: str = Path(..., description="Vehicle ID"),
+    vehicle_id: int = Path(..., description="Vehicle ID"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db)
@@ -163,16 +170,17 @@ def get_maintenances_by_vehicle(
             limit=per_page
         )
         return entries
-    except Exception as e:
+    except Exception:
+        logger.exception("Unexpected error fetching maintenance entries for vehicle %s", vehicle_id)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error fetching maintenance entries for vehicle: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors de la récupération des entrées de maintenance"
         )
 
 
 @router.get("/vehicle/{vehicle_id}/latest", response_model=MaintenanceResponse)
 def get_latest_maintenance_by_vehicle(
-    vehicle_id: str = Path(..., description="Vehicle ID"),
+    vehicle_id: int = Path(..., description="Vehicle ID"),
     db: Session = Depends(get_db)
 ):
     """Get the latest maintenance entry for a specific vehicle"""
@@ -189,7 +197,7 @@ def get_latest_maintenance_by_vehicle(
 
 @router.get("/vehicle/{vehicle_id}/statistics", response_model=MaintenanceStatisticsResponse)
 def get_maintenance_statistics_by_vehicle(
-    vehicle_id: str = Path(..., description="Vehicle ID"),
+    vehicle_id: int = Path(..., description="Vehicle ID"),
     db: Session = Depends(get_db)
 ):
     """Get maintenance statistics for a specific vehicle"""
@@ -198,8 +206,9 @@ def get_maintenance_statistics_by_vehicle(
     try:
         statistics = maintenance_service.get_maintenance_statistics_by_vehicle(vehicle_id)
         return statistics
-    except Exception as e:
+    except Exception:
+        logger.exception("Unexpected error calculating maintenance statistics for vehicle %s", vehicle_id)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Error calculating maintenance statistics: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Erreur lors du calcul des statistiques de maintenance"
         )

@@ -1,4 +1,5 @@
 import logging
+from enum import Enum
 from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, status
@@ -19,6 +20,15 @@ from app.core.enums import FuelType
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class FuelEntryOrderBy(str, Enum):
+    fueling_date = "fueling_date"
+    created_at = "created_at"
+    odometer_reading = "odometer_reading"
+    total_cost = "total_cost"
+    liters = "liters"
+    price_per_liter = "price_per_liter"
 
 
 @router.post("/", response_model=FuelEntryResponse, status_code=status.HTTP_201_CREATED)
@@ -45,7 +55,7 @@ def get_fuel_entries(
     end_date: Optional[date] = Query(None, description="Filter by end date"),
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=10000, description="Items per page"),
-    order_by: str = Query("fueling_date", description="Order by field"),
+    order_by: FuelEntryOrderBy = Query(FuelEntryOrderBy.fueling_date, description="Order by field"),
     order: str = Query("desc", regex="^(asc|desc)$", description="Order direction"),
     db: Session = Depends(get_db)
 ):
@@ -61,7 +71,7 @@ def get_fuel_entries(
         end_date=end_date,
         skip=skip,
         limit=per_page,
-        order_by=order_by,
+        order_by=order_by.value,
         order=order
     )
 
@@ -137,9 +147,9 @@ def delete_fuel_entry(
 @router.get("/vehicle/{vehicle_id}/nearest-station")
 def get_nearest_station(
     vehicle_id: int = Path(..., description="Vehicle ID"),
-    lat: float = Query(..., description="Current latitude"),
-    lon: float = Query(..., description="Current longitude"),
-    radius_m: float = Query(250, description="Search radius in metres"),
+    lat: float = Query(..., ge=-90, le=90, description="Current latitude"),
+    lon: float = Query(..., ge=-180, le=180, description="Current longitude"),
+    radius_m: float = Query(250, ge=1, le=10000, description="Search radius in metres"),
     db: Session = Depends(get_db),
 ):
     """Return station name from the closest past fill within radius_m metres."""

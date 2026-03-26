@@ -38,8 +38,8 @@ class FuelEntryBase(BaseModel):
         description="City or location of fueling",
         example="Paris, France",
     )
-    latitude: Optional[float] = Field(None, description="GPS latitude of fueling station")
-    longitude: Optional[float] = Field(None, description="GPS longitude of fueling station")
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0, description="GPS latitude of fueling station")
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0, description="GPS longitude of fueling station")
     fueling_date: date = Field(
         default_factory=date.today, description="Date of fueling"
     )
@@ -88,8 +88,8 @@ class FuelEntryUpdate(BaseModel):
     odometer_reading: Optional[int] = Field(None, ge=0, le=9999999)
     station_name: Optional[str] = Field(None, max_length=100)
     location: Optional[str] = Field(None, max_length=100)
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90.0, le=90.0)
+    longitude: Optional[float] = Field(None, ge=-180.0, le=180.0)
     fueling_date: Optional[date] = None
     is_full_tank: Optional[bool] = None
     notes: Optional[str] = Field(None, max_length=500)
