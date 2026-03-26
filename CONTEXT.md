@@ -1,7 +1,7 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-03-24
+Last updated: 2026-03-26
 
 ---
 
@@ -68,6 +68,7 @@ The app is **not** meant to become a full fleet management system. Keep it focus
   - `within_distance(geom, geom'POINT(lon lat)', Xkm)` works in `where`
 - **E10 reference prices are global** — one shared price list, not per-vehicle. I fill up my E85 car and reference the E10 price I see at that station for savings calculation.
 - **TSC is strict in production**: `bun run build` runs `tsc -b && vite build`. Unused imports are errors. Always run `npx tsc --noEmit` before committing.
+- **Running backend tests**: no system pytest, no venv. Use Docker: `docker compose run --rm backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`. 50 tests total (49 pass — `test_invalid_maintenance_type` is a pre-existing failure unrelated to security/features, maintenance_type accepts any string).
 
 ---
 
@@ -79,6 +80,10 @@ The app is **not** meant to become a full fleet management system. Keep it focus
 - **Batch stats endpoint** (`GET /vehicles/stats/batch`): returns all active vehicle stats in one call to avoid N+1 queries on the dashboard
 - **Soft delete**: vehicles use `is_active` flag. Hard delete only with `?force=true`
 - **Centralized FuelType enum** in `app/core/enums.py` — single source of truth
+- **order_by is whitelisted**: `fuel_entries.py` and `maintenances.py` use strict `str(Enum)` classes (`FuelEntryOrderBy`, `MaintenanceOrderBy`) — never accept raw strings for sort fields
+- **Swagger UI is gated**: `docs_url` and `redoc_url` are `None` when `DEBUG=False`. Set `DEBUG=True` in local `.env` to access `/docs`
+- **Error responses are opaque**: endpoints return static French strings, never `str(e)`. Internal details go to `logger.exception()` only
+- **GPS bounds validated**: latitude `ge=-90/le=90`, longitude `ge=-180/le=180` enforced in Pydantic schema and query params
 
 ### Frontend
 - **React Query** for all server state — no useEffect for data fetching except for derived/local effects
@@ -103,8 +108,11 @@ When making schema changes:
 
 ### Fuel tracking
 - Full CRUD with offline queue
-- GPS capture + nearby station prices (auto-fill station name + price/L)
-- FlexFuel: E85/E10 selector for converted vehicles, auto-fills from last fill type
+- GPS capture button inline with date/odometer row (top of form, no scrolling needed)
+- After GPS: NearbyStationsList appears → click station to auto-fill name, location, price/L from gouv.fr API
+- Backend endpoint `GET /fuel-entries/vehicle/{id}/nearest-station?lat=X&lon=Y&radius_m=250`: haversine in Python, returns station_name from closest past fill within radius — auto-fills form field
+- Fuel type selector always shown, pre-filled from last fill (or vehicle default)
+- FlexFuel vehicles: E85/E10 selector only
 - Consumption: L/100km, fill-to-fill method, partial fill accumulation
 
 ### Maintenance tracking
@@ -142,6 +150,7 @@ When making schema changes:
 ### Auth
 - API key (`X-API-Key` header), configured in `.env`
 - Empty = disabled (useful for local dev)
+- CORS: explicit methods `["GET","POST","PUT","DELETE","OPTIONS"]` and headers `["Content-Type","Authorization","X-API-Key","Accept"]` — no wildcards
 
 ### Dark mode
 - Sun/Moon toggle in header
@@ -178,12 +187,30 @@ When making schema changes:
 
 ---
 
+## Security Status (as of 2026-03-26)
+
+### Fixed
+- SQL injection via `order_by` → enum whitelist
+- GPS coordinate validation → Pydantic `ge/le` bounds
+- CORS wildcard → explicit methods + headers
+- Swagger UI exposed in prod → gated behind `DEBUG=True`
+- Health check leaked environment → returns `{"status":"healthy"}` only
+- Error messages leaked `str(e)` → static strings, server-side logging
+- `vehicle_id` typed as `str` in maintenances.py → fixed to `int`
+
+### Pending (known, accepted for homelab)
+- **`.env` in git history**: credentials (`mathis`/`mathis`, `192.168.25.46`) are in commit `3836c24`. To fix: `git filter-repo --path backend/.env --path backend/.env.local --invert-paths` + force push + rotate DB password. Low priority since repo is private and credentials are homelab-only.
+- **No rate limiting**: acceptable for single-user homelab
+- **Offline queue stored in localStorage**: acceptable since only user is the owner
+- **CSP/HSTS headers**: handle at reverse proxy level (Nginx/Traefik), not in app
+
+---
+
 ## Pending / Ideas for Future Sessions
 
-- **Cost of ownership** upgrade: monthly trend chart (fuel + maintenance per month over time — already done as MonthlyCostChart)
-- **Fuel price evolution chart** already exists (PriceChart)
 - **Photo receipts** — snap a photo of pump receipt / maintenance invoice, attach to entry
 - **Push notifications** — PWA push when maintenance is due or insurance km limit approaching
 - **Multi-vehicle comparison** — side-by-side stats
 - **CI/CD** — GitHub Actions: lint, test, build, deploy on push to master
 - **Test coverage for FlexFuel** — no tests yet for flexfuel service/endpoints
+- **Fix `test_invalid_maintenance_type`** — maintenance_type accepts any string, should be enum-validated
