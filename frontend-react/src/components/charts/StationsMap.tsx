@@ -42,9 +42,9 @@ export function StationsMap({ entries }: StationsMapProps) {
       const lat = entry.latitude!
       const lon = entry.longitude!
 
-      // Find an existing cluster within 50m
+      // Find an existing cluster within 100m
       const nearby = result.find(
-        (c) => distanceMeters(c.latitude, c.longitude, lat, lon) <= 50
+        (c) => distanceMeters(c.latitude, c.longitude, lat, lon) <= 100
       )
 
       if (nearby) {
