@@ -16,8 +16,6 @@ import { useVehicle } from '@/hooks/use-vehicles'
 import { useFlexfuelConversion, useFlexfuelRentability } from '@/hooks/use-flexfuel'
 import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
 import { PriceChart } from '@/components/charts/PriceChart'
-import { OdometerChart } from '@/components/charts/OdometerChart'
-import { CostPerKmChart } from '@/components/charts/CostPerKmChart'
 import { StationsMap } from '@/components/charts/StationsMap'
 import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilityChart'
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
@@ -134,8 +132,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <PriceChart entries={filteredEntries} />
           <MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} />
           <DistanceChart entries={filteredEntries} />
-          <OdometerChart entries={filteredEntries} />
-          <CostPerKmChart entries={filteredEntries} maintenances={filteredMaintenances} />
+<CostPerKmChart entries={filteredEntries} maintenances={filteredMaintenances} />
           <StationsMap entries={filteredEntries} />
 
           {/* FlexFuel E85 Rentability */}
