@@ -20,6 +20,7 @@ import { StationsMap } from '@/components/charts/StationsMap'
 import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilityChart'
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
+import { InsuranceKmChart } from '@/components/charts/InsuranceKmChart'
 
 interface FuelChartsProps {
   vehicleId: number
@@ -132,7 +133,9 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <PriceChart entries={filteredEntries} />
           <MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} />
           <DistanceChart entries={filteredEntries} />
-<CostPerKmChart entries={filteredEntries} maintenances={filteredMaintenances} />
+          {vehicle && (
+            <InsuranceKmChart vehicle={vehicle} entries={filteredEntries} />
+          )}
           <StationsMap entries={filteredEntries} />
 
           {/* FlexFuel E85 Rentability */}

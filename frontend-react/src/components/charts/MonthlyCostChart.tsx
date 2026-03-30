@@ -8,6 +8,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { FuelEntry, Maintenance } from '@/types'
@@ -17,11 +18,20 @@ interface MonthlyCostChartProps {
   maintenances: Maintenance[]
 }
 
+type ChartPoint = {
+  month: string
+  monthKey: string
+  Carburant?: number
+  Maintenance?: number
+  CarburantProj?: number
+  MaintenanceProj?: number
+}
+
 export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProps) {
   const [mode, setMode] = useState<'euros' | 'per100km'>('euros')
 
   // Monthly absolute costs (€)
-  const eurosData = useMemo(() => {
+  const eurosData = useMemo((): ChartPoint[] => {
     const map = new Map<string, { fuel: number; maintenance: number }>()
 
     for (const e of entries) {
@@ -48,14 +58,39 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
         })
         return {
           month: label,
+          monthKey: month,
           Carburant: Math.round(costs.fuel * 100) / 100,
           Maintenance: Math.round(costs.maintenance * 100) / 100,
         }
       })
   }, [entries, maintenances])
 
+  // 3-month projection appended after last real month
+  const eurosDataWithProjection = useMemo((): ChartPoint[] => {
+    if (eurosData.length < 2) return eurosData
+
+    const last3 = eurosData.slice(-Math.min(3, eurosData.length))
+    const avgFuel = last3.reduce((s, d) => s + (d.Carburant ?? 0), 0) / last3.length
+    const avgMaint = last3.reduce((s, d) => s + (d.Maintenance ?? 0), 0) / last3.length
+
+    const lastKey = eurosData[eurosData.length - 1].monthKey
+    const [ly, lm] = lastKey.split('-').map(Number)
+
+    const projected: ChartPoint[] = [1, 2, 3].map((offset) => {
+      const date = new Date(ly, lm - 1 + offset, 1)
+      return {
+        month: date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+        monthKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        CarburantProj: Math.round(avgFuel * 100) / 100,
+        MaintenanceProj: Math.round(avgMaint * 100) / 100,
+      }
+    })
+
+    return [...eurosData, ...projected]
+  }, [eurosData])
+
   // Monthly cost per 100km
-  const per100kmData = useMemo(() => {
+  const per100kmData = useMemo((): ChartPoint[] => {
     if (entries.length < 2) return []
 
     const sorted = [...entries].sort(
@@ -113,19 +148,25 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
         const [y, m] = month.split('-')
         return {
           month: `${m}/${y.slice(2)}`,
+          monthKey: month,
           Carburant: Math.round((fuelCost / dist) * 100 * 100) / 100,
           Maintenance: Math.round((maintCost / dist) * 100 * 100) / 100,
         }
       })
   }, [entries, maintenances])
 
-  const data = mode === 'euros' ? eurosData : per100kmData
+  const data = mode === 'euros' ? eurosDataWithProjection : per100kmData
+  const realData = mode === 'euros' ? eurosData : per100kmData
 
-  if (data.length === 0) return null
+  if (realData.length === 0) return null
 
   const unit = mode === 'euros' ? ' €' : ' €/100km'
   const avgTotal =
-    data.reduce((s, d) => s + d.Carburant + d.Maintenance, 0) / data.length
+    realData.reduce((s, d) => s + (d.Carburant ?? 0) + (d.Maintenance ?? 0), 0) / realData.length
+
+  const lastRealMonth = mode === 'euros' && eurosData.length > 0
+    ? eurosData[eurosData.length - 1].month
+    : null
 
   return (
     <Card>
@@ -162,14 +203,36 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
             <XAxis dataKey="month" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit={unit} />
             <Tooltip
-              formatter={(value: number, name: string) => [
-                `${value.toFixed(2)}${unit}`,
-                name,
-              ]}
+              formatter={(value: number, name: string) => {
+                const label = name === 'CarburantProj'
+                  ? 'Carburant (prév.)'
+                  : name === 'MaintenanceProj'
+                  ? 'Maintenance (prév.)'
+                  : name
+                return [`${value.toFixed(2)}${unit}`, label]
+              }}
             />
-            <Legend />
+            <Legend
+              formatter={(value) =>
+                value === 'CarburantProj'
+                  ? 'Carburant (prév.)'
+                  : value === 'MaintenanceProj'
+                  ? 'Maintenance (prév.)'
+                  : value
+              }
+            />
+            {lastRealMonth && (
+              <ReferenceLine
+                x={lastRealMonth}
+                stroke="hsl(0, 0%, 65%)"
+                strokeDasharray="3 3"
+                label={{ value: 'prévision ▸', position: 'insideTopRight', fontSize: 10, fill: 'hsl(0, 0%, 55%)' }}
+              />
+            )}
             <Bar dataKey="Carburant" stackId="a" fill="hsl(217, 91%, 60%)" radius={[0, 0, 0, 0]} />
             <Bar dataKey="Maintenance" stackId="a" fill="hsl(25, 95%, 53%)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="CarburantProj" stackId="a" fill="hsl(217, 91%, 60%)" fillOpacity={0.35} radius={[0, 0, 0, 0]} />
+            <Bar dataKey="MaintenanceProj" stackId="a" fill="hsl(25, 95%, 53%)" fillOpacity={0.35} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
