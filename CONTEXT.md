@@ -1,7 +1,7 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-03-26
+Last updated: 2026-03-30
 
 ---
 
@@ -133,14 +133,23 @@ When making schema changes:
 - In FuelAddDialog/FuelEditDialog: after GPS capture, shows clickable list → auto-fills form
 
 ### Charts (in graphs popup)
-- Consumption history (L/100km over time)
-- Fuel price evolution
-- Monthly cost breakdown (stacked: fuel + maintenance)
-- Distance per month + projected annual km
-- Odometer progression
-- Cost per km over time
-- Stations map (Leaflet, clusters past fill GPS points)
-- FlexFuel rentability (for converted vehicles)
+- **ConsumptionChart**: L/100km per fill-up over time (line). Backend computes with partial-fill accumulation.
+- **PriceChart**: €/L per fill-up over time (line) with average reference line.
+- **MonthlyCostChart**: stacked bars fuel + maintenance per month. Toggle: €/mois ↔ €/100km. Both modes show 3-month projection as faded bars (avg of last 3 months).
+- **DistanceChart**: km per month (bar) + projected annual km badge.
+- **InsuranceKmChart**: absolute odometer progression vs insurance km limit (line). Reference line at `insurance_km_limit + years_elapsed × annual_increase`. Dotted projection forward at current monthly rate. Badge uses backend `insurance_km_remaining` (authoritative). Only renders if `vehicle.insurance_km_limit` is set. Uses **allEntries** (never filtered) for correct base odometer.
+- **StationsMap**: clusters GPS fill points within 100m radius, Leaflet map.
+- **FlexfuelRentabilityChart**: cumulative savings line vs kit cost reference line. If break-even not reached: dotted projection line extending at `monthly_average_savings` rate until kit cost is hit. Badge shows projected break-even month. Monthly savings bar chart.
+
+#### Insurance km calculation (mirrors backend exactly)
+```
+current_limit = insurance_km_limit + floor(years_since_start_date) × annual_increase
+insurance_km_remaining = current_limit − last_odometer_reading
+```
+The limit is a **cumulative total odometer threshold**, not a per-year quota reset each year.
+
+#### Monthly cost projection method
+Average of last min(3, N) real months → append 3 future months with same avg, rendered as `fillOpacity=0.35` bars. ReferenceLine marks the boundary between real and projected data.
 
 ### PWA / Offline
 - Service worker: network-first for API, cache-first for assets and map tiles
@@ -203,6 +212,25 @@ When making schema changes:
 - **No rate limiting**: acceptable for single-user homelab
 - **Offline queue stored in localStorage**: acceptable since only user is the owner
 - **CSP/HSTS headers**: handle at reverse proxy level (Nginx/Traefik), not in app
+
+---
+
+## Session log — 2026-03-30
+
+### Graph deduplication & new charts
+- Merged `CostPerKmChart` into `MonthlyCostChart` (toggle €/mois ↔ €/100km). Deleted the old component.
+- Deleted `OdometerChart` (duplicate of `DistanceChart`).
+- Added 3-month projection to both modes of `MonthlyCostChart` (faded bars + ReferenceLine).
+- Added dotted break-even projection line to `FlexfuelRentabilityChart` when kit not yet amortised. Badge shows projected month.
+- Created `InsuranceKmChart`: absolute odometer vs insurance limit, dotted forward projection. Uses `allEntries` (unfiltered) + `useVehicleStats` for authoritative remaining km.
+
+### API key & resilience (session prior)
+- `frontend-react/src/lib/api.ts`: added `getHeaders()` injecting `X-API-Key` from `VITE_API_KEY`.
+- `frontend/js/config.js`: added `API_KEY`, `getHeaders()`, `fetchApi()` wrapper; all vanilla JS fetch calls updated.
+- `/health` endpoint now probes DB with `SELECT 1`.
+- `run.py`: `timeout_graceful_shutdown=5` added to Uvicorn.
+- Docker healthcheck added to backend service in both compose files.
+- Station map cluster radius: 50m → 100m.
 
 ---
 

@@ -133,8 +133,8 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <PriceChart entries={filteredEntries} />
           <MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} />
           <DistanceChart entries={filteredEntries} />
-          {vehicle && (
-            <InsuranceKmChart vehicle={vehicle} entries={filteredEntries} />
+          {vehicle && allEntries && (
+            <InsuranceKmChart vehicle={vehicle} entries={allEntries} />
           )}
           <StationsMap entries={filteredEntries} />
 

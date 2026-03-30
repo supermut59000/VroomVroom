@@ -11,125 +11,114 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useVehicleStats } from '@/hooks/use-vehicles'
 import type { FuelEntry, Vehicle } from '@/types'
 
 interface InsuranceKmChartProps {
   vehicle: Vehicle
-  entries: FuelEntry[]
+  entries: FuelEntry[]   // must be allEntries (unfiltered)
 }
 
 type ChartPoint = {
   month: string
-  monthKey: string
-  kmActual?: number
-  kmProj?: number
+  odomActual?: number
+  odomProj?: number
 }
 
 export function InsuranceKmChart({ vehicle, entries }: InsuranceKmChartProps) {
+  // Use backend-computed values as authoritative source
+  const { data: stats } = useVehicleStats(vehicle.id)
+
   const result = useMemo(() => {
-    const limit = vehicle.insurance_km_limit
-    if (!limit || entries.length === 0) return null
+    if (!vehicle.insurance_km_limit || entries.length === 0) return null
 
-    const now = new Date()
+    const limit = stats?.current_insurance_km_limit ?? vehicle.insurance_km_limit
+    const remaining = stats?.insurance_km_remaining ?? null
+    const isExceeded = stats?.insurance_km_exceeded ?? false
 
-    // Determine the start of the current insurance year
-    let start: Date
-    if (vehicle.insurance_km_start_date) {
-      start = new Date(vehicle.insurance_km_start_date)
-      // Advance year-by-year until we're in the current running year
-      while (new Date(start.getFullYear() + 1, start.getMonth(), start.getDate()) <= now) {
-        start = new Date(start.getFullYear() + 1, start.getMonth(), start.getDate())
-      }
-    } else {
-      start = new Date(now.getFullYear(), 0, 1)
-    }
-
-    const yearEnd = new Date(start.getFullYear() + 1, start.getMonth(), start.getDate())
-    const startStr = start.toISOString().split('T')[0]
-
-    // Base odometer: last entry before start date, or vehicle initial_odometer
-    const entriesBefore = entries
-      .filter((e) => e.fueling_date < startStr)
-      .sort((a, b) => b.fueling_date.localeCompare(a.fueling_date))
-    const baseOdometer =
-      entriesBefore.length > 0 ? entriesBefore[0].odometer_reading : vehicle.initial_odometer
-
-    // Entries in the current insurance year
-    const yearEntries = entries.filter((e) => e.fueling_date >= startStr)
-
-    if (yearEntries.length === 0) return null
-
-    // Max odometer per month
+    // Group entries by month, max odometer per month
     const monthMap = new Map<string, number>()
-    for (const e of yearEntries) {
+    for (const e of entries) {
       const key = e.fueling_date.slice(0, 7)
       monthMap.set(key, Math.max(monthMap.get(key) ?? 0, e.odometer_reading))
     }
 
     const sortedMonths = Array.from(monthMap.entries()).sort(([a], [b]) => a.localeCompare(b))
+    if (sortedMonths.length === 0) return null
 
     const actualPoints: ChartPoint[] = sortedMonths.map(([key, odometer]) => {
       const [y, m] = key.split('-').map(Number)
       return {
         month: new Date(y, m - 1).toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
-        monthKey: key,
-        kmActual: Math.max(0, odometer - baseOdometer),
+        odomActual: odometer,
       }
     })
 
-    if (actualPoints.length === 0) return null
+    const lastOdometer = sortedMonths[sortedMonths.length - 1][1]
 
-    const currentKm = actualPoints[actualPoints.length - 1].kmActual!
-    const monthsWithData = actualPoints.length
-    const avgMonthlyKm = currentKm / monthsWithData
+    // Average km/month from last 3 months (consecutive diffs)
+    const diffs: number[] = []
+    for (let i = Math.max(1, sortedMonths.length - 3); i < sortedMonths.length; i++) {
+      const diff = sortedMonths[i][1] - sortedMonths[i - 1][1]
+      if (diff > 0) diffs.push(diff)
+    }
+    const avgMonthlyKm = diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0
 
-    // Total months in insurance year
-    const totalMonths = Math.round(
-      (yearEnd.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30.44),
-    )
-    const monthsRemaining = Math.max(0, totalMonths - monthsWithData)
-    const projectedTotal = Math.round(currentKm + avgMonthlyKm * monthsRemaining)
-
-    // Build projected points
-    const lastKey = actualPoints[actualPoints.length - 1].monthKey
+    // Project forward until odometer reaches limit (cap at 36 months)
+    const projectedPoints: ChartPoint[] = []
+    const lastKey = sortedMonths[sortedMonths.length - 1][0]
     const [ly, lm] = lastKey.split('-').map(Number)
 
-    const projectedPoints: ChartPoint[] = Array.from({ length: monthsRemaining }, (_, i) => {
-      const date = new Date(ly, lm - 1 + i + 1, 1)
-      return {
-        month: date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
-        monthKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
-        kmProj: Math.round(currentKm + avgMonthlyKm * (i + 1)),
+    if (avgMonthlyKm > 0 && lastOdometer < limit) {
+      for (let i = 1; i <= 36; i++) {
+        const proj = Math.round(lastOdometer + i * avgMonthlyKm)
+        const date = new Date(ly, lm - 1 + i, 1)
+        projectedPoints.push({
+          month: date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+          odomProj: proj,
+        })
+        if (proj >= limit) break
       }
-    })
-
-    // Bridge: last actual point also carries kmProj so the two lines connect
-    if (projectedPoints.length > 0) {
-      actualPoints[actualPoints.length - 1].kmProj = currentKm
     }
 
-    const remaining = limit - currentKm
-    const isExceeded = remaining < 0
-    const isClose = remaining >= 0 && remaining < limit * 0.1
+    // Bridge: last actual point also carries odomProj so the two lines connect
+    if (projectedPoints.length > 0) {
+      actualPoints[actualPoints.length - 1].odomProj = lastOdometer
+    }
+
+    // Projected months until limit
+    const monthsUntilLimit =
+      avgMonthlyKm > 0 && remaining != null && remaining > 0
+        ? Math.ceil(remaining / avgMonthlyKm)
+        : null
+
+    // Y-axis domain: don't start at 0, frame around the interesting range
+    const allOdom = [
+      ...actualPoints.map((p) => p.odomActual ?? Infinity),
+      ...projectedPoints.map((p) => p.odomProj ?? -Infinity),
+      limit,
+    ]
+    const minOdom = Math.min(...allOdom.filter((v) => v !== Infinity && v !== -Infinity))
+    const maxOdom = Math.max(...allOdom.filter((v) => v !== -Infinity && v !== Infinity))
+    const padding = Math.max(1000, (maxOdom - minOdom) * 0.1)
+    const yMin = Math.floor((minOdom - padding) / 1000) * 1000
+    const yMax = Math.ceil((maxOdom + padding) / 1000) * 1000
 
     return {
       chartData: [...actualPoints, ...projectedPoints],
       limit,
-      currentKm,
       remaining,
-      projectedTotal,
       isExceeded,
-      isClose,
-      startYear: start.getFullYear(),
+      isClose: remaining != null && remaining >= 0 && remaining < limit * 0.1,
+      monthsUntilLimit,
+      yMin,
+      yMax,
     }
-  }, [vehicle, entries])
+  }, [vehicle, entries, stats])
 
   if (!result) return null
 
-  const { chartData, limit, remaining, projectedTotal, isExceeded, isClose } = result
-
-  // Y-axis ceiling: slightly above limit or projected total whichever is higher
-  const yMax = Math.ceil(Math.max(limit, projectedTotal) * 1.08 / 1000) * 1000
+  const { chartData, limit, remaining, isExceeded, isClose, monthsUntilLimit, yMin, yMax } = result
 
   return (
     <Card>
@@ -138,32 +127,26 @@ export function InsuranceKmChart({ vehicle, entries }: InsuranceKmChartProps) {
           <div>
             <CardTitle className="text-base">Kilométrage assurance</CardTitle>
             <p className="text-sm font-normal text-muted-foreground">
-              Limite : {limit.toLocaleString('fr-FR')} km/an
+              Limite : {Math.round(limit).toLocaleString('fr-FR')} km
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {isExceeded ? (
               <Badge className="border-0 bg-red-100 text-red-700">
-                Dépassé de {Math.abs(remaining).toLocaleString('fr-FR')} km
+                Dépassé de {Math.abs(Math.round(remaining!)).toLocaleString('fr-FR')} km
               </Badge>
             ) : isClose ? (
               <Badge className="border-0 bg-orange-100 text-orange-700">
-                {remaining.toLocaleString('fr-FR')} km restants
+                {Math.round(remaining!).toLocaleString('fr-FR')} km restants
               </Badge>
-            ) : (
+            ) : remaining != null ? (
               <Badge variant="outline">
-                {remaining.toLocaleString('fr-FR')} km restants
+                {Math.round(remaining).toLocaleString('fr-FR')} km restants
               </Badge>
-            )}
-            {projectedTotal > 0 && (
-              <Badge
-                className={
-                  projectedTotal > limit
-                    ? 'border-0 bg-red-100 text-red-700'
-                    : 'border-0 bg-muted text-muted-foreground'
-                }
-              >
-                Proj. fin d'année : {projectedTotal.toLocaleString('fr-FR')} km
+            ) : null}
+            {monthsUntilLimit != null && !isExceeded && (
+              <Badge className="border-0 bg-muted text-muted-foreground">
+                Limite dans ~{monthsUntilLimit} mois
               </Badge>
             )}
           </div>
@@ -177,13 +160,13 @@ export function InsuranceKmChart({ vehicle, entries }: InsuranceKmChartProps) {
             <YAxis
               tick={{ fontSize: 11 }}
               unit=" km"
-              domain={[0, yMax]}
+              domain={[yMin, yMax]}
               tickFormatter={(v) => v.toLocaleString('fr-FR')}
             />
             <Tooltip
               formatter={(value: number, name: string) => [
                 `${Math.round(value).toLocaleString('fr-FR')} km`,
-                name === 'kmActual' ? 'Km parcourus' : 'Projection',
+                name === 'odomActual' ? 'Compteur' : 'Projection',
               ]}
             />
             <ReferenceLine
@@ -191,7 +174,7 @@ export function InsuranceKmChart({ vehicle, entries }: InsuranceKmChartProps) {
               stroke="hsl(0, 72%, 51%)"
               strokeDasharray="5 5"
               label={{
-                value: `Limite ${limit.toLocaleString('fr-FR')} km`,
+                value: `Limite ${Math.round(limit).toLocaleString('fr-FR')} km`,
                 position: 'insideTopRight',
                 fontSize: 10,
                 fill: 'hsl(0, 72%, 51%)',
@@ -199,22 +182,22 @@ export function InsuranceKmChart({ vehicle, entries }: InsuranceKmChartProps) {
             />
             <Line
               type="monotone"
-              dataKey="kmActual"
+              dataKey="odomActual"
               stroke="hsl(217, 91%, 60%)"
               strokeWidth={2.5}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
-              name="kmActual"
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
+              name="odomActual"
               connectNulls={false}
             />
             <Line
               type="monotone"
-              dataKey="kmProj"
+              dataKey="odomProj"
               stroke="hsl(217, 91%, 60%)"
               strokeWidth={2}
               strokeDasharray="6 4"
               dot={false}
-              name="kmProj"
+              name="odomProj"
               connectNulls={false}
             />
           </LineChart>
