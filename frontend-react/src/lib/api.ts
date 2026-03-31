@@ -16,6 +16,8 @@ function getApiUrl(): string {
 
 export const API_URL = getApiUrl()
 
+const REQUEST_TIMEOUT_MS = 15_000
+
 function getHeaders(withBody = false): Record<string, string> {
   const headers: Record<string, string> = {}
   if (withBody) headers['Content-Type'] = 'application/json'
@@ -49,13 +51,24 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json()
 }
 
+function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+  return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+    clearTimeout(timeoutId),
+  )
+}
+
 export const api = {
   get<T>(path: string): Promise<T> {
-    return fetch(`${API_URL}${path}`, { headers: getHeaders() }).then((r) => handleResponse<T>(r))
+    return fetchWithTimeout(`${API_URL}${path}`, { headers: getHeaders() }).then((r) =>
+      handleResponse<T>(r),
+    )
   },
 
   post<T>(path: string, body: unknown): Promise<T> {
-    return fetch(`${API_URL}${path}`, {
+    return fetchWithTimeout(`${API_URL}${path}`, {
       method: 'POST',
       headers: getHeaders(true),
       body: JSON.stringify(body),
@@ -63,7 +76,7 @@ export const api = {
   },
 
   put<T>(path: string, body: unknown): Promise<T> {
-    return fetch(`${API_URL}${path}`, {
+    return fetchWithTimeout(`${API_URL}${path}`, {
       method: 'PUT',
       headers: getHeaders(true),
       body: JSON.stringify(body),
@@ -71,7 +84,7 @@ export const api = {
   },
 
   delete<T = void>(path: string): Promise<T> {
-    return fetch(`${API_URL}${path}`, {
+    return fetchWithTimeout(`${API_URL}${path}`, {
       method: 'DELETE',
       headers: getHeaders(),
     }).then((r) => handleResponse<T>(r))

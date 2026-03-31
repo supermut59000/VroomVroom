@@ -20,9 +20,16 @@ class FlexfuelService:
     def __init__(self, db: Session):
         self.db = db
 
+    def _assert_vehicle_exists(self, vehicle_id: int) -> None:
+        from app.models.vehicle import Vehicle
+        if not self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first():
+            raise ValueError(f"Véhicule avec l'id {vehicle_id} introuvable")
+
     # ---- Conversion CRUD ----
 
     def create_conversion(self, data: FlexfuelConversionCreate) -> FlexfuelConversion:
+        self._assert_vehicle_exists(data.vehicle_id)
+
         conversion = FlexfuelConversion(
             vehicle_id=data.vehicle_id,
             conversion_date=data.conversion_date,
@@ -136,10 +143,12 @@ class FlexfuelService:
         data_points = []
         monthly_map = defaultdict(float)
         break_even_date = None
+        skipped_fills_no_e10_price = 0
 
         for entry in e85_entries:
             e10_ref_price = self.get_latest_e10_price_at_date(entry.fueling_date)
             if e10_ref_price is None:
+                skipped_fills_no_e10_price += 1
                 continue  # Skip fills with no E10 reference price
 
             equivalent_e10_liters = entry.liters / overconsumption_factor
@@ -185,6 +194,7 @@ class FlexfuelService:
             "break_even_reached": cumulative_savings >= conversion.kit_cost,
             "break_even_date": break_even_date,
             "monthly_average_savings": monthly_avg,
+            "skipped_fills_no_e10_price": skipped_fills_no_e10_price,
             "data_points": data_points,
             "monthly_savings": monthly_savings,
         }

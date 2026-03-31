@@ -4,12 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-VroomVroom is a **vehicle management web application** for tracking vehicles, fuel consumption, mileage, and maintenance in a homelab environment. It's a full-stack application with FastAPI backend and Vanilla JavaScript frontend.
+VroomVroom is a **vehicle management web application** for tracking vehicles, fuel consumption, mileage, and maintenance in a homelab environment. Full-stack: FastAPI backend + React 19 frontend, designed as a mobile-friendly PWA.
 
 **Tech Stack:**
-- Backend: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic 2.x, MariaDB/MySQL
-- Frontend: Vanilla JavaScript (ES6 modules), Chart.js, pure CSS
+- Backend: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic 2.x, MariaDB/MySQL, Alembic (migrations)
+- Frontend: React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, TanStack React Query, Recharts
 - Infrastructure: Docker Compose, Uvicorn ASGI server
+- Tests: pytest + httpx (SQLite in-memory, 45 tests)
 
 ## Quick Start
 
@@ -47,6 +48,24 @@ python run.py  # Starts on port 8000
 cd frontend
 python3 -m http.server 3000
 ```
+
+## Database Migrations (Alembic)
+
+```bash
+# Apply all pending migrations
+cd backend && .venv/bin/alembic upgrade head
+
+# Generate a new migration after changing a model
+cd backend && .venv/bin/alembic revision --autogenerate -m "describe change"
+
+# Check current revision
+cd backend && .venv/bin/alembic current
+```
+
+**Notes:**
+- `alembic/env.py` reads `settings.database_url` automatically — no credentials in `alembic.ini`
+- `compare_type=False` is set to avoid false-positive column-type diffs on custom SQLEnum columns
+- The first migration (`4eba94125b27_init`) establishes Alembic tracking on the existing schema
 
 ## Architecture Overview
 
@@ -165,7 +184,9 @@ CREATE TABLE fuel_entries (
 | PUT | `/{vehicle_id}` | Update vehicle |
 | DELETE | `/{vehicle_id}` | Soft delete (or force delete with `?force=true`) |
 | GET | `/{vehicle_id}/stats` | Get statistics (consumption, costs, distance) |
+| GET | `/{vehicle_id}/timeline` | Unified chronological feed: fuel + maintenance merged |
 | POST | `/{vehicle_id}/archive` | Archive vehicle (set is_active=False) |
+| GET | `/stats/batch` | All active vehicles' stats in one call (avoids N+1) |
 
 ### Fuel Entries (`/api/v1/fuel-entries`)
 
@@ -236,43 +257,37 @@ def create_fuel_entry(self, fuel_entry_data: FuelEntryCreate):
 
 ### Frontend Patterns
 
-**1. Module-Based Architecture**
-```javascript
-// Each feature is an ES6 class
-export default class VehicleCard {
-    constructor(dashboard) {
-        this.dashboard = dashboard;
-        this.API_URL = API_URL;
-    }
-}
+**1. API layer with timeout** — all requests go through `src/lib/api.ts`
+```typescript
+// 15-second AbortController timeout on every fetch
+import { api } from '@/lib/api'
+const vehicles = await api.get<VehicleList[]>('/vehicles/')
 ```
 
-**2. Environment Detection**
-```javascript
-// config.js automatically detects environment
-const hostname = window.location.hostname;
-export const API_URL = hostname === 'localhost'
-    ? 'http://localhost:8055/api/v1'
-    : 'https://carmanagementapi.home.ouiouibaguette.fr/api/v1';
+**2. Data fetching** — TanStack React Query hooks in `src/hooks/`
+```typescript
+// Batch stats avoids N+1: useAllVehicleStats() fetches once,
+// useVehicleStats(id) uses initialData from the batch result
+const { data: stats } = useVehicleStats(vehicle.id)
 ```
 
-**3. Popup/Modal Pattern**
-```javascript
-// All forms use overlay-based popups
-showPopup() {
-    this.overlay.style.display = 'flex';
-    this.overlay.addEventListener('click', this.handleOverlayClick);
-    document.addEventListener('keydown', this.handleEscapeKey);
-}
+**3. Error boundaries** — `src/components/ErrorBoundary.tsx`
+```typescript
+// Wraps Dashboard in App.tsx, and each chart in FuelCharts.tsx
+<ErrorBoundary><ConsumptionChart ... /></ErrorBoundary>
 ```
 
-**4. Event Delegation in Dashboard**
-```javascript
-// Central event handling from Dashboard.js
-renderVehicles() {
-    // Renders all vehicles
-    // Dashboard handles button clicks via data-vehicle-id
-}
+**4. Centralised strings** — `src/lib/i18n.ts`
+```typescript
+import { t } from '@/lib/i18n'
+toast.success(t.fuel.addSuccess)
+<p>{t.vehicle.stats.totalDistance}</p>
+```
+
+**5. Theme-aware colors** — use CSS custom properties, not hardcoded HSL
+```typescript
+// Defined in index.css :root and .dark blocks
+const COLORS = { fuel: 'var(--color-chart-fuel)' }
 ```
 
 ## Important Calculations

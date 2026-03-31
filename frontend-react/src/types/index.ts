@@ -299,6 +299,7 @@ export interface FlexfuelRentabilitySummary {
   break_even_reached: boolean
   break_even_date: string | null
   monthly_average_savings: number | null
+  skipped_fills_no_e10_price: number
   data_points: FlexfuelSavingsDataPoint[]
   monthly_savings: FlexfuelMonthlySavings[]
 }

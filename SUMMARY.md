@@ -1,6 +1,6 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-03-24 (session 3)
+Last updated: 2026-03-31 (session 4)
 
 ---
 
@@ -333,6 +333,36 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 - E10 equivalent cost = equivalent E10 liters × latest E10 reference price at fill date
 - Savings per fill = E10 equivalent cost - actual E85 cost
 - Break-even = when cumulative savings >= kit cost
+
+---
+
+## What Was Done (Session of 2026-03-31)
+
+### Backend — Bug fixes & hardening
+
+- **`models/__init__.py`**: added missing `FuelEntry` and `Maintenance` exports to `__all__`
+- **Type consistency**: fixed `vehicle_id: Optional[str]` → `Optional[int]` in `FuelService` (3 methods) and `MaintenanceService` (4 methods)
+- **`per_page` cap**: reduced max from 10 000 to 500 on fuel entry list endpoints
+- **DB indexes**: added `index=True` on `FuelEntry.fueling_date` and `Maintenance.maintenance_date`
+- **Vehicle existence guard**: `_assert_vehicle_exists()` added to `FuelService`, `MaintenanceService`, and `FlexfuelService` — raises a clean 404 instead of a DB FK error
+- **Odometer monotonicity**: `FuelService.create_fuel_entry` now raises `ValueError` if the new odometer reading is lower than the previous entry
+- **FlexFuel skipped fills**: `calculate_rentability()` now counts and returns `skipped_fills_no_e10_price` in the response (fills where no E10 reference price existed at that date were silently ignored before)
+- **Bare `404` literals**: standardised all `raise HTTPException(status_code=404, ...)` in `flexfuel.py` to use `status.HTTP_404_NOT_FOUND`
+- **New endpoint `GET /vehicles/{id}/timeline`**: returns fuel entries + maintenance merged and sorted by date descending — schema `VehicleTimeline` / `VehicleTimelineEvent` added to `schemas/vehicle.py`
+- **Alembic setup**: added Alembic to `requirements.txt`, initialised `backend/alembic/` with `env.py` that reads `settings.database_url`; `compare_type=False` to avoid false positives on custom SQLEnum columns. Run with `cd backend && .venv/bin/alembic upgrade head`
+
+### Frontend — Improvements
+
+- **Removed `react-router-dom`**: was listed in `package.json` but never imported anywhere
+- **API request timeout**: `fetchWithTimeout()` wrapper in `lib/api.ts` adds a 15-second `AbortController` timeout to every `fetch()` call
+- **`aria-label` on icon buttons**: all icon-only buttons in `VehicleCard` footer and the GPS button in `FuelAddDialog` now have accessible labels
+- **`ErrorBoundary` component**: new `src/components/ErrorBoundary.tsx` (class component with "Réessayer" reset button); wraps `<Dashboard>` in `App.tsx` and each individual chart in `FuelCharts.tsx` so a single failing chart can't crash the whole popup
+- **Theme-aware chart colors**: `CostOfOwnershipSection` pie chart colors replaced with CSS custom properties (`--color-chart-purchase/fuel/maintenance`) defined in both `@root` (light) and `.dark` blocks in `index.css`
+- **Fuel type mismatch warning**: `FuelAddDialog` shows an orange alert banner when the selected fuel type differs from the vehicle's registered type (does not block submission)
+- **VehicleCard skeleton**: stats area shows 4 `<Skeleton>` shimmer lines while `useVehicleStats` is loading, replacing a blank card content
+- **PWA manifest icon sizes**: added 96 × 96, 128 × 128, and 256 × 256 entries (PNG files at `public/icons/icon-{96,128,256}.png` need to be generated separately)
+- **Centralised i18n strings**: new `src/lib/i18n.ts` exports a typed `t` object with all French user-facing strings grouped by domain (`vehicle`, `fuel`, `fuelType`, `maintenance`, `charts`, `flexfuel`, `stations`, `errors`, `offline`). Components can import and use instead of hardcoded string literals.
+- **`FlexfuelRentabilitySummary` type**: added `skipped_fills_no_e10_price: number` to match the new backend field
 
 ---
 

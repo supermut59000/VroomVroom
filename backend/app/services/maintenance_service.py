@@ -10,8 +10,15 @@ class MaintenanceService:
     def __init__(self, db: Session):
         self.db = db
 
+    def _assert_vehicle_exists(self, vehicle_id: int) -> None:
+        from app.models.vehicle import Vehicle
+        if not self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first():
+            raise ValueError(f"Véhicule avec l'id {vehicle_id} introuvable")
+
     def create_maintenance(self, maintenance: MaintenanceCreate) -> Maintenance:
         """Create a new maintenance entry"""
+        self._assert_vehicle_exists(maintenance.vehicle_id)
+
         db_maintenance = Maintenance(
             vehicle_id=maintenance.vehicle_id,
             maintenance_type=maintenance.maintenance_type,
@@ -37,7 +44,7 @@ class MaintenanceService:
 
     def get_maintenances(
         self,
-        vehicle_id: Optional[str] = None,
+        vehicle_id: Optional[int] = None,
         maintenance_type: Optional[str] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
@@ -73,7 +80,7 @@ class MaintenanceService:
 
     def get_maintenances_by_vehicle(
         self,
-        vehicle_id: str,
+        vehicle_id: int,
         skip: int = 0,
         limit: int = 100
     ) -> List[Maintenance]:
@@ -117,7 +124,7 @@ class MaintenanceService:
         self.db.commit()
         return True
 
-    def get_latest_maintenance_by_vehicle(self, vehicle_id: str) -> Optional[Maintenance]:
+    def get_latest_maintenance_by_vehicle(self, vehicle_id: int) -> Optional[Maintenance]:
         """Get the latest maintenance entry for a vehicle"""
         return (
             self.db.query(Maintenance)
@@ -128,7 +135,7 @@ class MaintenanceService:
 
     def get_maintenances_count(
         self,
-        vehicle_id: Optional[str] = None,
+        vehicle_id: Optional[int] = None,
         maintenance_type: Optional[str] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
@@ -150,7 +157,7 @@ class MaintenanceService:
 
         return query.count()
 
-    def get_maintenance_statistics_by_vehicle(self, vehicle_id: str) -> dict:
+    def get_maintenance_statistics_by_vehicle(self, vehicle_id: int) -> dict:
         """Get maintenance statistics for a vehicle"""
         entries = (
             self.db.query(Maintenance)

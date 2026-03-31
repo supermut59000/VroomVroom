@@ -5,8 +5,9 @@ from datetime import datetime, date
 
 from app.models.vehicle import Vehicle
 from app.models.fuel_entry import FuelEntry
+from app.models.maintenance import Maintenance
 
-from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleStats
+from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleStats, VehicleTimeline, VehicleTimelineEvent
 from app.core.enums import FuelType
 from app.services.fuel_service import FuelService
 
@@ -135,6 +136,61 @@ class VehicleService:
         current_limit = vehicle.insurance_km_limit + (years_elapsed * annual_increase)
 
         return current_limit
+
+    def get_vehicle_timeline(self, vehicle_id: int) -> VehicleTimeline:
+        """Return fuel entries and maintenance entries merged and sorted chronologically."""
+        fuel_entries = (
+            self.db.query(FuelEntry)
+            .filter(FuelEntry.vehicle_id == vehicle_id)
+            .all()
+        )
+        maintenances = (
+            self.db.query(Maintenance)
+            .filter(Maintenance.vehicle_id == vehicle_id)
+            .all()
+        )
+
+        events: list[VehicleTimelineEvent] = []
+
+        for e in fuel_entries:
+            events.append(VehicleTimelineEvent(
+                event_type="fuel",
+                event_date=e.fueling_date,
+                event_id=e.id,
+                odometer_reading=e.odometer_reading,
+                data={
+                    "fuel_type": e.fuel_type.value if e.fuel_type else None,
+                    "liters": e.liters,
+                    "price_per_liter": e.price_per_liter,
+                    "total_cost": e.total_cost,
+                    "station_name": e.station_name,
+                    "location": e.location,
+                    "is_full_tank": e.is_full_tank,
+                    "notes": e.notes,
+                },
+            ))
+
+        for m in maintenances:
+            events.append(VehicleTimelineEvent(
+                event_type="maintenance",
+                event_date=m.maintenance_date,
+                event_id=m.id,
+                odometer_reading=m.odometer_reading,
+                data={
+                    "maintenance_type": m.maintenance_type,
+                    "description": m.description,
+                    "cost": m.cost,
+                    "service_provider": m.service_provider,
+                    "location": m.location,
+                    "next_maintenance_date": m.next_maintenance_date.isoformat() if m.next_maintenance_date else None,
+                    "next_maintenance_odometer": m.next_maintenance_odometer,
+                    "notes": m.notes,
+                },
+            ))
+
+        events.sort(key=lambda ev: (ev.event_date, ev.odometer_reading), reverse=True)
+
+        return VehicleTimeline(vehicle_id=vehicle_id, events=events)
 
     def get_vehicle_stats(self, vehicle_id: int) -> VehicleStats:
         """

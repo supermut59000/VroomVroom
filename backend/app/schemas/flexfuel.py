@@ -92,5 +92,9 @@ class FlexfuelRentabilitySummary(BaseModel):
     break_even_reached: bool
     break_even_date: Optional[date] = None
     monthly_average_savings: Optional[float] = None
+    skipped_fills_no_e10_price: int = Field(
+        default=0,
+        description="Number of E85 fills skipped because no E10 reference price was available on that date",
+    )
     data_points: List[FlexfuelSavingsDataPoint]
     monthly_savings: List[FlexfuelMonthlySavings]

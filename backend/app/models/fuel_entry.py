@@ -31,7 +31,7 @@ class FuelEntry(Base):
     longitude = Column(Float, nullable=True)
 
     # Date and notes
-    fueling_date = Column(Date, nullable=False, default=date.today)
+    fueling_date = Column(Date, nullable=False, default=date.today, index=True)
     is_full_tank = Column(Boolean, nullable=False, default=True)
     notes = Column(Text, nullable=True)
 

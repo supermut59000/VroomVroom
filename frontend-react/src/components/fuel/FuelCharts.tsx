@@ -21,6 +21,7 @@ import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilit
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
 import { InsuranceKmChart } from '@/components/charts/InsuranceKmChart'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 interface FuelChartsProps {
   vehicleId: number
@@ -129,20 +130,20 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
         <Separator />
 
         <div className="space-y-6">
-          <ConsumptionChart dataPoints={filteredConsumptionData} />
-          <PriceChart entries={filteredEntries} />
-          <MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} />
-          <DistanceChart entries={filteredEntries} />
+          <ErrorBoundary><ConsumptionChart dataPoints={filteredConsumptionData} /></ErrorBoundary>
+          <ErrorBoundary><PriceChart entries={filteredEntries} /></ErrorBoundary>
+          <ErrorBoundary><MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} /></ErrorBoundary>
+          <ErrorBoundary><DistanceChart entries={filteredEntries} /></ErrorBoundary>
           {vehicle && allEntries && (
-            <InsuranceKmChart vehicle={vehicle} entries={allEntries} />
+            <ErrorBoundary><InsuranceKmChart vehicle={vehicle} entries={allEntries} /></ErrorBoundary>
           )}
-          <StationsMap entries={filteredEntries} />
+          <ErrorBoundary><StationsMap entries={filteredEntries} /></ErrorBoundary>
 
           {/* FlexFuel E85 Rentability */}
           {rentability && (
             <>
               <Separator />
-              <FlexfuelRentabilityChart data={rentability} />
+              <ErrorBoundary><FlexfuelRentabilityChart data={rentability} /></ErrorBoundary>
             </>
           )}
         </div>

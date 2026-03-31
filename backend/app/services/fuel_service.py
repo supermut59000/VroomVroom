@@ -11,8 +11,23 @@ class FuelService:
     def __init__(self, db: Session):
         self.db = db
 
+    def _assert_vehicle_exists(self, vehicle_id: int) -> None:
+        from app.models.vehicle import Vehicle
+        if not self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first():
+            raise ValueError(f"Véhicule avec l'id {vehicle_id} introuvable")
+
     def create_fuel_entry(self, fuel_entry: FuelEntryCreate) -> FuelEntry:
         """Create a new fuel entry"""
+        self._assert_vehicle_exists(fuel_entry.vehicle_id)
+
+        # Validate odometer monotonicity
+        latest = self.get_latest_fuel_entry_by_vehicle(fuel_entry.vehicle_id)
+        if latest and fuel_entry.odometer_reading < latest.odometer_reading:
+            raise ValueError(
+                f"Le compteur kilométrique ({fuel_entry.odometer_reading} km) est inférieur "
+                f"au dernier relevé ({latest.odometer_reading} km)"
+            )
+
         # Calculate total cost
         total_cost = fuel_entry.liters * fuel_entry.price_per_liter
 
@@ -43,7 +58,7 @@ class FuelService:
 
     def get_fuel_entries(
         self,
-        vehicle_id: Optional[str] = None,
+        vehicle_id: Optional[int] = None,
         fuel_type: Optional[FuelType] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
@@ -129,7 +144,7 @@ class FuelService:
         self.db.commit()
         return True
 
-    def get_distinct_station_names(self, vehicle_id: Optional[str] = None) -> List[str]:
+    def get_distinct_station_names(self, vehicle_id: Optional[int] = None) -> List[str]:
         """Get distinct station names, optionally filtered by vehicle"""
         query = self.db.query(FuelEntry.station_name).filter(FuelEntry.station_name.isnot(None))
         if vehicle_id:
@@ -168,7 +183,7 @@ class FuelService:
 
     def get_fuel_entries_count(
         self,
-        vehicle_id: Optional[str] = None,
+        vehicle_id: Optional[int] = None,
         fuel_type: Optional[FuelType] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,

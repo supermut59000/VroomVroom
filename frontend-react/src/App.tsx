@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { Header } from '@/components/layout/Header'
 import { OfflineBanner } from '@/components/layout/OfflineBanner'
 import { Dashboard } from '@/pages/Dashboard'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +25,9 @@ export default function App() {
           <OfflineBanner />
           <Header />
           <main className="container mx-auto px-4 py-6">
-            <Dashboard />
+            <ErrorBoundary>
+              <Dashboard />
+            </ErrorBoundary>
           </main>
         </div>
         <Toaster richColors position="top-right" />

@@ -107,6 +107,13 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const pricePerLiter = form.watch('price_per_liter')
   const totalCost = liters && pricePerLiter ? (liters * pricePerLiter).toFixed(2) : '0.00'
 
+  const selectedFuelType = form.watch('fuel_type')
+  const fuelTypeMismatch =
+    !isFlexfuel &&
+    vehicle?.fuel_type &&
+    selectedFuelType &&
+    selectedFuelType !== vehicle.fuel_type
+
   const onSubmit = async (data: FormData) => {
     if (!vehicleId) return
 
@@ -194,6 +201,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
               onClick={geo.capture}
               disabled={geo.status === 'loading'}
               title="Capturer ma position GPS"
+              aria-label="Capturer ma position GPS"
             >
               {geo.status === 'loading' ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -248,6 +256,12 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
               </SelectContent>
             </Select>
           </div>
+
+          {fuelTypeMismatch && (
+            <p className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-400">
+              ⚠ Le type sélectionné ({selectedFuelType}) diffère du carburant enregistré du véhicule ({vehicle?.fuel_type}).
+            </p>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">

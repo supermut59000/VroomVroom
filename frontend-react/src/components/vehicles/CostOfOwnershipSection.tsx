@@ -8,10 +8,12 @@ interface CostOfOwnershipSectionProps {
   vehicleId: number
 }
 
+// Use CSS custom properties so colors adapt to light/dark theme automatically.
+// The values reference Tailwind/shadcn CSS vars defined in index.css.
 const COLORS = {
-  purchase: 'hsl(0, 0%, 45%)',
-  fuel: 'hsl(217, 91%, 60%)',
-  maintenance: 'hsl(25, 95%, 53%)',
+  purchase: 'var(--color-chart-purchase, hsl(220 8.9% 46.1%))',
+  fuel: 'var(--color-chart-fuel, hsl(217 91% 60%))',
+  maintenance: 'var(--color-chart-maintenance, hsl(25 95% 53%))',
 }
 
 export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProps) {

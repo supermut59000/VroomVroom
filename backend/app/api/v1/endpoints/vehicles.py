@@ -9,6 +9,7 @@ from app.schemas.vehicle import (
     VehicleResponse,
     VehicleList,
     VehicleStats,
+    VehicleTimeline,
 )
 from app.core.enums import FuelType
 from app.services.vehicle_service import VehicleService
@@ -171,6 +172,25 @@ def get_vehicle_stats(
         )
     
     return vehicle_service.get_vehicle_stats(vehicle_id)
+
+
+@router.get("/{vehicle_id}/timeline", response_model=VehicleTimeline)
+def get_vehicle_timeline(
+    vehicle_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retourne l'historique unifié d'un véhicule (pleins + maintenances) trié par date décroissante.
+    """
+    vehicle_service = VehicleService(db)
+
+    if not vehicle_service.get_vehicle(vehicle_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Véhicule non trouvé"
+        )
+
+    return vehicle_service.get_vehicle_timeline(vehicle_id)
 
 
 @router.post("/{vehicle_id}/archive", response_model=VehicleResponse)

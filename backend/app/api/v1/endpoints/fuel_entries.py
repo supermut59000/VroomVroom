@@ -54,7 +54,7 @@ def get_fuel_entries(
     start_date: Optional[date] = Query(None, description="Filter by start date"),
     end_date: Optional[date] = Query(None, description="Filter by end date"),
     page: int = Query(1, ge=1, description="Page number"),
-    per_page: int = Query(20, ge=1, le=10000, description="Items per page"),
+    per_page: int = Query(20, ge=1, le=500, description="Items per page"),
     order_by: FuelEntryOrderBy = Query(FuelEntryOrderBy.fueling_date, description="Order by field"),
     order: str = Query("desc", regex="^(asc|desc)$", description="Order direction"),
     db: Session = Depends(get_db)
@@ -149,7 +149,7 @@ def get_nearest_station(
     vehicle_id: int = Path(..., description="Vehicle ID"),
     lat: float = Query(..., ge=-90, le=90, description="Current latitude"),
     lon: float = Query(..., ge=-180, le=180, description="Current longitude"),
-    radius_m: float = Query(250, ge=1, le=10000, description="Search radius in metres"),
+    radius_m: float = Query(250, ge=1, le=500, description="Search radius in metres"),
     db: Session = Depends(get_db),
 ):
     """Return station name from the closest past fill within radius_m metres."""
@@ -164,7 +164,7 @@ def get_nearest_station(
 def get_fuel_entries_by_vehicle(
     vehicle_id: int = Path(..., description="Vehicle ID"),
     page: int = Query(1, ge=1, description="Page number"),
-    per_page: int = Query(20, ge=1, le=10000, description="Items per page"),
+    per_page: int = Query(20, ge=1, le=500, description="Items per page"),
     db: Session = Depends(get_db)
 ):
     """Get all fuel entries for a specific vehicle"""

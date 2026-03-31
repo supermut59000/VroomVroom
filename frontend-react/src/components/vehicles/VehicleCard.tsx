@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
@@ -92,7 +93,14 @@ export function VehicleCard({
       </CardHeader>
 
       <CardContent className="flex-1 space-y-3 pb-3">
-        {stats && (
+        {!stats ? (
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+        ) : (
           <>
             {/* Key stats */}
             <div className="grid grid-cols-[3fr_2fr] gap-3">
@@ -206,7 +214,7 @@ export function VehicleCard({
       <CardFooter className="flex justify-center gap-2 border-t pt-3">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onFuelAdd}>
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onFuelAdd} aria-label="Ajouter un plein">
               <Fuel className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
@@ -215,7 +223,7 @@ export function VehicleCard({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onDetails}>
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onDetails} aria-label="Détails et statistiques">
               <BarChart3 className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
@@ -224,7 +232,7 @@ export function VehicleCard({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onFuelView}>
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onFuelView} aria-label="Historique carburant">
               <ClipboardList className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
@@ -233,7 +241,7 @@ export function VehicleCard({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onMaintenanceView}>
+            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onMaintenanceView} aria-label="Voir la maintenance">
               <Wrench className="h-5 w-5" />
             </Button>
           </TooltipTrigger>
@@ -244,7 +252,7 @@ export function VehicleCard({
           <Tooltip>
             <TooltipTrigger asChild>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:text-destructive">
+                <Button variant="ghost" size="icon" className="h-10 w-10 text-destructive hover:text-destructive" aria-label="Supprimer le véhicule">
                   <Trash2 className="h-5 w-5" />
                 </Button>
               </AlertDialogTrigger>

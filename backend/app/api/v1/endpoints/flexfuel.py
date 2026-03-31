@@ -41,7 +41,10 @@ def create_conversion(
             detail="Ce véhicule a déjà une conversion FlexFuel enregistrée",
         )
     data.vehicle_id = vehicle_id
-    return service.create_conversion(data)
+    try:
+        return service.create_conversion(data)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
 
 @router.get(
@@ -53,7 +56,7 @@ def get_conversion(vehicle_id: int, db: Session = Depends(get_db)):
     service = FlexfuelService(db)
     conversion = service.get_conversion(vehicle_id)
     if not conversion:
-        raise HTTPException(status_code=404, detail="Aucune conversion FlexFuel trouvée")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune conversion FlexFuel trouvée")
     return conversion
 
 
@@ -70,7 +73,7 @@ def update_conversion(
     service = FlexfuelService(db)
     conversion = service.update_conversion(vehicle_id, data)
     if not conversion:
-        raise HTTPException(status_code=404, detail="Aucune conversion FlexFuel trouvée")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune conversion FlexFuel trouvée")
     return conversion
 
 
@@ -79,7 +82,7 @@ def delete_conversion(vehicle_id: int, db: Session = Depends(get_db)):
     """Delete FlexFuel conversion."""
     service = FlexfuelService(db)
     if not service.delete_conversion(vehicle_id):
-        raise HTTPException(status_code=404, detail="Aucune conversion FlexFuel trouvée")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune conversion FlexFuel trouvée")
 
 
 # ---- E10 Reference Price endpoints (global, not per-vehicle) ----
@@ -121,7 +124,7 @@ def update_e10_price(
     service = FlexfuelService(db)
     price = service.update_e10_price(price_id, data)
     if not price:
-        raise HTTPException(status_code=404, detail="Prix E10 non trouvé")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prix E10 non trouvé")
     return price
 
 
@@ -130,7 +133,7 @@ def delete_e10_price(price_id: int, db: Session = Depends(get_db)):
     """Delete an E10 reference price."""
     service = FlexfuelService(db)
     if not service.delete_e10_price(price_id):
-        raise HTTPException(status_code=404, detail="Prix E10 non trouvé")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Prix E10 non trouvé")
 
 
 # ---- Rentability endpoint ----
@@ -144,5 +147,5 @@ def get_rentability(vehicle_id: int, db: Session = Depends(get_db)):
     service = FlexfuelService(db)
     result = service.calculate_rentability(vehicle_id)
     if result is None:
-        raise HTTPException(status_code=404, detail="Aucune conversion FlexFuel trouvée")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aucune conversion FlexFuel trouvée")
     return result

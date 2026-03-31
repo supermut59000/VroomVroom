@@ -27,7 +27,7 @@ class Maintenance(Base):
     location = Column(String(100), nullable=True)
 
     # Date and notes
-    maintenance_date = Column(Date, nullable=False, default=date.today)
+    maintenance_date = Column(Date, nullable=False, default=date.today, index=True)
     notes = Column(Text, nullable=True)
 
     # Next maintenance reminder (optional)

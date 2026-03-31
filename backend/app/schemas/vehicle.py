@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Any, Dict, List, Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from app.core.enums import FuelType
@@ -106,3 +106,20 @@ class VehicleStats(BaseModel):
     current_insurance_km_limit: Optional[float] = None
     insurance_km_remaining: Optional[float] = None
     insurance_km_exceeded: bool = False
+
+
+# Schéma pour la timeline unifiée
+class VehicleTimelineEvent(BaseModel):
+    event_type: Literal["fuel", "maintenance"]
+    event_date: date
+    event_id: int
+    odometer_reading: int
+    data: Dict[str, Any]
+
+    class Config:
+        from_attributes = True
+
+
+class VehicleTimeline(BaseModel):
+    vehicle_id: int
+    events: List[VehicleTimelineEvent]
