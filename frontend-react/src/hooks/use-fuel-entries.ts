@@ -23,7 +23,7 @@ export function useAllFuelEntries(vehicleId: number | null) {
   return useQuery({
     queryKey: ['allFuelEntries', vehicleId],
     queryFn: () =>
-      api.get<FuelEntry[]>(`/fuel-entries/vehicle/${vehicleId}?per_page=10000`),
+      api.get<FuelEntry[]>(`/fuel-entries/vehicle/${vehicleId}?per_page=500`),
     enabled: vehicleId !== null,
   })
 }

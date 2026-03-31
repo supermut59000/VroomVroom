@@ -57,7 +57,7 @@ export function useVehicleCostStats(vehicleId: number) {
       yearAgo.setFullYear(yearAgo.getFullYear() - 1)
 
       const [fuelEntries, maintenances] = await Promise.all([
-        api.get<FuelEntry[]>(`/fuel-entries/vehicle/${vehicleId}?per_page=10000`),
+        api.get<FuelEntry[]>(`/fuel-entries/vehicle/${vehicleId}?per_page=500`),
         api.get<Maintenance[]>(`/maintenances/vehicle/${vehicleId}`),
       ])
 
