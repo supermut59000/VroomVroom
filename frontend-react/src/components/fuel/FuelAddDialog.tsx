@@ -108,9 +108,11 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const totalCost = liters && pricePerLiter ? (liters * pricePerLiter).toFixed(2) : '0.00'
 
   const selectedFuelType = form.watch('fuel_type')
+  // Hybrids legitimately fill with essence/diesel, so no warning for them.
   const fuelTypeMismatch =
     !isFlexfuel &&
     vehicle?.fuel_type &&
+    vehicle.fuel_type !== 'hybride' &&
     selectedFuelType &&
     selectedFuelType !== vehicle.fuel_type
 

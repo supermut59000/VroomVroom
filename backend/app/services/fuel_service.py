@@ -20,14 +20,6 @@ class FuelService:
         """Create a new fuel entry"""
         self._assert_vehicle_exists(fuel_entry.vehicle_id)
 
-        # Validate odometer monotonicity
-        latest = self.get_latest_fuel_entry_by_vehicle(fuel_entry.vehicle_id)
-        if latest and fuel_entry.odometer_reading < latest.odometer_reading:
-            raise ValueError(
-                f"Le compteur kilométrique ({fuel_entry.odometer_reading} km) est inférieur "
-                f"au dernier relevé ({latest.odometer_reading} km)"
-            )
-
         # Calculate total cost
         total_cost = fuel_entry.liters * fuel_entry.price_per_liter
 
