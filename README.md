@@ -31,6 +31,21 @@ Personal vehicle management app for tracking fuel, maintenance, and costs. Desig
 - Sorting and filtering on all lists
 - API key authentication (backend)
 
+## External Connections
+
+This app is self-hosted but makes the following outbound requests:
+
+| Service | URL | When | Data sent | Optional |
+|---------|-----|------|-----------|----------|
+| French gov fuel prices | `data.economie.gouv.fr` | User clicks "nearby stations" | GPS coordinates (lat/lon) | Yes — user-triggered |
+| OpenStreetMap tiles | `tile.openstreetmap.org` | Fuel map is opened | Map tile coordinates (reveals approx. location of fuel entries) | Yes — cached after first load |
+| Chart.js CDN | `cdn.jsdelivr.net` | First app load (vanilla JS frontend only) | None | Cached by service worker |
+| Leaflet CDN | `unpkg.com` | First app load (vanilla JS frontend only) | None | Cached by service worker |
+
+**The React frontend** does not load Chart.js or Leaflet from CDN — it bundles them locally.
+
+All user data (vehicles, fuel entries, maintenance) stays on your server. No analytics, no telemetry, no tracking.
+
 ## Tech Stack
 
 | Layer    | Tech                                          |
