@@ -18,8 +18,13 @@ interface DistanceChartProps {
 }
 
 export function DistanceChart({ entries }: DistanceChartProps) {
-  const { data, projectedAnnual } = useMemo(() => {
-    if (entries.length < 2) return { data: [], projectedAnnual: null }
+  const currentMonthKey = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }, [])
+
+  const { data, avgKm, projectedAnnual } = useMemo(() => {
+    if (entries.length < 2) return { data: [], avgKm: 0, projectedAnnual: null }
 
     // Group odometer readings by month — take min and max per month
     const monthMap = new Map<string, { min: number; max: number }>()
@@ -38,7 +43,7 @@ export function DistanceChart({ entries }: DistanceChartProps) {
 
     // Distance per month = max odometer this month - max odometer previous month
     const months = Array.from(monthMap.entries()).sort(([a], [b]) => a.localeCompare(b))
-    const result: { month: string; km: number }[] = []
+    const result: { month: string; monthKey: string; km: number }[] = []
 
     for (let i = 1; i < months.length; i++) {
       const [prevMonth, prevData] = months[i - 1]
@@ -51,24 +56,28 @@ export function DistanceChart({ entries }: DistanceChartProps) {
           month: 'short',
           year: '2-digit',
         })
-        result.push({ month: label, km })
+        result.push({ month: label, monthKey: curMonth, km })
       }
     }
 
-    // Projected annual: average of last 3 months × 12
+    // Exclude current month from avg and projection (partial month distorts figures)
+    const completedMonths = result.filter((r) => r.monthKey < currentMonthKey)
+    const base = completedMonths.length > 0 ? completedMonths : result
+
+    const avgKm = base.length > 0 ? Math.round(base.reduce((s, r) => s + r.km, 0) / base.length) : 0
+
+    // Projected annual: average of last 3 completed months × 12
     let projectedAnnual: number | null = null
-    if (result.length >= 1) {
-      const last = result.slice(-Math.min(3, result.length))
+    if (base.length >= 1) {
+      const last = base.slice(-Math.min(3, base.length))
       const avg = last.reduce((sum, r) => sum + r.km, 0) / last.length
       projectedAnnual = Math.round(avg * 12)
     }
 
-    return { data: result, projectedAnnual }
-  }, [entries])
+    return { data: result, avgKm, projectedAnnual }
+  }, [entries, currentMonthKey])
 
   if (data.length === 0) return null
-
-  const avgKm = data.length > 0 ? Math.round(data.reduce((s, d) => s + d.km, 0) / data.length) : 0
 
   return (
     <Card>

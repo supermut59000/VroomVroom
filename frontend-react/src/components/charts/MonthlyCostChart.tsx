@@ -177,7 +177,9 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
   // Shows up to 12 months, stops after 3 if no more scheduled maintenance
   const eurosDataWithProjection = useMemo((): ChartPoint[] => {
     if (eurosData.length === 0) return []
-    const last3 = eurosData.slice(-Math.min(3, eurosData.length))
+    const completed = eurosData.filter((d: ChartPoint) => d.monthKey < currentMonthKey)
+    const base = completed.length > 0 ? completed : eurosData
+    const last3 = base.slice(-Math.min(3, base.length))
     const avgFuel = last3.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0), 0) / last3.length
     const lastKey = eurosData[eurosData.length - 1].monthKey
     const [ly, lm] = lastKey.split('-').map(Number)
@@ -202,7 +204,9 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
   // - MaintenanceProj = scheduled spread ÷ avgKmPerMonth × 100
   const per100kmDataWithProjection = useMemo((): ChartPoint[] => {
     if (per100kmData.length === 0) return []
-    const last3 = per100kmData.slice(-Math.min(3, per100kmData.length))
+    const completed = per100kmData.filter((d: ChartPoint) => d.monthKey < currentMonthKey)
+    const base = completed.length > 0 ? completed : per100kmData
+    const last3 = base.slice(-Math.min(3, base.length))
     const avgFuelPer100 = last3.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0), 0) / last3.length
     const lastKey = per100kmData[per100kmData.length - 1].monthKey
     const [ly, lm] = lastKey.split('-').map(Number)
@@ -232,8 +236,11 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
   if (realData.length === 0) return null
 
   const unit = mode === 'euros' ? ' €' : ' €/100km'
+  // Exclude current month from average — partial month would drag the figure down
+  const completedData = realData.filter((d: ChartPoint) => d.monthKey < currentMonthKey)
+  const avgBase = completedData.length > 0 ? completedData : realData
   const avgTotal =
-    realData.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0) + (d.Maintenance ?? 0), 0) / realData.length
+    avgBase.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0) + (d.Maintenance ?? 0), 0) / avgBase.length
 
   const lastRealMonth =
     realData.length > 0 ? realData[realData.length - 1].month : null
