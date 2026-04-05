@@ -30,6 +30,11 @@ type ChartPoint = {
 export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProps) {
   const [mode, setMode] = useState<'euros' | 'per100km'>('euros')
 
+  const currentMonthKey = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }, [])
+
   // Average km/month — same method as DistanceChart:
   // group by month (max odo), diff between consecutive months, then average
   const avgKmPerMonth = useMemo(() => {
@@ -113,6 +118,7 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
 
     return Array.from(allMonths)
       .sort()
+      .filter((month) => month <= currentMonthKey)
       .map((month) => {
         const [year, m] = month.split('-')
         const label = new Date(Number(year), Number(m) - 1).toLocaleDateString('fr-FR', {
@@ -150,6 +156,7 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
 
     return Array.from(monthlyDistance.keys())
       .sort()
+      .filter((month) => month <= currentMonthKey)
       .map((month) => {
         const dist = monthlyDistance.get(month) || 1
         const fuelCost = monthlyFuelCost.get(month) || 0
@@ -164,30 +171,60 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
       })
   }, [entries, spreadMaintenanceCosts])
 
-  // Helper: append 3 projected months based on average of last 3 real months
-  function appendProjection(source: ChartPoint[]): ChartPoint[] {
-    if (source.length < 2) return source
-    const last3 = source.slice(-Math.min(3, source.length))
-    const avgFuel = last3.reduce((s, d) => s + (d.Carburant ?? 0), 0) / last3.length
-    const avgMaint = last3.reduce((s, d) => s + (d.Maintenance ?? 0), 0) / last3.length
-    const lastKey = source[source.length - 1].monthKey
+  // Projection for €/mois:
+  // - CarburantProj = avg fuel of last 3 real months
+  // - MaintenanceProj = actual scheduled spread for that future month (or 0)
+  // Shows up to 12 months, stops after 3 if no more scheduled maintenance
+  const eurosDataWithProjection = useMemo((): ChartPoint[] => {
+    if (eurosData.length === 0) return []
+    const last3 = eurosData.slice(-Math.min(3, eurosData.length))
+    const avgFuel = last3.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0), 0) / last3.length
+    const lastKey = eurosData[eurosData.length - 1].monthKey
     const [ly, lm] = lastKey.split('-').map(Number)
-    const projected: ChartPoint[] = [1, 2, 3].map((offset) => {
+    const projected: ChartPoint[] = []
+    for (let offset = 1; offset <= 12; offset++) {
       const date = new Date(ly, lm - 1 + offset, 1)
-      return {
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const maintCost = spreadMaintenanceCosts.get(monthKey) || 0
+      if (offset > 3 && maintCost === 0) break
+      projected.push({
         month: date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
-        monthKey: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+        monthKey,
         CarburantProj: Math.round(avgFuel * 100) / 100,
-        MaintenanceProj: Math.round(avgMaint * 100) / 100,
-      }
-    })
-    return [...source, ...projected]
-  }
+        MaintenanceProj: Math.round(maintCost * 100) / 100,
+      })
+    }
+    return [...eurosData, ...projected]
+  }, [eurosData, spreadMaintenanceCosts])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const eurosDataWithProjection = useMemo(() => appendProjection(eurosData), [eurosData])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const per100kmDataWithProjection = useMemo(() => appendProjection(per100kmData), [per100kmData])
+  // Projection for €/100km:
+  // - CarburantProj = avg fuel/100km of last 3 real months
+  // - MaintenanceProj = scheduled spread ÷ avgKmPerMonth × 100
+  const per100kmDataWithProjection = useMemo((): ChartPoint[] => {
+    if (per100kmData.length === 0) return []
+    const last3 = per100kmData.slice(-Math.min(3, per100kmData.length))
+    const avgFuelPer100 = last3.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0), 0) / last3.length
+    const lastKey = per100kmData[per100kmData.length - 1].monthKey
+    const [ly, lm] = lastKey.split('-').map(Number)
+    const projected: ChartPoint[] = []
+    for (let offset = 1; offset <= 12; offset++) {
+      const date = new Date(ly, lm - 1 + offset, 1)
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const maintCost = spreadMaintenanceCosts.get(monthKey) || 0
+      const maintPer100 =
+        avgKmPerMonth && avgKmPerMonth > 0
+          ? Math.round((maintCost / avgKmPerMonth) * 100 * 100) / 100
+          : 0
+      if (offset > 3 && maintCost === 0) break
+      projected.push({
+        month: `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(2)}`,
+        monthKey,
+        CarburantProj: Math.round(avgFuelPer100 * 100) / 100,
+        MaintenanceProj: maintPer100,
+      })
+    }
+    return [...per100kmData, ...projected]
+  }, [per100kmData, spreadMaintenanceCosts, avgKmPerMonth])
 
   const data = mode === 'euros' ? eurosDataWithProjection : per100kmDataWithProjection
   const realData = mode === 'euros' ? eurosData : per100kmData
