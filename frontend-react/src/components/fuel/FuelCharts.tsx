@@ -51,7 +51,10 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
     if (endDate) {
       filtered = filtered.filter((e) => e.fueling_date <= endDate)
     }
-    return filtered.sort((a, b) => a.fueling_date.localeCompare(b.fueling_date))
+    return filtered.sort((a, b) => {
+      const dateDiff = a.fueling_date.localeCompare(b.fueling_date)
+      return dateDiff !== 0 ? dateDiff : a.id - b.id
+    })
   }, [allEntries, startDate, endDate])
 
   const filteredConsumptionData = useMemo(() => {

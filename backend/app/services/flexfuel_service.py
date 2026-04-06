@@ -180,9 +180,9 @@ class FlexfuelService:
             for month, savings in sorted(monthly_map.items())
         ]
 
-        monthly_avg = None
-        if monthly_savings:
-            monthly_avg = round(sum(m["savings"] for m in monthly_savings) / len(monthly_savings), 2)
+        current_month = date.today().strftime("%Y-%m")
+        completed_months = [m["savings"] for m in monthly_savings if m["month"] < current_month]
+        monthly_avg = round(sum(completed_months) / len(completed_months), 2) if completed_months else None
 
         return {
             "vehicle_id": vehicle_id,

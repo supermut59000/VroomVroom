@@ -148,8 +148,40 @@ insurance_km_remaining = current_limit − last_odometer_reading
 ```
 The limit is a **cumulative total odometer threshold**, not a per-year quota reset each year.
 
-#### Monthly cost projection method
-Average of last min(3, N) real months → append 3 future months with same avg, rendered as `fillOpacity=0.35` bars. ReferenceLine marks the boundary between real and projected data.
+`InsuranceKmChart.tsx` projection: uses max odometer per month (same grouping as DistanceChart), then computes consecutive diffs for the **last 3 months** (not completed months — uses all available including current). Projects forward at that avg rate until limit hit, capped at 36 months. Uses `allEntries` (never date-filtered) so the base odometer is always correct.
+
+#### DistanceChart km/month method
+Groups entries by month → takes **max odometer per month** → differences between consecutive months. This accounts for multiple fills in a month without double-counting. Avg and projected annual use **completed months only** (< current month key).
+
+#### CostOfOwnershipSection (in VehicleDetailsDialog)
+```
+totalCost = purchase_price + total_fuel_cost + total_maintenance_cost
+costPerMonth = (fuelCost + maintenanceCost) / monthsOwned   ← no purchase price amortization
+allInCostPerKm = totalCost / total_distance                  ← includes purchase price
+projectedYearly = costPerMonth × 12
+monthsOwned = max(1, months from acquisition_date or created_at to today)
+```
+Rendered as stat cards + donut chart (purchase / fuel / maintenance breakdown). Colors use CSS custom properties (`--color-chart-purchase/fuel/maintenance`) for dark mode support. Only renders if `totalCost > 0`.
+
+#### Monthly cost projection method (updated 2026-04-05)
+
+**Spreading**: Each maintenance cost is spread across multiple months (not dumped on one month).
+Priority for determining the spread end date:
+1. `next_maintenance_date` → spread from `maintenance_date` to that date (prorated by ms overlap)
+2. `next_maintenance_odometer` → convert km remaining to months via `avgKmPerMonth`, then spread
+3. Fallback → 12-month fixed spread (tires, wipers, anything without a next service date)
+
+`avgKmPerMonth` is computed client-side the same way as `DistanceChart`: max odo per month → diff between consecutive months → average. No backend endpoint involved.
+
+**Spreading is applied in both modes** (€/mois and €/100km). The shared `spreadMaintenanceCosts` Map is computed once and reused.
+
+**Real data capped at current month** (`<= currentMonthKey`). Future spread amounts go to projection only.
+
+**Projection** (faded `fillOpacity=0.35` bars, up to 12 months, stops after 3 if no more spread):
+- `CarburantProj` = avg fuel of last 3 **completed** months (current month excluded)
+- `MaintenanceProj` = actual `spreadMaintenanceCosts` value for that future month
+
+**Averages** (header "Moyenne" badge, DistanceChart `avgKm` / `projectedAnnual`): computed on completed months only (< current month). Fallback to all months if no completed months exist.
 
 ### PWA / Offline
 - Service worker: network-first for API, cache-first for assets and map tiles
@@ -212,6 +244,20 @@ Average of last min(3, N) real months → append 3 future months with same avg, 
 - **No rate limiting**: acceptable for single-user homelab
 - **Offline queue stored in localStorage**: acceptable since only user is the owner
 - **CSP/HSTS headers**: handle at reverse proxy level (Nginx/Traefik), not in app
+
+---
+
+## Session log — 2026-04-05
+
+### MonthlyCostChart — maintenance spreading & projection rework
+
+- **Spreading added to €/mois mode**: previously maintenance cost was dumped entirely on the month of the entry. Now spread across months with same algo as €/100km mode.
+- **Unified `spreadMaintenanceCosts` memo**: single Map used by both modes instead of duplicated logic. Old `per100kmData` fallback was `new Date()` (today) — replaced by proper priority cascade.
+- **Spread priority**: `next_maintenance_date` > `next_maintenance_odometer` (converted via `avgKmPerMonth`) > 12-month fallback.
+- **`avgKmPerMonth`** uses same method as `DistanceChart` (max odo per month, diffs, average). No backend endpoint.
+- **Real data capped at current month** in both modes — future spread no longer appears as solid bars.
+- **Projection** uses actual scheduled `spreadMaintenanceCosts` for future months (not avg of past maintenance). Fuel projection uses avg of last 3 **completed** months.
+- **Current month excluded from averages** in MonthlyCostChart (header "Moyenne") and DistanceChart (`avgKm` badge, `projectedAnnual`) — partial month was dragging figures down.
 
 ---
 

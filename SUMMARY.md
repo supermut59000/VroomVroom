@@ -1,6 +1,6 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-03-31 (session 4)
+Last updated: 2026-04-05 (session 5)
 
 ---
 
@@ -58,11 +58,17 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 - Y axis auto-scales to max(kit cost, total savings) × 1.1
 
 **Charts & Analytics (in graphs popup)**
-- Consumption chart, price chart, cost/km chart (existing)
-- Monthly cost chart: stacked bar — fuel (blue) + maintenance (orange) per month
-- Distance chart: monthly km bars (purple) + average reference line + projected annual km badge
-- Stations map: Leaflet map of past fill locations with GPS
+- Consumption chart (L/100km per fill), price chart (€/L over time)
+- Monthly cost chart: stacked bar — fuel (blue) + maintenance (orange) per month. Maintenance spread. Toggle €/mois ↔ €/100km. Current month excluded from averages.
+- Distance chart: monthly km bars — uses **max odo per month, diff between consecutive months**. Avg + projected annual use completed months only.
+- Stations map: Leaflet map of past fill locations with GPS, clustered within 100m radius
 - FlexFuel rentability charts (for converted vehicles)
+
+**Cost of Ownership (in VehicleDetailsDialog)**
+- `CostOfOwnershipSection.tsx`: donut chart (achat / carburant / maintenance breakdown) + stat cards
+- `allInCostPerKm` = (purchase + fuel + maintenance) / total_distance
+- `costPerMonth` = (fuel + maintenance) / months_owned (no purchase amortization)
+- `projectedYearly` = costPerMonth × 12
 
 **Dark Mode**
 - Toggle in header (Sun/Moon icon)
@@ -269,6 +275,7 @@ VroomVroom/
 | PUT | `/{id}` | Update vehicle |
 | DELETE | `/{id}` | Soft delete (or `?force=true` for hard delete) |
 | GET | `/{id}/stats` | Vehicle statistics |
+| GET | `/{id}/timeline` | Fuel entries + maintenances merged, sorted by date desc |
 | POST | `/{id}/archive` | Archive (set is_active=false) |
 | GET | `/stats/batch` | All active vehicles' stats in one call |
 
@@ -336,6 +343,27 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 
 ---
 
+## What Was Done (Session of 2026-04-05)
+
+### MonthlyCostChart — maintenance spreading & projection rework
+
+**Spreading** (both €/mois and €/100km modes):
+- Previously: maintenance cost dumped entirely on the month of the entry in €/mois mode, spread only in €/100km mode with `new Date()` as fallback.
+- Now: unified `spreadMaintenanceCosts` memo used by both modes.
+- Spread priority: `next_maintenance_date` → `next_maintenance_odometer` (converted to months via `avgKmPerMonth`) → 12-month fallback (tires, wipers, etc.).
+- `avgKmPerMonth` computed client-side same method as `DistanceChart` (max odo per month → diffs → average). No backend endpoint.
+
+**Chart behaviour**:
+- Real data (solid bars) capped at current month in both modes.
+- Projection (faded bars, up to 12 months, stops after 3 if no more spread scheduled):
+  - `MaintenanceProj` = actual `spreadMaintenanceCosts` value for that future month.
+  - `CarburantProj` = avg fuel of last 3 **completed** months (current month excluded).
+- Current month excluded from "Moyenne" header and from projection base — partial month was dragging figures down.
+
+**DistanceChart**: same treatment — `avgKm` badge and `projectedAnnual` now use completed months only.
+
+---
+
 ## What Was Done (Session of 2026-03-31)
 
 ### Backend — Bug fixes & hardening
@@ -345,7 +373,7 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 - **`per_page` cap**: reduced max from 10 000 to 500 on fuel entry list endpoints
 - **DB indexes**: added `index=True` on `FuelEntry.fueling_date` and `Maintenance.maintenance_date`
 - **Vehicle existence guard**: `_assert_vehicle_exists()` added to `FuelService`, `MaintenanceService`, and `FlexfuelService` — raises a clean 404 instead of a DB FK error
-- **Odometer monotonicity**: `FuelService.create_fuel_entry` now raises `ValueError` if the new odometer reading is lower than the previous entry
+- **Odometer monotonicity**: NOT implemented — no validation in `FuelService.create_fuel_entry`. Decreasing odometer entries silently break consumption calculations. Known limitation, pending fix.
 - **FlexFuel skipped fills**: `calculate_rentability()` now counts and returns `skipped_fills_no_e10_price` in the response (fills where no E10 reference price existed at that date were silently ignored before)
 - **Bare `404` literals**: standardised all `raise HTTPException(status_code=404, ...)` in `flexfuel.py` to use `status.HTTP_404_NOT_FOUND`
 - **New endpoint `GET /vehicles/{id}/timeline`**: returns fuel entries + maintenance merged and sorted by date descending — schema `VehicleTimeline` / `VehicleTimelineEvent` added to `schemas/vehicle.py`
@@ -390,7 +418,7 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 - If GPS recaptured: shows NearbyStationsList, preserves existing lat/lon if GPS not used
 
 ### New Charts
-- `MonthlyCostChart.tsx`: stacked bar (fuel + maintenance) per month
+- `MonthlyCostChart.tsx`: stacked bar (fuel + maintenance) per month. Maintenance spread across months. Toggle €/mois ↔ €/100km. Projection uses scheduled spread + avg fuel. Current month excluded from averages.
 - `DistanceChart.tsx`: monthly km bars + average dashed line + projected annual km badge (based on last 3 months)
 - Both added to FuelCharts popup
 
