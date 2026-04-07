@@ -106,12 +106,21 @@ function computeTankState(
   return { litersInTank, ethanolLiters, lastOdo: prevOdo }
 }
 
+type SeasonMode = 'hiver' | 'ete'
+
+// Months 10–3 = winter, 4–9 = summer (0-indexed JS month)
+function defaultSeasonMode(): SeasonMode {
+  const m = new Date().getMonth() // 0 = January
+  return m >= 3 && m <= 8 ? 'ete' : 'hiver'
+}
+
 interface BlendRecommendation {
   type: 'blend' | 'e85_only' | 'tank_full'
   dilutantLiters: number
   e85Liters: number
   resultEthanolPct: number
-  withinTolerance: boolean
+  /** hiver: résultat ≤ target. été: résultat ≥ target. */
+  withinBound: boolean
   note?: string
 }
 
@@ -119,9 +128,10 @@ function computeRecommendation(
   remainingLiters: number,
   currentEthanolLiters: number,
   tankCapacity: number,
-  targetPct: number,   // 0–100
-  tolerancePct: number, // 0–100
+  targetPct: number,        // 0–100
+  tolerancePct: number,     // 0–100
   dilutantEthFraction: number, // 0.10 or 0.05
+  season: SeasonMode,
 ): BlendRecommendation {
   const target = targetPct / 100
   const tolerance = tolerancePct / 100
@@ -133,11 +143,11 @@ function computeRecommendation(
       dilutantLiters: 0,
       e85Liters: 0,
       resultEthanolPct: remainingLiters > 0 ? (currentEthanolLiters / remainingLiters) * 100 : 0,
-      withinTolerance: true,
+      withinBound: true,
     }
   }
 
-  // Solve for x (dilutant litres):
+  // Solve for x (dilutant litres) to hit exactly target:
   // currentEthanol + x·dilutantFrac + (T-x)·0.85 = target·(remaining + T)
   const numerator = target * (remainingLiters + T) - currentEthanolLiters - 0.85 * T
   const denominator = dilutantEthFraction - 0.85 // always negative
@@ -146,48 +156,59 @@ function computeRecommendation(
 
   let x: number
   if (xIdeal <= 0) {
-    // No dilution needed (current ethanol already at or below target)
     x = 0
   } else if (xIdeal < MIN_PUMP_LITERS) {
-    // Ideal is positive but below pump minimum — round UP to 5L and verify
-    x = MIN_PUMP_LITERS
+    if (season === 'hiver') {
+      // Round UP to 5L in winter to stay ≤ target
+      x = MIN_PUMP_LITERS
+    } else {
+      // Summer: prefer less dilutant (≥ target) → skip if tiny
+      x = 0
+    }
   } else {
-    x = Math.round(xIdeal)
+    // Round direction depends on season:
+    // Hiver → ceil (more dilutant → result ≤ target)
+    // Été  → floor (less dilutant → result ≥ target)
+    x = season === 'hiver' ? Math.ceil(xIdeal) : Math.floor(xIdeal)
   }
 
   // Ensure at least 5L of E85 remains after dilutant
   if (x > 0 && T - x < MIN_PUMP_LITERS) {
-    x = Math.round(T - MIN_PUMP_LITERS)
+    x = season === 'hiver' ? Math.ceil(T - MIN_PUMP_LITERS) : Math.floor(T - MIN_PUMP_LITERS)
     if (x < MIN_PUMP_LITERS) x = 0
   }
 
-  // If we rounded UP to 5L, verify the result is reasonably close to target
-  // (within 2× tolerance); otherwise fall back to e85 only
-  if (x === MIN_PUMP_LITERS && xIdeal < MIN_PUMP_LITERS) {
+  // If we forced x=5L in winter from below minimum, verify it doesn't overshoot
+  // target by more than tolerance (i.e., result is way too low in ethanol)
+  if (season === 'hiver' && x === MIN_PUMP_LITERS && xIdeal < MIN_PUMP_LITERS) {
     const testPct =
       (currentEthanolLiters + x * dilutantEthFraction + (T - x) * 0.85) /
       (remainingLiters + T)
-    if (Math.abs(testPct - target) > tolerance * 2) x = 0
+    if (testPct < target - tolerance * 2) x = 0
   }
 
   const e85 = Math.round(T - x)
 
   if (x === 0) {
     const e85Only = Math.round(T)
-    const onlyResultPct =
+    const onlyPct =
       (currentEthanolLiters + e85Only * 0.85) / (remainingLiters + e85Only)
 
-    const note =
-      onlyResultPct > target + tolerance
-        ? 'Taux éthanol trop élevé — reporter la dilution au prochain plein.'
-        : 'Taux déjà dans la cible.'
+    let note: string
+    if (season === 'hiver' && onlyPct > target + tolerance) {
+      note = 'Taux éthanol trop élevé — reporter la dilution au prochain plein.'
+    } else if (season === 'ete' && onlyPct < target - tolerance) {
+      note = 'Taux éthanol insuffisant — ajouter du diluant au prochain plein.'
+    } else {
+      note = season === 'hiver' ? 'Taux déjà ≤ cible.' : 'Taux déjà ≥ cible.'
+    }
 
     return {
       type: 'e85_only',
       dilutantLiters: 0,
       e85Liters: e85Only,
-      resultEthanolPct: onlyResultPct * 100,
-      withinTolerance: Math.abs(onlyResultPct - target) <= tolerance,
+      resultEthanolPct: onlyPct * 100,
+      withinBound: season === 'hiver' ? onlyPct <= target + tolerance : onlyPct >= target - tolerance,
       note,
     }
   }
@@ -196,12 +217,15 @@ function computeRecommendation(
   const resultTotal = remainingLiters + x + e85
   const resultPct = resultTotal > 0 ? resultEthanolLiters / resultTotal : 0
 
+  const withinBound =
+    season === 'hiver' ? resultPct <= target + tolerance : resultPct >= target - tolerance
+
   return {
     type: 'blend',
     dilutantLiters: x,
     e85Liters: e85,
     resultEthanolPct: resultPct * 100,
-    withinTolerance: Math.abs(resultPct - target) <= tolerance,
+    withinBound,
   }
 }
 
@@ -214,6 +238,7 @@ interface BlendCalculatorProps {
 export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculatorProps) {
   const [dilutantType, setDilutantType] = useState<DilutantType>('e10')
   const [currentOdo, setCurrentOdo] = useState<string>('')
+  const [season, setSeason] = useState<SeasonMode>(defaultSeasonMode)
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.10 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
@@ -258,8 +283,9 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
         conversion.target_ethanol_pct,
         conversion.ethanol_tolerance_pct,
         dilutantEthFraction,
+        season,
       ),
-    [remainingLiters, currentEthanolLiters, tankCapacity, conversion, dilutantEthFraction],
+    [remainingLiters, currentEthanolLiters, tankCapacity, conversion, dilutantEthFraction, season],
   )
 
   if (!avgConsumption) {
@@ -280,14 +306,19 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
     )
   }
 
-  const targetMin = Math.round(conversion.target_ethanol_pct - conversion.ethanol_tolerance_pct)
-  const targetMax = Math.round(conversion.target_ethanol_pct + conversion.ethanol_tolerance_pct)
+  const target = conversion.target_ethanol_pct
   const resultPct = recommendation.resultEthanolPct
-  const resultColor = recommendation.withinTolerance
+  const resultOk = recommendation.withinBound
+  const resultColor = resultOk
     ? 'text-emerald-600 dark:text-emerald-400'
-    : resultPct > targetMax
-      ? 'text-orange-500'
-      : 'text-blue-500'
+    : season === 'hiver'
+      ? 'text-orange-500'   // too much ethanol in winter
+      : 'text-blue-500'     // not enough ethanol in summer
+
+  // Season label displayed in recommendation
+  const seasonConstraint = season === 'hiver'
+    ? `≤ ${target}%`
+    : `≥ ${target}%`
 
   return (
     <Card>
@@ -297,40 +328,63 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
           Mélange E85
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Cible {conversion.target_ethanol_pct}% ± {conversion.ethanol_tolerance_pct}%
-          &nbsp;· {tankCapacity} L &nbsp;· {avgConsumption.toFixed(1)} L/100km
+          Cible {target}% &nbsp;· {tankCapacity} L &nbsp;· {avgConsumption.toFixed(1)} L/100km
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
 
-        {/* Inputs — compact for mobile */}
+        {/* Season toggle + inputs on same row */}
         <div className="flex gap-2">
-          <div className="flex-1 space-y-1">
-            <Label className="text-xs">Odomètre actuel (km)</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              placeholder={String(lastOdo)}
-              value={currentOdo}
-              onChange={(e) => setCurrentOdo(e.target.value)}
-              className="h-10 text-base"
-            />
+          {/* Season toggle */}
+          <div className="flex rounded-md border overflow-hidden text-sm font-medium">
+            <button
+              type="button"
+              onClick={() => setSeason('hiver')}
+              className={`px-3 py-2 transition-colors ${
+                season === 'hiver'
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                  : 'text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              ❄ Hiver
+            </button>
+            <button
+              type="button"
+              onClick={() => setSeason('ete')}
+              className={`px-3 py-2 transition-colors ${
+                season === 'ete'
+                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+                  : 'text-muted-foreground hover:bg-muted'
+              }`}
+            >
+              ☀ Été
+            </button>
           </div>
-          <div className="w-36 space-y-1">
-            <Label className="text-xs">Diluant</Label>
-            <Select value={dilutantType} onValueChange={(v) => setDilutantType(v as DilutantType)}>
-              <SelectTrigger className="h-10">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="e10">E10</SelectItem>
-                <SelectItem value="sp95">SP95</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
+          {/* Odometer */}
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder={String(lastOdo)}
+            value={currentOdo}
+            onChange={(e) => setCurrentOdo(e.target.value)}
+            className="h-10 flex-1 text-base"
+            aria-label="Odomètre actuel (km)"
+          />
+
+          {/* Dilutant */}
+          <Select value={dilutantType} onValueChange={(v) => setDilutantType(v as DilutantType)}>
+            <SelectTrigger className="h-10 w-24">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="e10">E10</SelectItem>
+              <SelectItem value="sp95">SP95</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Recommendation — the main output, big and clear */}
+        {/* Recommendation — main output */}
         {recommendation.type === 'tank_full' ? (
           <p className="text-sm text-muted-foreground">Réservoir presque plein.</p>
         ) : recommendation.type === 'blend' ? (
@@ -340,28 +394,38 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
               &nbsp;+ {recommendation.e85Liters} L E85
             </p>
             <p className={`mt-1 text-sm ${resultColor}`}>
-              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;({targetMin}–{targetMax}%)
+              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;(cible {seasonConstraint})
             </p>
           </div>
         ) : (
-          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
-            <p className="text-lg font-bold text-orange-800 dark:text-orange-300">
+          <div className={`rounded-lg border p-4 ${
+            resultOk
+              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
+              : 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/30'
+          }`}>
+            <p className={`text-lg font-bold ${
+              resultOk
+                ? 'text-emerald-800 dark:text-emerald-300'
+                : 'text-orange-800 dark:text-orange-300'
+            }`}>
               {recommendation.e85Liters} L E85 uniquement
             </p>
             {recommendation.note && (
-              <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
+              <p className={`mt-1 text-sm ${
+                resultOk ? 'text-emerald-700 dark:text-emerald-400' : 'text-orange-700 dark:text-orange-400'
+              }`}>
                 {recommendation.note}
               </p>
             )}
             <p className={`mt-1 text-sm ${resultColor}`}>
-              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;({targetMin}–{targetMax}%)
+              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;(cible {seasonConstraint})
             </p>
           </div>
         )}
 
-        {/* Details — secondary info, small */}
+        {/* Details — secondary info */}
         <div className="flex gap-4 text-xs text-muted-foreground">
-          <span>Restant estimé : {remainingLiters.toFixed(1)} L</span>
+          <span>Restant : {remainingLiters.toFixed(1)} L</span>
           <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
         </div>
 
