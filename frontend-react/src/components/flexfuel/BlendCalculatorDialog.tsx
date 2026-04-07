@@ -37,6 +37,12 @@ export function BlendCalculatorDialog({ vehicleId, onClose }: BlendCalculatorDia
           </DialogTitle>
         </DialogHeader>
 
+        {conversion && (
+          <p className="text-xs text-muted-foreground -mt-2 mb-1">
+            Cible {conversion.target_ethanol_pct}% &nbsp;· {vehicle?.tank_capacity ?? '?'} L
+          </p>
+        )}
+
         {!conversion ? (
           <p className="py-4 text-sm text-muted-foreground">
             Aucune conversion FlexFuel enregistrée pour ce véhicule.
@@ -46,6 +52,7 @@ export function BlendCalculatorDialog({ vehicleId, onClose }: BlendCalculatorDia
             conversion={conversion}
             vehicle={vehicle}
             entries={entries}
+            embedded
           />
         ) : (
           <p className="py-4 text-sm text-muted-foreground">Chargement…</p>

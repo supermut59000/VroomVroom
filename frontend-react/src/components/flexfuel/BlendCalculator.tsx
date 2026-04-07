@@ -232,9 +232,11 @@ interface BlendCalculatorProps {
   conversion: FlexfuelConversion
   vehicle: Vehicle
   entries: FuelEntry[]
+  /** When true, renders without Card wrapper (used inside a Dialog that provides its own title). */
+  embedded?: boolean
 }
 
-export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculatorProps) {
+export function BlendCalculator({ conversion, vehicle, entries, embedded = false }: BlendCalculatorProps) {
   const [dilutantType, setDilutantType] = useState<DilutantType>('e10')
   const [currentOdo, setCurrentOdo] = useState<string>('')
   const [season, setSeason] = useState<SeasonMode>(defaultSeasonMode)
@@ -288,6 +290,12 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
   )
 
   if (!avgConsumption) {
+    const noDataContent = (
+      <p className="text-sm text-muted-foreground">
+        Pas assez de données depuis l'installation du boîtier. Enregistrez au moins deux pleins complets.
+      </p>
+    )
+    if (embedded) return noDataContent
     return (
       <Card>
         <CardHeader>
@@ -296,11 +304,7 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
             Calculateur de mélange E85
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Pas assez de données depuis l'installation du boîtier. Enregistrez au moins deux pleins complets.
-          </p>
-        </CardContent>
+        <CardContent>{noDataContent}</CardContent>
       </Card>
     )
   }
@@ -319,69 +323,55 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
     ? `≤ ${target}%`
     : `≥ ${target}%`
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <FlaskConical className="h-4 w-4 text-emerald-600" />
-          Mélange E85
-        </CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Cible {target}% &nbsp;· {tankCapacity} L &nbsp;· {avgConsumption.toFixed(1)} L/100km
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
+  const content = (
+    <div className="space-y-3">
+      {/* Season toggle */}
+      <div className="flex rounded-md border overflow-hidden text-sm font-medium w-fit">
+        <button
+          type="button"
+          onClick={() => setSeason('hiver')}
+          className={`px-3 py-2 transition-colors ${
+            season === 'hiver'
+              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+              : 'text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          ❄ Hiver
+        </button>
+        <button
+          type="button"
+          onClick={() => setSeason('ete')}
+          className={`px-3 py-2 transition-colors ${
+            season === 'ete'
+              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
+              : 'text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          ☀ Été
+        </button>
+      </div>
 
-        {/* Season toggle + inputs on same row */}
-        <div className="flex gap-2">
-          {/* Season toggle */}
-          <div className="flex rounded-md border overflow-hidden text-sm font-medium">
-            <button
-              type="button"
-              onClick={() => setSeason('hiver')}
-              className={`px-3 py-2 transition-colors ${
-                season === 'hiver'
-                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              ❄ Hiver
-            </button>
-            <button
-              type="button"
-              onClick={() => setSeason('ete')}
-              className={`px-3 py-2 transition-colors ${
-                season === 'ete'
-                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
-                  : 'text-muted-foreground hover:bg-muted'
-              }`}
-            >
-              ☀ Été
-            </button>
-          </div>
-
-          {/* Odometer */}
-          <Input
-            type="number"
-            inputMode="numeric"
-            placeholder={String(lastOdo)}
-            value={currentOdo}
-            onChange={(e) => setCurrentOdo(e.target.value)}
-            className="h-10 flex-1 text-base"
-            aria-label="Odomètre actuel (km)"
-          />
-
-          {/* Dilutant */}
-          <Select value={dilutantType} onValueChange={(v) => setDilutantType(v as DilutantType)}>
-            <SelectTrigger className="h-10 w-24">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="e10">E10</SelectItem>
-              <SelectItem value="sp95">SP95</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Odometer + dilutant */}
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder={String(lastOdo)}
+          value={currentOdo}
+          onChange={(e) => setCurrentOdo(e.target.value)}
+          className="h-10 flex-1 text-base"
+          aria-label="Odomètre actuel (km)"
+        />
+        <Select value={dilutantType} onValueChange={(v) => setDilutantType(v as DilutantType)}>
+          <SelectTrigger className="h-10 w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="e10">E10</SelectItem>
+            <SelectItem value="sp95">SP95</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
         {/* Recommendation — main output */}
         {recommendation.type === 'tank_full' ? (
@@ -422,13 +412,28 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
           </div>
         )}
 
-        {/* Details — secondary info */}
-        <div className="flex gap-4 text-xs text-muted-foreground">
-          <span>Restant : {remainingLiters.toFixed(1)} L</span>
-          <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
-        </div>
+      {/* Details — secondary info */}
+      <div className="flex gap-4 text-xs text-muted-foreground">
+        <span>Restant : {remainingLiters.toFixed(1)} L</span>
+        <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
+      </div>
+    </div>
+  )
 
-      </CardContent>
+  if (embedded) return content
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <FlaskConical className="h-4 w-4 text-emerald-600" />
+          Mélange E85
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">
+          Cible {target}% &nbsp;· {tankCapacity} L &nbsp;· {avgConsumption.toFixed(1)} L/100km
+        </p>
+      </CardHeader>
+      <CardContent>{content}</CardContent>
     </Card>
   )
 }
