@@ -12,10 +12,13 @@ import {
 } from '@/components/ui/select'
 import type { FlexfuelConversion, Vehicle, FuelEntry } from '@/types'
 
-// Ethanol content by fuel type (fraction 0–1)
+// Fixed ethanol content by fuel type (fraction 0–1) — used for history only.
+// 'essence' is assumed SP95 (5%) for all historical fills; the user's dilutant
+// choice at recommendation time is handled separately to avoid the estimate
+// changing when the selector is toggled.
 const ETHANOL_FRACTION: Record<string, number> = {
   e85: 0.85,
-  essence: 0.05, // overridden by dilutantPct when filling — used for history
+  essence: 0.05,
   diesel: 0.0,
   gpl: 0.0,
   electrique: 0.0,
@@ -32,8 +35,7 @@ interface TankState {
   lastOdo: number
 }
 
-/** Compute average L/100km from fill history using fill-to-fill method.
- *  Only uses entries from conversionDate onwards (E85 consumption pattern). */
+/** Compute average L/100km from fills since conversionDate, fill-to-fill method. */
 function computeAvgConsumption(entries: FuelEntry[], conversionDate: string): number | null {
   const sorted = [...entries]
     .filter((e) => e.fueling_date >= conversionDate)
@@ -63,15 +65,14 @@ function computeAvgConsumption(entries: FuelEntry[], conversionDate: string): nu
 }
 
 /**
- * Walk through fills from conversionDate onwards in chronological order,
- * tracking litres of ethanol + total litres in tank after each fill.
+ * Walk through fills from conversionDate onwards, tracking ethanol litres
+ * in the tank. Uses fixed ETHANOL_FRACTION for 'essence' fills (stable,
+ * independent of the dilutant type the user selects in the UI).
  * Tank is capped at tankCapacity to prevent accumulation drift.
- * Returns state after the last recorded fill.
  */
 function computeTankState(
   entries: FuelEntry[],
   conversionDate: string,
-  dilutantEthPct: number, // fraction for 'essence' fills
   avgL100km: number,
   tankCapacity: number,
 ): TankState {
@@ -95,13 +96,7 @@ function computeTankState(
     const consumed = (distance * avgL100km) / 100
     const remaining = Math.min(Math.max(0, litersInTank - consumed), tankCapacity)
     const ethRemaining = litersInTank > 0 ? (ethanolLiters / litersInTank) * remaining : 0
-
-    const fillEthFraction =
-      e.fuel_type === 'e85'
-        ? 0.85
-        : e.fuel_type === 'essence'
-          ? dilutantEthPct
-          : ETHANOL_FRACTION[e.fuel_type] ?? 0
+    const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
 
     litersInTank = Math.min(remaining + e.liters, tankCapacity)
     ethanolLiters = Math.min(ethRemaining + e.liters * fillEthFraction, litersInTank)
@@ -124,13 +119,13 @@ function computeRecommendation(
   remainingLiters: number,
   currentEthanolLiters: number,
   tankCapacity: number,
-  targetPct: number, // 0–100
+  targetPct: number,   // 0–100
   tolerancePct: number, // 0–100
   dilutantEthFraction: number, // 0.10 or 0.05
 ): BlendRecommendation {
   const target = targetPct / 100
   const tolerance = tolerancePct / 100
-  const T = Math.max(0, tankCapacity - remainingLiters) // total to add
+  const T = Math.max(0, tankCapacity - remainingLiters)
 
   if (T < MIN_PUMP_LITERS) {
     return {
@@ -142,46 +137,50 @@ function computeRecommendation(
     }
   }
 
-  // Solve: currentEthanolLiters + x * dilutantEthFraction + (T - x) * 0.85 = target * (remainingLiters + T)
-  // x * (dilutantEthFraction - 0.85) = target * (remainingLiters + T) - currentEthanolLiters - 0.85 * T
-  const numerator =
-    target * (remainingLiters + T) - currentEthanolLiters - 0.85 * T
-  const denominator = dilutantEthFraction - 0.85 // negative
+  // Solve for x (dilutant litres):
+  // currentEthanol + x·dilutantFrac + (T-x)·0.85 = target·(remaining + T)
+  const numerator = target * (remainingLiters + T) - currentEthanolLiters - 0.85 * T
+  const denominator = dilutantEthFraction - 0.85 // always negative
 
-  let x = numerator / denominator
+  const xIdeal = numerator / denominator
 
-  // Round to nearest liter
-  x = Math.round(x)
-
-  // Apply pump minimum (5L) constraint
-  if (x < MIN_PUMP_LITERS) x = 0 // can't dispense < 5L → skip dilutant
-  if (T - x < MIN_PUMP_LITERS) {
-    // E85 part would be < 5L — back off dilutant
-    x = Math.round(T - MIN_PUMP_LITERS)
-    if (x < MIN_PUMP_LITERS) x = 0 // no valid split → E85 only
+  let x: number
+  if (xIdeal <= 0) {
+    // No dilution needed (current ethanol already at or below target)
+    x = 0
+  } else if (xIdeal < MIN_PUMP_LITERS) {
+    // Ideal is positive but below pump minimum — round UP to 5L and verify
+    x = MIN_PUMP_LITERS
+  } else {
+    x = Math.round(xIdeal)
   }
 
-  const dilutant = x
+  // Ensure at least 5L of E85 remains after dilutant
+  if (x > 0 && T - x < MIN_PUMP_LITERS) {
+    x = Math.round(T - MIN_PUMP_LITERS)
+    if (x < MIN_PUMP_LITERS) x = 0
+  }
+
+  // If we rounded UP to 5L, verify the result is reasonably close to target
+  // (within 2× tolerance); otherwise fall back to e85 only
+  if (x === MIN_PUMP_LITERS && xIdeal < MIN_PUMP_LITERS) {
+    const testPct =
+      (currentEthanolLiters + x * dilutantEthFraction + (T - x) * 0.85) /
+      (remainingLiters + T)
+    if (Math.abs(testPct - target) > tolerance * 2) x = 0
+  }
+
   const e85 = Math.round(T - x)
 
-  const resultEthanol =
-    currentEthanolLiters + dilutant * dilutantEthFraction + e85 * 0.85
-  const resultTotal = remainingLiters + dilutant + e85
-  const resultPct = resultTotal > 0 ? resultEthanol / resultTotal : 0
-
-  if (dilutant === 0) {
-    // Couldn't add dilutant — check why
+  if (x === 0) {
     const e85Only = Math.round(T)
     const onlyResultPct =
-      resultTotal > 0
-        ? (currentEthanolLiters + e85Only * 0.85) / (remainingLiters + e85Only)
-        : 0
+      (currentEthanolLiters + e85Only * 0.85) / (remainingLiters + e85Only)
 
-    const currentPct = remainingLiters > 0 ? currentEthanolLiters / remainingLiters : 0
     const note =
-      currentPct > target + tolerance
-        ? 'Taux éthanol trop élevé pour diluer ce plein — reporter au prochain plein.'
-        : 'Dilution non nécessaire ce plein.'
+      onlyResultPct > target + tolerance
+        ? 'Taux éthanol trop élevé — reporter la dilution au prochain plein.'
+        : 'Taux déjà dans la cible.'
 
     return {
       type: 'e85_only',
@@ -193,9 +192,13 @@ function computeRecommendation(
     }
   }
 
+  const resultEthanolLiters = currentEthanolLiters + x * dilutantEthFraction + e85 * 0.85
+  const resultTotal = remainingLiters + x + e85
+  const resultPct = resultTotal > 0 ? resultEthanolLiters / resultTotal : 0
+
   return {
     type: 'blend',
-    dilutantLiters: dilutant,
+    dilutantLiters: x,
     e85Liters: e85,
     resultEthanolPct: resultPct * 100,
     withinTolerance: Math.abs(resultPct - target) <= tolerance,
@@ -214,9 +217,7 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.10 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
-
   const tankCapacity = vehicle.tank_capacity ?? 50
-
   const conversionDate = conversion.conversion_date
 
   const avgConsumption = useMemo(
@@ -224,35 +225,27 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
     [entries, conversionDate],
   )
 
-  // State after last recorded fill (using selected dilutant fraction for 'essence' history)
-  const tankStateAfterLastFill = useMemo(
+  // Tank state: fixed fractions for history — independent of dilutant selector
+  const tankState = useMemo(
     () =>
       avgConsumption
-        ? computeTankState(entries, conversionDate, dilutantEthFraction, avgConsumption, tankCapacity)
+        ? computeTankState(entries, conversionDate, avgConsumption, tankCapacity)
         : null,
-    [entries, conversionDate, dilutantEthFraction, avgConsumption, tankCapacity],
+    [entries, conversionDate, avgConsumption, tankCapacity],
   )
 
-  const lastOdo = tankStateAfterLastFill?.lastOdo ?? 0
+  const lastOdo = tankState?.lastOdo ?? 0
   const inputOdo = currentOdo !== '' ? Number(currentOdo) : lastOdo
 
-  // Estimate remaining fuel accounting for distance since last fill
   const { remainingLiters, currentEthanolPct } = useMemo(() => {
-    if (!tankStateAfterLastFill || !avgConsumption) {
-      return { remainingLiters: 0, currentEthanolPct: 0 }
-    }
-    const distance = Math.max(0, inputOdo - tankStateAfterLastFill.lastOdo)
+    if (!tankState || !avgConsumption) return { remainingLiters: 0, currentEthanolPct: 0 }
+    const distance = Math.max(0, inputOdo - tankState.lastOdo)
     const consumed = (distance * avgConsumption) / 100
-    const remaining = Math.max(0, tankStateAfterLastFill.litersInTank - consumed)
+    const remaining = Math.min(Math.max(0, tankState.litersInTank - consumed), tankCapacity)
     const ethFraction =
-      tankStateAfterLastFill.litersInTank > 0
-        ? tankStateAfterLastFill.ethanolLiters / tankStateAfterLastFill.litersInTank
-        : 0
-    return {
-      remainingLiters: remaining,
-      currentEthanolPct: ethFraction * 100,
-    }
-  }, [tankStateAfterLastFill, avgConsumption, inputOdo])
+      tankState.litersInTank > 0 ? tankState.ethanolLiters / tankState.litersInTank : 0
+    return { remainingLiters: remaining, currentEthanolPct: ethFraction * 100 }
+  }, [tankState, avgConsumption, inputOdo, tankCapacity])
 
   const currentEthanolLiters = (currentEthanolPct / 100) * remainingLiters
 
@@ -266,14 +259,7 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
         conversion.ethanol_tolerance_pct,
         dilutantEthFraction,
       ),
-    [
-      remainingLiters,
-      currentEthanolLiters,
-      tankCapacity,
-      conversion.target_ethanol_pct,
-      conversion.ethanol_tolerance_pct,
-      dilutantEthFraction,
-    ],
+    [remainingLiters, currentEthanolLiters, tankCapacity, conversion, dilutantEthFraction],
   )
 
   if (!avgConsumption) {
@@ -287,40 +273,39 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Pas assez de données de consommation pour calculer le mélange.
-            Enregistrez au moins deux pleins complets.
+            Pas assez de données depuis l'installation du boîtier. Enregistrez au moins deux pleins complets.
           </p>
         </CardContent>
       </Card>
     )
   }
 
-  const targetMin = conversion.target_ethanol_pct - conversion.ethanol_tolerance_pct
-  const targetMax = conversion.target_ethanol_pct + conversion.ethanol_tolerance_pct
-  const resultColor =
-    recommendation.withinTolerance
-      ? 'text-emerald-600'
-      : recommendation.resultEthanolPct > targetMax
-        ? 'text-orange-500'
-        : 'text-blue-500'
+  const targetMin = Math.round(conversion.target_ethanol_pct - conversion.ethanol_tolerance_pct)
+  const targetMax = Math.round(conversion.target_ethanol_pct + conversion.ethanol_tolerance_pct)
+  const resultPct = recommendation.resultEthanolPct
+  const resultColor = recommendation.withinTolerance
+    ? 'text-emerald-600 dark:text-emerald-400'
+    : resultPct > targetMax
+      ? 'text-orange-500'
+      : 'text-blue-500'
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <FlaskConical className="h-4 w-4 text-emerald-600" />
-          Calculateur de mélange E85
+          Mélange E85
         </CardTitle>
-        <p className="text-sm font-normal text-muted-foreground">
-          Cible : {conversion.target_ethanol_pct}% éthanol ± {conversion.ethanol_tolerance_pct}%
-          &nbsp;&middot;&nbsp;Réservoir : {tankCapacity} L
-          &nbsp;&middot;&nbsp;Conso moy. : {avgConsumption.toFixed(1)} L/100km
+        <p className="text-xs text-muted-foreground">
+          Cible {conversion.target_ethanol_pct}% ± {conversion.ethanol_tolerance_pct}%
+          &nbsp;· {tankCapacity} L &nbsp;· {avgConsumption.toFixed(1)} L/100km
         </p>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Inputs */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
+      <CardContent className="space-y-3">
+
+        {/* Inputs — compact for mobile */}
+        <div className="flex gap-2">
+          <div className="flex-1 space-y-1">
             <Label className="text-xs">Odomètre actuel (km)</Label>
             <Input
               type="number"
@@ -328,71 +313,58 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
               placeholder={String(lastOdo)}
               value={currentOdo}
               onChange={(e) => setCurrentOdo(e.target.value)}
-              className="h-9"
+              className="h-10 text-base"
             />
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Diluant disponible</Label>
+          <div className="w-36 space-y-1">
+            <Label className="text-xs">Diluant</Label>
             <Select value={dilutantType} onValueChange={(v) => setDilutantType(v as DilutantType)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="e10">E10 (10% éthanol)</SelectItem>
-                <SelectItem value="sp95">SP95 (5% éthanol)</SelectItem>
+                <SelectItem value="e10">E10</SelectItem>
+                <SelectItem value="sp95">SP95</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Tank state */}
-        <div className="rounded-md bg-muted/50 p-3 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Restant estimé</span>
-            <span className="font-medium">{remainingLiters.toFixed(1)} L</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Éthanol actuel estimé</span>
-            <span className="font-medium">{currentEthanolPct.toFixed(1)}%</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">À ajouter (fill to full)</span>
-            <span className="font-medium">
-              {Math.max(0, tankCapacity - remainingLiters).toFixed(0)} L
-            </span>
-          </div>
-        </div>
-
-        {/* Recommendation */}
+        {/* Recommendation — the main output, big and clear */}
         {recommendation.type === 'tank_full' ? (
-          <p className="text-sm text-muted-foreground">Réservoir presque plein, pas de recommandation.</p>
+          <p className="text-sm text-muted-foreground">Réservoir presque plein.</p>
         ) : recommendation.type === 'blend' ? (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950/30">
-            <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-              Mets d'abord {recommendation.dilutantLiters} L de {dilutantLabel},
-              puis {recommendation.e85Liters} L de E85
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+            <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
+              {recommendation.dilutantLiters} L {dilutantLabel}
+              &nbsp;+ {recommendation.e85Liters} L E85
             </p>
-            <p className={`mt-1 text-xs ${resultColor}`}>
-              Taux éthanol résultant : {recommendation.resultEthanolPct.toFixed(1)}%
-              &nbsp;(cible {targetMin.toFixed(0)}–{targetMax.toFixed(0)}%)
+            <p className={`mt-1 text-sm ${resultColor}`}>
+              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;({targetMin}–{targetMax}%)
             </p>
           </div>
         ) : (
-          <div className="rounded-md border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-950/30">
-            <p className="text-sm font-semibold text-orange-800 dark:text-orange-300">
-              Plein E85 uniquement : {recommendation.e85Liters} L
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
+            <p className="text-lg font-bold text-orange-800 dark:text-orange-300">
+              {recommendation.e85Liters} L E85 uniquement
             </p>
             {recommendation.note && (
-              <p className="mt-1 text-xs text-orange-700 dark:text-orange-400">
+              <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
                 {recommendation.note}
               </p>
             )}
-            <p className={`mt-1 text-xs ${resultColor}`}>
-              Taux éthanol résultant : {recommendation.resultEthanolPct.toFixed(1)}%
-              &nbsp;(cible {targetMin.toFixed(0)}–{targetMax.toFixed(0)}%)
+            <p className={`mt-1 text-sm ${resultColor}`}>
+              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;({targetMin}–{targetMax}%)
             </p>
           </div>
         )}
+
+        {/* Details — secondary info, small */}
+        <div className="flex gap-4 text-xs text-muted-foreground">
+          <span>Restant estimé : {remainingLiters.toFixed(1)} L</span>
+          <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
+        </div>
+
       </CardContent>
     </Card>
   )
