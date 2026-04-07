@@ -33,6 +33,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useVehicleStats, useVehicleCostStats, useDeleteVehicle } from '@/hooks/use-vehicles'
 import { useMaintenanceReminders } from '@/hooks/use-maintenance-reminders'
+import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { FUEL_TYPE_LABELS, FUEL_TYPE_COLORS } from '@/lib/constants'
 import type { VehicleList } from '@/types'
 import { toast } from 'sonner'
@@ -59,6 +60,7 @@ export function VehicleCard({
   const { data: stats } = useVehicleStats(vehicle.id)
   const { data: costStats } = useVehicleCostStats(vehicle.id)
   const { reminders } = useMaintenanceReminders(vehicle.id)
+  const { data: flexfuelConversion } = useFlexfuelConversion(vehicle.id)
   const deleteVehicle = useDeleteVehicle()
 
   const fuelColors = FUEL_TYPE_COLORS[vehicle.fuel_type]
@@ -251,7 +253,7 @@ export function VehicleCard({
           <TooltipContent>Maintenance</TooltipContent>
         </Tooltip>
 
-        {vehicle.fuel_type === 'e85' && onBlendCalc && (
+        {flexfuelConversion && onBlendCalc && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:text-emerald-700" onClick={onBlendCalc} aria-label="Calculateur de mélange E85">
