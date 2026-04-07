@@ -32,12 +32,15 @@ interface TankState {
   lastOdo: number
 }
 
-/** Compute average L/100km from fill history using fill-to-fill method. */
-function computeAvgConsumption(entries: FuelEntry[]): number | null {
-  const sorted = [...entries].sort((a, b) => {
-    const d = a.fueling_date.localeCompare(b.fueling_date)
-    return d !== 0 ? d : a.id - b.id
-  })
+/** Compute average L/100km from fill history using fill-to-fill method.
+ *  Only uses entries from conversionDate onwards (E85 consumption pattern). */
+function computeAvgConsumption(entries: FuelEntry[], conversionDate: string): number | null {
+  const sorted = [...entries]
+    .filter((e) => e.fueling_date >= conversionDate)
+    .sort((a, b) => {
+      const d = a.fueling_date.localeCompare(b.fueling_date)
+      return d !== 0 ? d : a.id - b.id
+    })
 
   let prevFullOdo: number | null = null
   let accLiters = 0
@@ -60,19 +63,24 @@ function computeAvgConsumption(entries: FuelEntry[]): number | null {
 }
 
 /**
- * Walk through all fills in chronological order and track
- * litres of ethanol + total litres in tank after each fill.
+ * Walk through fills from conversionDate onwards in chronological order,
+ * tracking litres of ethanol + total litres in tank after each fill.
+ * Tank is capped at tankCapacity to prevent accumulation drift.
  * Returns state after the last recorded fill.
  */
 function computeTankState(
   entries: FuelEntry[],
+  conversionDate: string,
   dilutantEthPct: number, // fraction for 'essence' fills
   avgL100km: number,
+  tankCapacity: number,
 ): TankState {
-  const sorted = [...entries].sort((a, b) => {
-    const d = a.fueling_date.localeCompare(b.fueling_date)
-    return d !== 0 ? d : a.id - b.id
-  })
+  const sorted = [...entries]
+    .filter((e) => e.fueling_date >= conversionDate)
+    .sort((a, b) => {
+      const d = a.fueling_date.localeCompare(b.fueling_date)
+      return d !== 0 ? d : a.id - b.id
+    })
 
   if (sorted.length === 0) {
     return { litersInTank: 0, ethanolLiters: 0, lastOdo: 0 }
@@ -85,7 +93,7 @@ function computeTankState(
   for (const e of sorted) {
     const distance = Math.max(0, e.odometer_reading - prevOdo)
     const consumed = (distance * avgL100km) / 100
-    const remaining = Math.max(0, litersInTank - consumed)
+    const remaining = Math.min(Math.max(0, litersInTank - consumed), tankCapacity)
     const ethRemaining = litersInTank > 0 ? (ethanolLiters / litersInTank) * remaining : 0
 
     const fillEthFraction =
@@ -95,8 +103,8 @@ function computeTankState(
           ? dilutantEthPct
           : ETHANOL_FRACTION[e.fuel_type] ?? 0
 
-    litersInTank = remaining + e.liters
-    ethanolLiters = ethRemaining + e.liters * fillEthFraction
+    litersInTank = Math.min(remaining + e.liters, tankCapacity)
+    ethanolLiters = Math.min(ethRemaining + e.liters * fillEthFraction, litersInTank)
     prevOdo = e.odometer_reading
   }
 
@@ -209,15 +217,20 @@ export function BlendCalculator({ conversion, vehicle, entries }: BlendCalculato
 
   const tankCapacity = vehicle.tank_capacity ?? 50
 
-  const avgConsumption = useMemo(() => computeAvgConsumption(entries), [entries])
+  const conversionDate = conversion.conversion_date
+
+  const avgConsumption = useMemo(
+    () => computeAvgConsumption(entries, conversionDate),
+    [entries, conversionDate],
+  )
 
   // State after last recorded fill (using selected dilutant fraction for 'essence' history)
   const tankStateAfterLastFill = useMemo(
     () =>
       avgConsumption
-        ? computeTankState(entries, dilutantEthFraction, avgConsumption)
+        ? computeTankState(entries, conversionDate, dilutantEthFraction, avgConsumption, tankCapacity)
         : null,
-    [entries, dilutantEthFraction, avgConsumption],
+    [entries, conversionDate, dilutantEthFraction, avgConsumption, tankCapacity],
   )
 
   const lastOdo = tankStateAfterLastFill?.lastOdo ?? 0
