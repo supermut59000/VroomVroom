@@ -146,7 +146,23 @@ function computeRecommendation(
     }
   }
 
-  // Solve for x (dilutant litres) to hit exactly target:
+  // Summer: pure E85, no blend calculation needed
+  if (season === 'ete') {
+    const e85Only = Math.round(T)
+    const resultPct =
+      remainingLiters + e85Only > 0
+        ? (currentEthanolLiters + e85Only * 0.85) / (remainingLiters + e85Only)
+        : 0
+    return {
+      type: 'e85_only',
+      dilutantLiters: 0,
+      e85Liters: e85Only,
+      resultEthanolPct: resultPct * 100,
+      withinBound: true,
+    }
+  }
+
+  // Winter: solve for x (dilutant litres) to hit exactly target:
   // currentEthanol + x·dilutantFrac + (T-x)·0.85 = target·(remaining + T)
   const numerator = target * (remainingLiters + T) - currentEthanolLiters - 0.85 * T
   const denominator = dilutantEthFraction - 0.85 // always negative
@@ -318,11 +334,6 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
       ? 'text-orange-500'   // too much ethanol in winter
       : 'text-blue-500'     // not enough ethanol in summer
 
-  // Season label displayed in recommendation
-  const seasonConstraint = season === 'hiver'
-    ? `≤ ${target}%`
-    : `≥ ${target}%`
-
   const content = (
     <div className="space-y-3">
       {/* Season toggle */}
@@ -376,26 +387,36 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
         {/* Recommendation — main output */}
         {recommendation.type === 'tank_full' ? (
           <p className="text-sm text-muted-foreground">Réservoir presque plein.</p>
+        ) : season === 'ete' ? (
+          // Summer: pure E85, no blend needed
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
+            <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
+              {recommendation.e85Liters} L E85
+            </p>
+            <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+              Plein E85 pur — économies maximales
+            </p>
+          </div>
         ) : recommendation.type === 'blend' ? (
+          // Winter blend
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
             <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
               {recommendation.dilutantLiters} L {dilutantLabel}
               &nbsp;+ {recommendation.e85Liters} L E85
             </p>
             <p className={`mt-1 text-sm ${resultColor}`}>
-              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;(cible {seasonConstraint})
+              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;(cible ≤ {target}%)
             </p>
           </div>
         ) : (
+          // Winter e85_only (already within bound or can't dilute)
           <div className={`rounded-lg border p-4 ${
             resultOk
               ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
               : 'border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/30'
           }`}>
             <p className={`text-lg font-bold ${
-              resultOk
-                ? 'text-emerald-800 dark:text-emerald-300'
-                : 'text-orange-800 dark:text-orange-300'
+              resultOk ? 'text-emerald-800 dark:text-emerald-300' : 'text-orange-800 dark:text-orange-300'
             }`}>
               {recommendation.e85Liters} L E85 uniquement
             </p>
@@ -407,7 +428,7 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
               </p>
             )}
             <p className={`mt-1 text-sm ${resultColor}`}>
-              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;(cible {seasonConstraint})
+              Résultat : {resultPct.toFixed(1)}% éthanol &nbsp;(cible ≤ {target}%)
             </p>
           </div>
         )}
