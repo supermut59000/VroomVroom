@@ -17,6 +17,7 @@ import { FuelAddDialog } from '@/components/fuel/FuelAddDialog'
 import { FuelViewDialog } from '@/components/fuel/FuelViewDialog'
 import { MaintenanceAddDialog } from '@/components/maintenance/MaintenanceAddDialog'
 import { MaintenanceViewDialog } from '@/components/maintenance/MaintenanceViewDialog'
+import { BlendCalculatorDialog } from '@/components/flexfuel/BlendCalculatorDialog'
 
 export function Dashboard() {
   const { data: vehicles, isLoading, error, refetch } = useVehicles()
@@ -29,6 +30,7 @@ export function Dashboard() {
   const [fuelViewVehicleId, setFuelViewVehicleId] = useState<number | null>(null)
   const [maintenanceAddVehicleId, setMaintenanceAddVehicleId] = useState<number | null>(null)
   const [maintenanceViewVehicleId, setMaintenanceViewVehicleId] = useState<number | null>(null)
+  const [blendCalcVehicleId, setBlendCalcVehicleId] = useState<number | null>(null)
   const [fabSheetOpen, setFabSheetOpen] = useState(false)
 
   const handleFabClick = () => {
@@ -119,6 +121,7 @@ export function Dashboard() {
         onFuelView={setFuelViewVehicleId}
         onMaintenanceAdd={setMaintenanceAddVehicleId}
         onMaintenanceView={setMaintenanceViewVehicleId}
+        onBlendCalc={setBlendCalcVehicleId}
       />
 
       {/* Dialogs */}
@@ -150,6 +153,10 @@ export function Dashboard() {
       <MaintenanceViewDialog
         vehicleId={maintenanceViewVehicleId}
         onClose={() => setMaintenanceViewVehicleId(null)}
+      />
+      <BlendCalculatorDialog
+        vehicleId={blendCalcVehicleId}
+        onClose={() => setBlendCalcVehicleId(null)}
       />
 
       {/* Floating Action Button — quick fuel add */}

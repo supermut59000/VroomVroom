@@ -8,6 +8,7 @@ import {
   Calendar,
   TrendingUp,
   Wallet,
+  FlaskConical,
 } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -44,6 +45,7 @@ interface VehicleCardProps {
   onFuelView: () => void
   onMaintenanceAdd: () => void
   onMaintenanceView: () => void
+  onBlendCalc?: () => void
 }
 
 export function VehicleCard({
@@ -52,6 +54,7 @@ export function VehicleCard({
   onFuelAdd,
   onFuelView,
   onMaintenanceView,
+  onBlendCalc,
 }: VehicleCardProps) {
   const { data: stats } = useVehicleStats(vehicle.id)
   const { data: costStats } = useVehicleCostStats(vehicle.id)
@@ -247,6 +250,17 @@ export function VehicleCard({
           </TooltipTrigger>
           <TooltipContent>Maintenance</TooltipContent>
         </Tooltip>
+
+        {vehicle.fuel_type === 'e85' && onBlendCalc && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:text-emerald-700" onClick={onBlendCalc} aria-label="Calculateur de mélange E85">
+                <FlaskConical className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Mélange E85</TooltipContent>
+          </Tooltip>
+        )}
 
         <AlertDialog>
           <Tooltip>
