@@ -209,7 +209,8 @@ export function VehicleDetailsDialog({
                 </section>
               )}
 
-              {/* FlexFuel E85 */}
+              {/* FlexFuel E85 — only for E85 vehicles */}
+              {vehicle.fuel_type === 'e85' && <>
               <Separator />
               <section>
                 <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
@@ -267,6 +268,7 @@ export function VehicleDetailsDialog({
                   </Button>
                 )}
               </section>
+              </>}
 
               {/* Cost of ownership */}
               <Separator />
