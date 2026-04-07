@@ -209,13 +209,12 @@ function computeRecommendation(
     const onlyPct =
       (currentEthanolLiters + e85Only * 0.85) / (remainingLiters + e85Only)
 
+    // At this point season is always 'hiver' (summer returns early above)
     let note: string
-    if (season === 'hiver' && onlyPct > target + tolerance) {
+    if (onlyPct > target + tolerance) {
       note = 'Taux éthanol trop élevé — reporter la dilution au prochain plein.'
-    } else if (season === 'ete' && onlyPct < target - tolerance) {
-      note = 'Taux éthanol insuffisant — ajouter du diluant au prochain plein.'
     } else {
-      note = season === 'hiver' ? 'Taux déjà ≤ cible.' : 'Taux déjà ≥ cible.'
+      note = 'Taux déjà ≤ cible.'
     }
 
     return {
