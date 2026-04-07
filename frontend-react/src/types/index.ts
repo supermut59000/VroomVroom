@@ -233,6 +233,8 @@ export interface FlexfuelConversion {
   kit_brand: string | null
   installer: string | null
   notes: string | null
+  target_ethanol_pct: number
+  ethanol_tolerance_pct: number
   created_at: string
   updated_at: string | null
 }
@@ -245,6 +247,8 @@ export interface FlexfuelConversionCreate {
   kit_brand?: string | null
   installer?: string | null
   notes?: string | null
+  target_ethanol_pct?: number
+  ethanol_tolerance_pct?: number
 }
 
 export interface FlexfuelConversionUpdate {
@@ -254,6 +258,8 @@ export interface FlexfuelConversionUpdate {
   kit_brand?: string | null
   installer?: string | null
   notes?: string | null
+  target_ethanol_pct?: number
+  ethanol_tolerance_pct?: number
 }
 
 // E10 Reference Price (global, not per-vehicle)

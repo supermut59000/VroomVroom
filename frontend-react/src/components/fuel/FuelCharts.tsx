@@ -18,6 +18,7 @@ import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
 import { PriceChart } from '@/components/charts/PriceChart'
 import { StationsMap } from '@/components/charts/StationsMap'
 import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilityChart'
+import { BlendCalculator } from '@/components/flexfuel/BlendCalculator'
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
 import { InsuranceKmChart } from '@/components/charts/InsuranceKmChart'
@@ -142,7 +143,19 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           )}
           <ErrorBoundary><StationsMap entries={filteredEntries} /></ErrorBoundary>
 
-          {/* FlexFuel E85 Rentability */}
+          {/* FlexFuel E85 */}
+          {flexfuelConversion && vehicle && allEntries && (
+            <>
+              <Separator />
+              <ErrorBoundary>
+                <BlendCalculator
+                  conversion={flexfuelConversion}
+                  vehicle={vehicle}
+                  entries={allEntries}
+                />
+              </ErrorBoundary>
+            </>
+          )}
           {rentability && (
             <>
               <Separator />

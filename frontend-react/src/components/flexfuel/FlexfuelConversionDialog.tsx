@@ -28,6 +28,8 @@ const schema = z.object({
   kit_brand: z.string().optional().or(z.literal('')),
   installer: z.string().optional().or(z.literal('')),
   notes: z.string().optional().or(z.literal('')),
+  target_ethanol_pct: z.coerce.number().min(0).max(100),
+  ethanol_tolerance_pct: z.coerce.number().min(0).max(20),
 })
 
 type FormData = z.infer<typeof schema>
@@ -61,6 +63,8 @@ export function FlexfuelConversionDialog({
           kit_brand: existing.kit_brand ?? '',
           installer: existing.installer ?? '',
           notes: existing.notes ?? '',
+          target_ethanol_pct: existing.target_ethanol_pct,
+          ethanol_tolerance_pct: existing.ethanol_tolerance_pct,
         }
       : {
           conversion_date: new Date().toISOString().split('T')[0],
@@ -69,6 +73,8 @@ export function FlexfuelConversionDialog({
           kit_brand: '',
           installer: '',
           notes: '',
+          target_ethanol_pct: 77,
+          ethanol_tolerance_pct: 5,
         },
   })
 
@@ -83,6 +89,8 @@ export function FlexfuelConversionDialog({
           kit_brand: data.kit_brand || null,
           installer: data.installer || null,
           notes: data.notes || null,
+          target_ethanol_pct: data.target_ethanol_pct,
+          ethanol_tolerance_pct: data.ethanol_tolerance_pct,
         })
         toast.success('Conversion mise à jour')
       } else {
@@ -94,6 +102,8 @@ export function FlexfuelConversionDialog({
           kit_brand: data.kit_brand || null,
           installer: data.installer || null,
           notes: data.notes || null,
+          target_ethanol_pct: data.target_ethanol_pct,
+          ethanol_tolerance_pct: data.ethanol_tolerance_pct,
         })
         toast.success('Conversion FlexFuel enregistrée')
       }
@@ -140,6 +150,19 @@ export function FlexfuelConversionDialog({
             <Label htmlFor="conv-overcons">Surconsommation E85 (%)</Label>
             <Input id="conv-overcons" type="number" step="0.1" {...form.register('overconsumption_pct')} />
             <p className="text-xs text-muted-foreground">Par défaut 20%. L'E85 consomme environ 20% de plus que l'E10.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="conv-ethanol-target">Taux éthanol cible (%)</Label>
+              <Input id="conv-ethanol-target" type="number" step="0.1" min="0" max="100" {...form.register('target_ethanol_pct')} />
+              <p className="text-xs text-muted-foreground">Ex: 77% = 5L E10 + 40L E85 dans un réservoir 45L.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="conv-ethanol-tol">Tolérance (%)</Label>
+              <Input id="conv-ethanol-tol" type="number" step="0.5" min="0" max="20" {...form.register('ethanol_tolerance_pct')} />
+              <p className="text-xs text-muted-foreground">Écart accepté autour de la cible (±%).</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -17,6 +17,8 @@ class FlexfuelConversion(Base):
     kit_brand = Column(String(100), nullable=True)
     installer = Column(String(100), nullable=True)
     notes = Column(Text, nullable=True)
+    target_ethanol_pct = Column(Float, nullable=False, default=77.0)
+    ethanol_tolerance_pct = Column(Float, nullable=False, default=5.0)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

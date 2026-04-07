@@ -149,6 +149,8 @@ CREATE TABLE IF NOT EXISTS `flexfuel_conversions` (
     `kit_brand` VARCHAR(100) NULL,
     `installer` VARCHAR(100) NULL,
     `notes` TEXT NULL,
+    `target_ethanol_pct` FLOAT NOT NULL DEFAULT 77.0,
+    `ethanol_tolerance_pct` FLOAT NOT NULL DEFAULT 5.0,
 
     -- Timestamps
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,

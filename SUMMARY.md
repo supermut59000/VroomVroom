@@ -56,6 +56,8 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
   - Cumulative savings line chart with kit cost threshold (red dashed line)
   - Monthly savings bar chart
 - Y axis auto-scales to max(kit cost, total savings) × 1.1
+- `monthly_average_savings` excludes current (incomplete) month — avoids dragging break-even projection too far
+- **BlendCalculator** (in graphs popup): recommends X L dilutant (E10 or SP95) + Y L E85 to maintain `target_ethanol_pct` in tank. French pump minimum 5L enforced. Configured on conversion record (`target_ethanol_pct`, `ethanol_tolerance_pct`).
 
 **Charts & Analytics (in graphs popup)**
 - Consumption chart (L/100km per fill), price chart (€/L over time)
@@ -340,6 +342,35 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 - E10 equivalent cost = equivalent E10 liters × latest E10 reference price at fill date
 - Savings per fill = E10 equivalent cost - actual E85 cost
 - Break-even = when cumulative savings >= kit cost
+
+---
+
+## What Was Done (Session of 2026-04-07)
+
+### FlexFuel — Blend Calculator E85/diluant
+
+**Context**: user does E85 + small SP95/E10 fills (same day, same odometer) to maintain a target ethanol % in the tank for cold starts. Two separate fuel entries — partial 'essence' + full E85 — already work correctly with the existing consumption and rentability calculations.
+
+**Backend**:
+- `FlexfuelConversion` model + Pydantic schema: added `target_ethanol_pct` (default 77.0) and `ethanol_tolerance_pct` (default 5.0)
+- Migration: `backend/migrations/add_blend_calculator_to_flexfuel.sql`
+- `init_database.sql` updated for fresh installs
+- `flexfuel_service.py`: `monthly_average_savings` now excludes the current (incomplete) month — fixes over-optimistic break-even projection
+
+**Frontend**:
+- `FlexfuelConversionDialog`: two new fields (target éthanol cible %, tolérance ±%)
+- New component `BlendCalculator` (`frontend-react/src/components/flexfuel/BlendCalculator.tsx`):
+  - Recomputes avg L/100km from fill history (fill-to-fill, client-side)
+  - Tracks ethanol liters fill-by-fill from entire history to estimate current tank ethanol %
+  - User inputs current odometer + dilutant type (E10 or SP95, since it varies by station)
+  - Solves blend equation: `x L dilutant + y L E85` to hit target %
+  - Applies 5L minimum pump constraint (France): if x < 5 → skip dilutant this fill
+  - Shows "Mets X L de E10 puis Y L de E85" or "E85 uniquement + reporter la dilution"
+  - Color-coded result % (green = within tolerance, orange = too high, blue = too low)
+- `FuelCharts`: BlendCalculator injected above FlexfuelRentabilityChart (only for FlexFuel vehicles)
+
+**FuelCharts ordering fix** (same session):
+- `filteredEntries` sort now uses `id` as tiebreaker for same-date fills, preserving DB insertion order
 
 ---
 

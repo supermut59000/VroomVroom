@@ -121,10 +121,11 @@ When making schema changes:
 - Reminder badges on vehicle cards (red = overdue, orange = upcoming within 30 days or 1000km)
 
 ### FlexFuel E85
-- Record conversion (date, kit cost, overconsumption %, brand, installer)
+- Record conversion (date, kit cost, overconsumption %, brand, installer, target_ethanol_pct, ethanol_tolerance_pct)
 - Global E10 reference price history (date + price/L, shared across vehicles)
 - Rentability calculation: savings per E85 fill = (E85_liters / overconsumption_factor × E10_ref_price) - actual_E85_cost
 - Charts: cumulative savings line (Y axis = max(kit_cost, total_savings) × 1.1), monthly savings bars, summary cards
+- **BlendCalculator**: see section below
 
 ### Station price map
 - Standalone dialog (header button): nearby stations from gouv.fr API, adjustable radius 2-50km
@@ -140,6 +141,7 @@ When making schema changes:
 - **InsuranceKmChart**: absolute odometer progression vs insurance km limit (line). Reference line at `insurance_km_limit + years_elapsed × annual_increase`. Dotted projection forward at current monthly rate. Badge uses backend `insurance_km_remaining` (authoritative). Only renders if `vehicle.insurance_km_limit` is set. Uses **allEntries** (never filtered) for correct base odometer.
 - **StationsMap**: clusters GPS fill points within 100m radius, Leaflet map.
 - **FlexfuelRentabilityChart**: cumulative savings line vs kit cost reference line. If break-even not reached: dotted projection line extending at `monthly_average_savings` rate until kit cost is hit. Badge shows projected break-even month. Monthly savings bar chart.
+- **BlendCalculator** (`frontend-react/src/components/flexfuel/BlendCalculator.tsx`): in-graphs popup, only for FlexFuel vehicles. See dedicated section below.
 
 #### Insurance km calculation (mirrors backend exactly)
 ```
@@ -182,6 +184,57 @@ Priority for determining the spread end date:
 - `MaintenanceProj` = actual `spreadMaintenanceCosts` value for that future month
 
 **Averages** (header "Moyenne" badge, DistanceChart `avgKm` / `projectedAnnual`): computed on completed months only (< current month). Fallback to all months if no completed months exist.
+
+#### FlexFuel monthly_average_savings (backend)
+Computed in `flexfuel_service.py`. Excludes the current month from the average so that a partial month doesn't drag the projection down. If no completed months exist (conversion done this month), `monthly_average_savings = None` → no projection shown.
+
+#### BlendCalculator — mélange E85/diluant (frontend only)
+
+**Use case**: user fills with a small amount of SP95 or E10 first, then E85, to maintain a target ethanol % in the tank for reliable cold starts. Recorded as two separate fuel entries (partial 'essence' + full E85, same odometer).
+
+**Stored on `FlexfuelConversion`** (new fields):
+- `target_ethanol_pct` (default 77.0) — target ethanol % in tank
+- `ethanol_tolerance_pct` (default 5.0) — acceptable ±deviation
+
+**Ethanol content by fuel type**: E85 = 85%, E10 = 10%, SP95 = 5%, diesel/GPL/electric = 0%.
+For 'essence' fills in history: uses the dilutant fraction the user selects at calculation time (E10 or SP95).
+
+**Tank state computation** (fill-by-fill, from the full fill history):
+```
+state = { litersInTank: 0, ethanolLiters: 0, prevOdo: firstFill.odo }
+for each fill sorted by (fueling_date ASC, id ASC):
+  distance = max(0, fill.odo - prevOdo)
+  consumed = distance × avgL100km / 100
+  remaining = max(0, state.litersInTank - consumed)
+  ethRemaining = (state.ethanolLiters / state.litersInTank) × remaining
+  state.litersInTank = remaining + fill.liters
+  state.ethanolLiters = ethRemaining + fill.liters × ethanolFraction(fill.fuel_type)
+  state.prevOdo = fill.odo
+```
+`avgL100km` is computed client-side from the same fill history using fill-to-fill method (accumulate partials until next full tank, divide total liters by distance).
+
+**Blend recommendation** at fill time:
+```
+T = tankCapacity - remainingLiters          (litres à ajouter, fill to full)
+currentEthanolLiters = remainingLiters × currentEthanolPct
+
+x_ideal = (target × (remaining + T) - currentEthanolLiters - 0.85 × T) / (dilutantFraction - 0.85)
+x = round(x_ideal)
+
+if x < 5  → x = 0   (minimum pompe France = 5L)
+if T-x < 5 → x = max(0, round(T - 5))
+
+result_pct = (currentEthanolLiters + x × dilutantFraction + (T-x) × 0.85) / (remaining + T)
+```
+- If `x = 0` and `result_pct` is within tolerance → recommend E85 only (fine)
+- If `x = 0` and above tolerance → recommend E85 only + note "reporter la dilution au prochain plein"
+- Otherwise → recommend "Mets X L de [E10|SP95] puis Y L de E85"
+- Shows resulting ethanol % (green if within target ± tolerance, orange/blue if outside)
+
+**Recording** (no schema change needed): two fills, same odometer, same day:
+- 'essence' fill, `is_full_tank: false` (the dilutant)
+- E85 fill, `is_full_tank: true` (completes the tank)
+The consumption calculation already handles this correctly: partial 'essence' accumulates, E85 full fill triggers the fill-to-fill calculation over the total distance.
 
 ### PWA / Offline
 - Service worker: network-first for API, cache-first for assets and map tiles

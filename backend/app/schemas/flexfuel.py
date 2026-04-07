@@ -12,6 +12,8 @@ class FlexfuelConversionBase(BaseModel):
     kit_brand: Optional[str] = Field(None, max_length=100)
     installer: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
+    target_ethanol_pct: float = Field(default=77.0, ge=0, le=100, description="Target ethanol % in tank for cold-start blend")
+    ethanol_tolerance_pct: float = Field(default=5.0, ge=0, le=20, description="Acceptable deviation from target ethanol %")
 
 
 class FlexfuelConversionCreate(FlexfuelConversionBase):
@@ -25,6 +27,8 @@ class FlexfuelConversionUpdate(BaseModel):
     kit_brand: Optional[str] = Field(None, max_length=100)
     installer: Optional[str] = Field(None, max_length=100)
     notes: Optional[str] = None
+    target_ethanol_pct: Optional[float] = Field(None, ge=0, le=100)
+    ethanol_tolerance_pct: Optional[float] = Field(None, ge=0, le=20)
 
 
 class FlexfuelConversionResponse(FlexfuelConversionBase):
