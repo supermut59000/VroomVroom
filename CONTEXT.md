@@ -207,10 +207,11 @@ for each fill sorted by (fueling_date ASC, id ASC):
   consumed = distance × avgL100km / 100
   remaining = max(0, state.litersInTank - consumed)
   ethRemaining = (state.ethanolLiters / state.litersInTank) × remaining
-  state.litersInTank = remaining + fill.liters
+  state.litersInTank = fill.is_full_tank ? tankCapacity : min(remaining + fill.liters, tankCapacity)
   state.ethanolLiters = ethRemaining + fill.liters × ethanolFraction(fill.fuel_type)
   state.prevOdo = fill.odo
 ```
+`is_full_tank` resets `litersInTank` to `tankCapacity` — prevents small consumption estimation errors from accumulating over many fills (drift fix).
 `avgL100km` is computed client-side from the same fill history using fill-to-fill method (accumulate partials until next full tank, divide total liters by distance).
 
 **Blend recommendation** at fill time:

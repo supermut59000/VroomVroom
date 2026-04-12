@@ -372,6 +372,9 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 **FuelCharts ordering fix** (same session):
 - `filteredEntries` sort now uses `id` as tiebreaker for same-date fills, preserving DB insertion order
 
+**BlendCalculator drift fix** (session of 2026-04-12):
+- `computeTankState`: when `is_full_tank=true`, force `litersInTank = tankCapacity` instead of `remaining + liters`. Prevents consumption estimation errors from accumulating — was causing "Restant: 44.4L" instead of 45L after a full fill, showing 0.6L drift.
+
 ---
 
 ## What Was Done (Session of 2026-04-05)

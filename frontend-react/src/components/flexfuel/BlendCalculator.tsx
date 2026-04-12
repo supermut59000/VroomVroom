@@ -97,7 +97,7 @@ function computeTankState(
     const ethRemaining = litersInTank > 0 ? (ethanolLiters / litersInTank) * remaining : 0
     const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
 
-    litersInTank = Math.min(remaining + e.liters, tankCapacity)
+    litersInTank = e.is_full_tank ? tankCapacity : Math.min(remaining + e.liters, tankCapacity)
     ethanolLiters = Math.min(ethRemaining + e.liters * fillEthFraction, litersInTank)
     prevOdo = e.odometer_reading
   }
