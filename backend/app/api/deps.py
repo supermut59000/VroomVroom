@@ -1,3 +1,4 @@
+import hmac
 from typing import Generator
 from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import APIKeyHeader
@@ -27,7 +28,7 @@ async def verify_api_key(api_key: str | None = Security(_api_key_header)):
     """
     if not settings.API_KEY:
         return  # Auth disabled
-    if not api_key or api_key != settings.API_KEY:
+    if not api_key or not hmac.compare_digest(api_key, settings.API_KEY):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Clé API invalide ou manquante",

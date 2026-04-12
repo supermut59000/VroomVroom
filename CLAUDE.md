@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session Initialization
+
+**At the start of every conversation, read these two files before doing anything else:**
+- [CONTEXT.md](CONTEXT.md) — current app context, recent decisions, and active feature state
+- [SUMMARY.md](SUMMARY.md) — high-level summary of the project and its current status
+
 ## Project Overview
 
 VroomVroom is a **vehicle management web application** for tracking vehicles, fuel consumption, mileage, and maintenance in a homelab environment. Full-stack: FastAPI backend + React 19 frontend, designed as a mobile-friendly PWA.
