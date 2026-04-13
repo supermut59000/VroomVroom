@@ -94,11 +94,19 @@ function computeTankState(
     const distance = Math.max(0, e.odometer_reading - prevOdo)
     const consumed = (distance * avgL100km) / 100
     const remaining = Math.min(Math.max(0, litersInTank - consumed), tankCapacity)
-    const ethRemaining = litersInTank > 0 ? (ethanolLiters / litersInTank) * remaining : 0
+    const ethFractionBefore = litersInTank > 0 ? ethanolLiters / litersInTank : 0
     const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
 
-    litersInTank = e.is_full_tank ? tankCapacity : Math.min(remaining + e.liters, tankCapacity)
-    ethanolLiters = Math.min(ethRemaining + e.liters * fillEthFraction, litersInTank)
+    if (e.is_full_tank) {
+      // Deduce actual remaining from fill amount: more accurate than the consumption model.
+      // Prevents drift in the model from inflating ethanol% above the physical max (85%).
+      const actualRemaining = Math.max(0, tankCapacity - e.liters)
+      litersInTank = tankCapacity
+      ethanolLiters = Math.min(ethFractionBefore * actualRemaining + e.liters * fillEthFraction, tankCapacity)
+    } else {
+      litersInTank = Math.min(remaining + e.liters, tankCapacity)
+      ethanolLiters = Math.min(ethFractionBefore * remaining + e.liters * fillEthFraction, litersInTank)
+    }
     prevOdo = e.odometer_reading
   }
 
