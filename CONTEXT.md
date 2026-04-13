@@ -202,16 +202,40 @@ For 'essence' fills in history: uses the dilutant fraction the user selects at c
 **Tank state computation** (fill-by-fill, from the full fill history):
 ```
 state = { litersInTank: 0, ethanolLiters: 0, prevOdo: firstFill.odo }
+
 for each fill sorted by (fueling_date ASC, id ASC):
-  distance = max(0, fill.odo - prevOdo)
-  consumed = distance × avgL100km / 100
-  remaining = max(0, state.litersInTank - consumed)
-  ethRemaining = (state.ethanolLiters / state.litersInTank) × remaining
-  state.litersInTank = fill.is_full_tank ? tankCapacity : min(remaining + fill.liters, tankCapacity)
-  state.ethanolLiters = ethRemaining + fill.liters × ethanolFraction(fill.fuel_type)
-  state.prevOdo = fill.odo
+  distance       = max(0, fill.odo - prevOdo)
+  consumed       = distance × avgL100km / 100
+  remaining      = min(max(0, litersInTank - consumed), tankCapacity)
+  ethFrac        = litersInTank > 0 ? ethanolLiters / litersInTank : 0
+
+  if fill.is_full_tank:
+    # Physical constraint: at most (tankCapacity - fill.liters) was left before fill.
+    # Take min(model estimate, physical bound) to prevent drift from inflating ethanol%
+    # above the 85% physical max, while still preserving a prior partial fill logged at
+    # the same odometer (e.g. 5 L E10 just before 40 L E85).
+    actualRemaining  = min(remaining, max(0, tankCapacity - fill.liters))
+    litersInTank     = tankCapacity
+    ethanolLiters    = min(ethFrac × actualRemaining + fill.liters × ethanolFrac(fill.fuel_type), tankCapacity)
+  else:
+    litersInTank     = min(remaining + fill.liters, tankCapacity)
+    ethanolLiters    = min(ethFrac × remaining + fill.liters × ethanolFrac(fill.fuel_type), litersInTank)
+
+  prevOdo = fill.odo
 ```
-`is_full_tank` resets `litersInTank` to `tankCapacity` — prevents small consumption estimation errors from accumulating over many fills (drift fix).
+
+**Ethanol fractions used** (fixed constants — E85 at pump in France varies 60–85% by season, 85% is a conservative upper bound):
+```
+e85       → 0.85
+essence   → 0.05  (SP95 assumed for historical fills)
+e10       → 0.10  (dilutant selected at recommendation time, not stored on fill)
+diesel / gpl / electrique / hybride → 0.00
+```
+
+**Why `min(remaining, tankCapacity - fill.liters)` on full fills:**
+- Model overestimates remaining (e.g. 5 L) but only 1 L was physically there → without fix: `5×80% + 44×85% = 41.4 L / 45 L = 92%` (impossible). With fix: `1×80% + 44×85% = 38.4 L / 45 L = 85.3%` ✓
+- E10 partial + E85 full at same odometer: model says 5 L remaining (the E10 we just logged, consumed=0). `actualRemaining = min(5, 45−40) = 5 L` → E10 contribution preserved ✓
+- User over-logs E85 (45 L in 45 L tank): `actualRemaining = min(5, 0) = 0` → E10 contribution lost, but this is a data entry issue (5+45 > 45 L is physically impossible)
 `avgL100km` is computed client-side from the same fill history using fill-to-fill method (accumulate partials until next full tank, divide total liters by distance).
 
 **Blend recommendation** at fill time:

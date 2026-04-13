@@ -75,7 +75,7 @@ export function EthanolHistoryChart({ conversion, vehicle, entries }: EthanolHis
       const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
 
       if (e.is_full_tank) {
-        const actualRemaining = Math.max(0, tankCapacity - e.liters)
+        const actualRemaining = Math.min(remaining, Math.max(0, tankCapacity - e.liters))
         litersInTank = tankCapacity
         ethanolLiters = Math.min(ethFractionBefore * actualRemaining + e.liters * fillEthFraction, tankCapacity)
       } else {

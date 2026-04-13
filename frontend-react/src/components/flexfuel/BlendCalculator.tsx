@@ -98,9 +98,11 @@ function computeTankState(
     const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
 
     if (e.is_full_tank) {
-      // Deduce actual remaining from fill amount: more accurate than the consumption model.
-      // Prevents drift in the model from inflating ethanol% above the physical max (85%).
-      const actualRemaining = Math.max(0, tankCapacity - e.liters)
+      // Take the minimum of the model estimate and the physical constraint.
+      // min(remaining, tankCapacity - e.liters) prevents the model's overestimate of
+      // remaining from inflating ethanol% above 85%, while preserving a prior partial
+      // fill (e.g. E10 logged just before with the same odometer).
+      const actualRemaining = Math.min(remaining, Math.max(0, tankCapacity - e.liters))
       litersInTank = tankCapacity
       ethanolLiters = Math.min(ethFractionBefore * actualRemaining + e.liters * fillEthFraction, tankCapacity)
     } else {
