@@ -345,6 +345,32 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 
 ---
 
+## What Was Done (Session of 2026-04-13)
+
+### BlendCalculator — bug fixes
+
+**Tank drift fix** (`computeTankState` in `BlendCalculator.tsx`):
+- When `is_full_tank=true`, reset `litersInTank = tankCapacity` (was `remaining + liters`, causing small consumption errors to accumulate across fills).
+
+**Ethanol % overflow fix** (both `BlendCalculator.tsx` and `EthanolHistoryChart.tsx`):
+- Root cause: model overestimates remaining (e.g. 5 L), user fills 44 L E85, but `litersInTank` is forced to 45 L. Previous formula `5L×80% + 44L×85% / 45L = 92%` — physically impossible.
+- Fix: `actualRemaining = min(remaining, max(0, tankCapacity - fill.liters))`.
+  - Corrects overestimates (takes the physical bound when model overshoots).
+  - Preserves prior E10 partial fill at same odometer: `min(5, 45-40) = 5 L` ✓.
+  - Only loses E10 if user over-logs E85 (e.g. 45 L in a 45 L tank with E10 already in) — data issue.
+
+**`tank_capacity` gotcha discovered**: manufacturer spec (e.g. 45 L for Corsa E) is the *usable* capacity, not the physical total. Real capacity (réservoir + réserve) is ~50 L. When filling from reserve (5 L left + 45 L pumped), `tankCapacity - liters = 0` → E10 lost. **User must set `tank_capacity` to the observed fill-to-click-off value from near-empty.**
+
+### EthanolHistoryChart — nouveau graphique
+
+- **Replaced** `BlendCalculator` in graphs popup with `EthanolHistoryChart`.
+- BlendCalculator remains in the vehicle dashboard card (`BlendCalculatorDialog`) — no duplication.
+- Chart: line of ethanol % per full fill over time, with teal dashed target line and orange dashed ±tolerance bounds.
+- Same tank state algorithm as BlendCalculator (shared constants, same fixes).
+- File: `frontend-react/src/components/charts/EthanolHistoryChart.tsx`
+
+---
+
 ## What Was Done (Session of 2026-04-07)
 
 ### FlexFuel — Blend Calculator E85/diluant

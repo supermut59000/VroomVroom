@@ -261,6 +261,25 @@ result_pct = (currentEthanolLiters + x × dilutantFraction + (T-x) × 0.85) / (r
 - E85 fill, `is_full_tank: true` (completes the tank)
 The consumption calculation already handles this correctly: partial 'essence' accumulates, E85 full fill triggers the fill-to-fill calculation over the total distance.
 
+**BlendCalculator location**: vehicle dashboard card (via `BlendCalculatorDialog`). NOT in the graphs popup — graphs popup has `EthanolHistoryChart` instead.
+
+#### EthanolHistoryChart — taux éthanol dans le réservoir (frontend only)
+
+**File**: `frontend-react/src/components/charts/EthanolHistoryChart.tsx`
+
+**Purpose**: line chart showing estimated ethanol % in the tank after each full fill, over time. Allows tracking whether the blending strategy is keeping ethanol within the target band.
+
+**Data**: one point per `is_full_tank=true` fill, computed using the exact same tank state algorithm as BlendCalculator (same `ETHANOL_FRACTION` constants, same `avgL100km`, same `actualRemaining` formula).
+
+**Reference lines**:
+- Teal dashed: `target_ethanol_pct` (77% default)
+- Orange dashed: `target + tolerance` and `target - tolerance` (±5% default)
+
+**Gotcha — `tank_capacity` must be the real physical capacity** (réservoir + réserve), not the manufacturer's "usable" spec:
+- A Corsa E is listed as 45 L but can physically hold ~50 L (the light comes on with ~5 L left)
+- If `tank_capacity = 45` but user fills 45 L of E85 from reserve (5 L left), `tankCapacity - fill.liters = 0` → `actualRemaining = 0` → E10 partial fill contribution is lost → chart shows ~85% instead of the real ~78%
+- Fix: set `tank_capacity` to the observed fill-to-click-off value from near-empty (e.g. 50 L)
+
 ### PWA / Offline
 - Service worker: network-first for API, cache-first for assets and map tiles
 - Installable on mobile
