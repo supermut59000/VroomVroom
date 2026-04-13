@@ -18,7 +18,7 @@ import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
 import { PriceChart } from '@/components/charts/PriceChart'
 import { StationsMap } from '@/components/charts/StationsMap'
 import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilityChart'
-import { BlendCalculator } from '@/components/flexfuel/BlendCalculator'
+import { EthanolHistoryChart } from '@/components/charts/EthanolHistoryChart'
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
 import { InsuranceKmChart } from '@/components/charts/InsuranceKmChart'
@@ -148,7 +148,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
             <>
               <Separator />
               <ErrorBoundary>
-                <BlendCalculator
+                <EthanolHistoryChart
                   conversion={flexfuelConversion}
                   vehicle={vehicle}
                   entries={allEntries}
