@@ -12,9 +12,6 @@ import {
 import type { FlexfuelConversion, Vehicle, FuelEntry } from '@/types'
 
 // Fixed ethanol content by fuel type (fraction 0–1) — used for history only.
-// 'essence' is assumed SP95 (5%) for all historical fills; the user's dilutant
-// choice at recommendation time is handled separately to avoid the estimate
-// changing when the selector is toggled.
 const ETHANOL_FRACTION: Record<string, number> = {
   e85: 0.85,
   essence: 0.05,
@@ -29,7 +26,6 @@ const MIN_PUMP_LITERS = 5
 type DilutantType = 'e10' | 'sp95'
 type SeasonMode = 'hiver' | 'ete'
 
-// Months 10–3 = winter, 4–9 = summer (0-indexed JS month)
 function defaultSeasonMode(): SeasonMode {
   const m = new Date().getMonth()
   return m >= 3 && m <= 8 ? 'ete' : 'hiver'
@@ -41,7 +37,6 @@ interface TankState {
   lastOdo: number
 }
 
-/** Compute average L/100km from fills since conversionDate, fill-to-fill method. */
 function computeAvgConsumption(entries: FuelEntry[], conversionDate: string): number | null {
   const sorted = [...entries]
     .filter((e) => e.fueling_date >= conversionDate)
@@ -70,11 +65,6 @@ function computeAvgConsumption(entries: FuelEntry[], conversionDate: string): nu
   return values.reduce((a, b) => a + b, 0) / values.length
 }
 
-/**
- * Walk through fills from conversionDate onwards, tracking ethanol litres
- * in the tank. Uses fixed ETHANOL_FRACTION for 'essence' fills (stable,
- * independent of the dilutant type the user selects in the UI).
- */
 function computeTankState(
   entries: FuelEntry[],
   conversionDate: string,
@@ -106,15 +96,83 @@ function computeTankState(
     if (e.is_full_tank) {
       const actualRemaining = Math.min(remaining, Math.max(0, tankCapacity - e.liters))
       litersInTank = tankCapacity
-      ethanolLiters = Math.min(ethFractionBefore * actualRemaining + e.liters * fillEthFraction, tankCapacity)
+      ethanolLiters = Math.min(
+        ethFractionBefore * actualRemaining + e.liters * fillEthFraction,
+        tankCapacity,
+      )
     } else {
       litersInTank = Math.min(remaining + e.liters, tankCapacity)
-      ethanolLiters = Math.min(ethFractionBefore * remaining + e.liters * fillEthFraction, litersInTank)
+      ethanolLiters = Math.min(
+        ethFractionBefore * remaining + e.liters * fillEthFraction,
+        litersInTank,
+      )
     }
     prevOdo = e.odometer_reading
   }
 
   return { litersInTank, ethanolLiters, lastOdo: prevOdo }
+}
+
+// ─── Reference thresholds ──────────────────────────────────────────────────
+// Two km landmarks computed from the current tank state:
+//
+// odoA — last km at which a FULL E85 fill would still land ≤ targetMax.
+//   Derived from: r_A = tank × (targetMax − 0.85) / (ethFrac − 0.85)
+//   At remaining = r_A, result = targetMax exactly.
+//
+// odoB — first km at which an OPTIMAL blend (min-pump dilutant → exact target)
+//   becomes feasible. Diluting below 5 L is impossible at French pumps.
+//   Derived from solving x_ideal = 5 in the blend formula:
+//   r_B = [5 × (dilFrac − 0.85) − tank × (target − 0.85)] / (0.85 − ethFrac)
+
+interface Thresholds {
+  odoA: number | null  // null = already past
+  odoB: number | null  // null = now (remaining ≤ rB already)
+  odoBNow: boolean
+}
+
+function computeThresholds(
+  remaining: number,
+  ethFraction: number,
+  tankCapacity: number,
+  targetPct: number,
+  tolerancePct: number,
+  dilutantEthFraction: number,
+  avgL100km: number,
+  fromOdo: number,
+): Thresholds {
+  const eps = 0.001
+  if (avgL100km <= 0 || Math.abs(ethFraction - 0.85) < eps) {
+    return { odoA: null, odoB: null, odoBNow: false }
+  }
+
+  const targetMax = (targetPct + tolerancePct) / 100
+  const target = targetPct / 100
+
+  // Threshold A: last km for pure E85 fill ≤ targetMax
+  const rA = (tankCapacity * (targetMax - 0.85)) / (ethFraction - 0.85)
+  const odoA =
+    rA >= 0 && remaining > rA
+      ? Math.round(fromOdo + ((remaining - rA) * 100) / avgL100km)
+      : null
+
+  // Threshold B: first km where blend with exactly MIN_PUMP_LITERS dilutant → exact target
+  const denomB = 0.85 - ethFraction
+  let odoB: number | null = null
+  let odoBNow = false
+  if (denomB > eps) {
+    const rB =
+      (MIN_PUMP_LITERS * (dilutantEthFraction - 0.85) - tankCapacity * (target - 0.85)) / denomB
+    if (rB <= 0 || remaining <= rB) {
+      odoBNow = true
+    } else {
+      odoB = Math.round(fromOdo + ((remaining - rB) * 100) / avgL100km)
+    }
+  } else {
+    odoBNow = true
+  }
+
+  return { odoA, odoB, odoBNow }
 }
 
 // ─── Winter smart recommendation ───────────────────────────────────────────
@@ -126,9 +184,7 @@ type WinterRec =
       type: 'pure_e85'
       e85Liters: number
       resultPct: number
-      /** Absolute odometer at which the NEXT pure-E85 fill would exceed targetMax. */
       kmSafe: number | null
-      /** Distance from currentOdo to kmSafe. */
       kmRelative: number | null
     }
   | { type: 'blend'; dilutantLiters: number; e85Liters: number; resultPct: number; withinTolerance: boolean }
@@ -153,27 +209,22 @@ function computeWinterRec(
     return { type: 'tank_full', currentPct }
   }
 
-  // ── Case 1: ethanol too high → partial fill only, dilute next time ─────────
+  // Too high → partial fill only
   if (currentPct > targetPct + tolerancePct) {
     const partialL = 15
-    const resultPct = ((ethanolLiters + partialL * 0.85) / (remainingLiters + partialL)) * 100
+    const resultPct =
+      ((ethanolLiters + partialL * 0.85) / (remainingLiters + partialL)) * 100
     return { type: 'too_high', partialLiters: partialL, resultPct }
   }
 
-  // ── Case 2: pure E85 fill keeps ethanol within targetMax → recommend E85 ──
+  // Pure E85 keeps ethanol within targetMax
   const afterE85Pct = (ethanolLiters + toAdd * 0.85) / tankCapacity
-
   if (afterE85Pct <= targetMax) {
-    // Compute km until NEXT pure-E85 fill would push above targetMax.
-    // After this fill: full tank at afterE85Pct.
-    // As we drive, remaining ↓ but ethanol fraction stays the same.
-    // At remaining = rSafe, a full E85 refill hits exactly targetMax.
-    // rSafe = T * (targetMax - 0.85) / (afterE85Pct - 0.85)
     let kmSafe: number | null = null
     let kmRelative: number | null = null
     const f = afterE85Pct
     if (f < 0.85 - 0.001) {
-      const rSafe = tankCapacity * (targetMax - 0.85) / (f - 0.85)
+      const rSafe = (tankCapacity * (targetMax - 0.85)) / (f - 0.85)
       if (rSafe >= 0 && rSafe < tankCapacity) {
         const dist = ((tankCapacity - rSafe) * 100) / avgL100km
         kmSafe = Math.round(currentOdo + dist)
@@ -189,16 +240,16 @@ function computeWinterRec(
     }
   }
 
-  // ── Case 3: pure E85 would overshoot → blend needed ───────────────────────
+  // Blend needed
   const numerator = target * (remainingLiters + toAdd) - ethanolLiters - 0.85 * toAdd
-  const denominator = dilutantEthFraction - 0.85 // always negative
+  const denominator = dilutantEthFraction - 0.85
   const xIdeal = numerator / denominator
 
   let x: number
   if (xIdeal <= 0) {
     x = 0
   } else if (xIdeal < MIN_PUMP_LITERS) {
-    x = MIN_PUMP_LITERS // round up in winter — more dilutant keeps result ≤ target
+    x = MIN_PUMP_LITERS
   } else {
     x = Math.ceil(xIdeal)
   }
@@ -209,7 +260,6 @@ function computeWinterRec(
   }
 
   if (x === 0) {
-    // Can't blend effectively
     return {
       type: 'pure_e85',
       e85Liters: Math.round(toAdd),
@@ -235,16 +285,20 @@ interface BlendCalculatorProps {
   conversion: FlexfuelConversion
   vehicle: Vehicle
   entries: FuelEntry[]
-  /** When true, renders without Card wrapper (used inside a Dialog that provides its own title). */
   embedded?: boolean
 }
 
-export function BlendCalculator({ conversion, vehicle, entries, embedded = false }: BlendCalculatorProps) {
+export function BlendCalculator({
+  conversion,
+  vehicle,
+  entries,
+  embedded = false,
+}: BlendCalculatorProps) {
   const [dilutantType, setDilutantType] = useState<DilutantType>('e10')
   const [currentOdo, setCurrentOdo] = useState<string>('')
   const [season, setSeason] = useState<SeasonMode>(defaultSeasonMode)
 
-  const dilutantEthFraction = dilutantType === 'e10' ? 0.10 : 0.05
+  const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
   const tankCapacity = vehicle.tank_capacity ?? 50
   const conversionDate = conversion.conversion_date
@@ -279,6 +333,21 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
 
   const ethanolLiters = (currentEthanolPct / 100) * remainingLiters
 
+  const thresholds = useMemo(
+    () =>
+      computeThresholds(
+        remainingLiters,
+        currentEthanolPct / 100,
+        tankCapacity,
+        target,
+        tolerance,
+        dilutantEthFraction,
+        avgConsumption ?? 8,
+        inputOdo,
+      ),
+    [remainingLiters, currentEthanolPct, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo],
+  )
+
   const winterRec = useMemo(
     () =>
       computeWinterRec(
@@ -297,7 +366,8 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
   if (!avgConsumption) {
     const noDataContent = (
       <p className="text-sm text-muted-foreground">
-        Pas assez de données depuis l'installation du boîtier. Enregistrez au moins deux pleins complets.
+        Pas assez de données depuis l'installation du boîtier. Enregistrez au moins deux pleins
+        complets.
       </p>
     )
     if (embedded) return noDataContent
@@ -314,8 +384,8 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
     )
   }
 
-  // ── Summer rendering ──────────────────────────────────────────────────────
-  const summerContent = (
+  // ── Summer ────────────────────────────────────────────────────────────────
+  const summerCard = (
     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
       <p className="text-lg font-bold text-amber-800 dark:text-amber-300">
         {Math.round(tankCapacity - remainingLiters)} L E85
@@ -326,33 +396,107 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
     </div>
   )
 
-  // ── Winter rendering ──────────────────────────────────────────────────────
-  const showDilutantSelector = season === 'hiver' && winterRec.type === 'blend'
+  // ── Winter threshold cards ────────────────────────────────────────────────
+  const { odoA, odoB, odoBNow } = thresholds
 
-  let winterContent: React.ReactNode
+  const thresholdCards = (
+    <div className="grid grid-cols-2 gap-2">
+      {/* Card A: Pure E85 deadline */}
+      <div
+        className={`rounded-lg border p-3 ${
+          odoA !== null
+            ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
+            : 'border-border bg-muted/30'
+        }`}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+          E85 pur
+        </p>
+        {odoA !== null ? (
+          <>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-tight">
+              Jusqu'au km
+            </p>
+            <p className="text-base font-bold text-emerald-800 dark:text-emerald-200">
+              {odoA.toLocaleString('fr-FR')}
+            </p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
+              dans ~{(odoA - inputOdo).toLocaleString('fr-FR')} km
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm font-medium text-muted-foreground">Fenêtre passée</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              E85 pur ≥ {target + tolerance}%
+            </p>
+          </>
+        )}
+      </div>
+
+      {/* Card B: Optimal blend threshold */}
+      <div
+        className={`rounded-lg border p-3 ${
+          odoBNow
+            ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30'
+            : 'border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20'
+        }`}
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+          Dilution {dilutantLabel}
+        </p>
+        {odoBNow ? (
+          <>
+            <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">Maintenant</p>
+            <p className="text-base font-bold text-blue-800 dark:text-blue-200">
+              km {inputOdo.toLocaleString('fr-FR')}
+            </p>
+            <p className="text-[11px] text-blue-600 dark:text-blue-500 mt-0.5">
+              5 L+ {dilutantLabel} → {target}%
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">
+              À partir du km
+            </p>
+            <p className="text-base font-bold text-blue-800 dark:text-blue-200">
+              {odoB!.toLocaleString('fr-FR')}
+            </p>
+            <p className="text-[11px] text-blue-600 dark:text-blue-500 mt-0.5">
+              dans ~{(odoB! - inputOdo).toLocaleString('fr-FR')} km
+            </p>
+          </>
+        )}
+      </div>
+    </div>
+  )
+
+  // ── Winter recommendation card ────────────────────────────────────────────
+  let winterRecCard: React.ReactNode
   if (winterRec.type === 'tank_full') {
-    winterContent = (
+    winterRecCard = (
       <p className="text-sm text-muted-foreground">Réservoir presque plein.</p>
     )
   } else if (winterRec.type === 'too_high') {
-    winterContent = (
+    winterRecCard = (
       <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
-        <p className="text-sm font-medium text-orange-700 dark:text-orange-400 mb-1">
-          Taux éthanol élevé ({currentEthanolPct.toFixed(0)}%) — ne pas faire le plein
+        <p className="text-xs font-medium text-orange-700 dark:text-orange-400 mb-1">
+          Taux élevé ({currentEthanolPct.toFixed(0)}%) — ne pas faire le plein
         </p>
         <p className="text-lg font-bold text-orange-800 dark:text-orange-300">
-          Ajoute seulement {winterRec.partialLiters} L E85
+          {winterRec.partialLiters} L E85 uniquement
         </p>
         <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
-          Résultat : {winterRec.resultPct.toFixed(1)}% — cible ≤ {target + tolerance}%
+          Résultat : {winterRec.resultPct.toFixed(1)}%
         </p>
         <p className="mt-2 text-xs text-orange-600 dark:text-orange-500">
-          Au prochain plein, dilue avec E10 ou SP95
+          Au prochain plein, dilue avec {dilutantLabel}
         </p>
       </div>
     )
   } else if (winterRec.type === 'pure_e85') {
-    winterContent = (
+    winterRecCard = (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
         <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
           {winterRec.e85Liters} L E85 pur
@@ -362,17 +506,17 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
         </p>
         {winterRec.kmSafe !== null && winterRec.kmRelative !== null && (
           <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-500">
-            Prochaine dilution nécessaire vers le km {winterRec.kmSafe.toLocaleString('fr-FR')}
-            {' '}(dans ~{winterRec.kmRelative.toLocaleString('fr-FR')} km)
+            Dilution nécessaire vers le km {winterRec.kmSafe.toLocaleString('fr-FR')} (dans ~
+            {winterRec.kmRelative.toLocaleString('fr-FR')} km)
           </p>
         )}
       </div>
     )
-  } else if (winterRec.type === 'blend') {
+  } else {
     const resultColor = winterRec.withinTolerance
       ? 'text-emerald-600 dark:text-emerald-400'
       : 'text-orange-500'
-    winterContent = (
+    winterRecCard = (
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
         <p className="text-lg font-bold text-blue-800 dark:text-blue-300">
           {winterRec.dilutantLiters} L {dilutantLabel}&nbsp;+&nbsp;{winterRec.e85Liters} L E85
@@ -412,32 +556,63 @@ export function BlendCalculator({ conversion, vehicle, entries, embedded = false
         </button>
       </div>
 
-      {/* Odometer + dilutant selector (only in blend case) */}
-      <div className="flex gap-2">
-        <Input
-          type="number"
-          inputMode="numeric"
-          placeholder={String(lastOdo)}
-          value={currentOdo}
-          onChange={(e) => setCurrentOdo(e.target.value)}
-          className="h-10 flex-1 text-base"
-          aria-label="Odomètre actuel (km)"
-        />
-        {showDilutantSelector && (
-          <Select value={dilutantType} onValueChange={(v) => setDilutantType(v as DilutantType)}>
-            <SelectTrigger className="h-10 w-24">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="e10">E10</SelectItem>
-              <SelectItem value="sp95">SP95</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-      </div>
+      {season === 'ete' ? (
+        <>
+          {/* Summer: odometer input + pure E85 card */}
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder={String(lastOdo)}
+            value={currentOdo}
+            onChange={(e) => setCurrentOdo(e.target.value)}
+            className="h-10 text-base"
+            aria-label="Odomètre actuel (km)"
+          />
+          {summerCard}
+        </>
+      ) : (
+        <>
+          {/* Winter: dilutant selector + reference thresholds */}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">Diluant</span>
+            <Select
+              value={dilutantType}
+              onValueChange={(v) => setDilutantType(v as DilutantType)}
+            >
+              <SelectTrigger className="h-8 w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="e10">E10</SelectItem>
+                <SelectItem value="sp95">SP95</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-      {/* Recommendation */}
-      {season === 'ete' ? summerContent : winterContent}
+          {thresholdCards}
+
+          {/* Separator */}
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">Calculer pour un odomètre précis</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+
+          {/* Odometer input */}
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder={String(lastOdo)}
+            value={currentOdo}
+            onChange={(e) => setCurrentOdo(e.target.value)}
+            className="h-10 text-base"
+            aria-label="Odomètre actuel (km)"
+          />
+
+          {/* Recommendation */}
+          {winterRecCard}
+        </>
+      )}
 
       {/* Details */}
       <div className="flex gap-4 text-xs text-muted-foreground">
