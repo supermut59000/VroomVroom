@@ -251,7 +251,8 @@ function computeWinterRec(
   } else if (xIdeal < MIN_PUMP_LITERS) {
     x = MIN_PUMP_LITERS
   } else {
-    x = Math.ceil(xIdeal)
+    x = Math.round(xIdeal)
+    if (x < MIN_PUMP_LITERS) x = MIN_PUMP_LITERS
   }
 
   if (x > 0 && toAdd - x < MIN_PUMP_LITERS) {
