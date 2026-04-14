@@ -1,7 +1,7 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-03-30
+Last updated: 2026-04-14
 
 ---
 
@@ -238,23 +238,32 @@ diesel / gpl / electrique / hybride → 0.00
 - User over-logs E85 (45 L in 45 L tank): `actualRemaining = min(5, 0) = 0` → E10 contribution lost, but this is a data entry issue (5+45 > 45 L is physically impossible)
 `avgL100km` is computed client-side from the same fill history using fill-to-fill method (accumulate partials until next full tank, divide total liters by distance).
 
-**Blend recommendation** at fill time:
+**Two reference km thresholds** shown at top of dialog (no input needed):
 ```
-T = tankCapacity - remainingLiters          (litres à ajouter, fill to full)
-currentEthanolLiters = remainingLiters × currentEthanolPct
+ethFrac = ethanolLiters / remainingLiters
 
-x_ideal = (target × (remaining + T) - currentEthanolLiters - 0.85 × T) / (dilutantFraction - 0.85)
-x = round(x_ideal)
+# odoA — last km for pure E85 fill staying ≤ targetMax
+r_A = tank × (targetMax − 0.85) / (ethFrac − 0.85)
+odoA = fromOdo + (remaining − r_A) × 100 / avgL100km   (null if remaining ≤ r_A)
 
-if x < 5  → x = 0   (minimum pompe France = 5L)
-if T-x < 5 → x = max(0, round(T - 5))
-
-result_pct = (currentEthanolLiters + x × dilutantFraction + (T-x) × 0.85) / (remaining + T)
+# odoB — first km where x_ideal = 5 L (min pump) → exact target
+r_B = [5 × (dilFrac − 0.85) − tank × (target − 0.85)] / (0.85 − ethFrac)
+odoB = fromOdo + (remaining − r_B) × 100 / avgL100km   (odoBNow=true if remaining ≤ r_B)
 ```
-- If `x = 0` and `result_pct` is within tolerance → recommend E85 only (fine)
-- If `x = 0` and above tolerance → recommend E85 only + note "reporter la dilution au prochain plein"
-- Otherwise → recommend "Mets X L de [E10|SP95] puis Y L de E85"
-- Shows resulting ethanol % (green if within target ± tolerance, orange/blue if outside)
+Both thresholds react to the manual odometer input in real time.
+
+**Winter smart recommendation** (3 auto-detected cases):
+- `currentPct > targetMax` → partial fill: add only 15 L E85, dilute at next fill
+- Pure E85 fill result ≤ targetMax → recommend E85 only + km until next fill would exceed max
+- Otherwise → blend needed:
+```
+T = tankCapacity - remainingLiters
+x_ideal = (target × (remaining + T) - ethanolLiters - 0.85 × T) / (dilutantFraction - 0.85)
+x = round(x_ideal)   ← Math.round, not ceil — minimise dilutant, stay as close to target as possible
+if x < 5  → x = 5    (minimum pompe France)
+if T-x < 5 → adjust
+```
+- Summer → pure E85 always (économies maximales)
 
 **Recording** (no schema change needed): two fills, same odometer, same day:
 - 'essence' fill, `is_full_tank: false` (the dilutant)
@@ -341,6 +350,19 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 - **No rate limiting**: acceptable for single-user homelab
 - **Offline queue stored in localStorage**: acceptable since only user is the owner
 - **CSP/HSTS headers**: handle at reverse proxy level (Nginx/Traefik), not in app
+
+---
+
+## Session log — 2026-04-14
+
+### BlendCalculator — mode hiver intelligent + seuils km de référence
+
+- **Deux cartes de référence** affichées dès l'ouverture du dialog (hiver uniquement) :
+  - "E85 pur" : dernier km pour un plein E85 ≤ targetMax. `r_A = tank × (targetMax−0.85) / (ethFrac−0.85)`. Affiche "Fenêtre passée" si dépassé.
+  - "Dilution X" : premier km où 5 L de diluant → taux cible exact. `r_B = [5×(dilFrac−0.85) − tank×(target−0.85)] / (0.85−ethFrac)`. Affiche "Maintenant" si atteint.
+- **Recommandation hiver intelligente** (3 cas) : taux trop élevé → 15 L E85 partiel ; E85 pur ok → plein E85 + km-safe ; sinon → blend.
+- **Fix `Math.round` vs `Math.ceil`** : le calcul de blend utilisait `Math.ceil(xIdeal)` — donnait 6 L E10 quand x_ideal=5.15. Corrigé en `Math.round` → 5 L E10, résultat 72.1% (au plus près de la cible).
+- Sélecteur diluant (E10/SP95) toujours visible en hiver, caché en été.
 
 ---
 

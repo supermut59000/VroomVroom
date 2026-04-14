@@ -345,6 +345,28 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 
 ---
 
+## What Was Done (Session of 2026-04-14)
+
+### BlendCalculator — mode hiver intelligent + seuils km de référence
+
+**Contexte** : l'ancienne UI demandait un odomètre et affichait X L E10 + Y L E85. L'utilisateur voulait une vision plus claire : jusqu'où peut-il aller en E85 pur, et à partir de quand doit-il diluer ?
+
+**Deux cartes de référence** (calculées depuis l'état courant du réservoir, sans saisie) :
+- **"E85 pur"** — dernier km à partir duquel un plein E85 resterait ≤ target + tolerance. Formule : `r_A = tank × (targetMax − 0.85) / (ethFrac − 0.85)`, puis `odo_A = fromOdo + (remaining − r_A) × 100 / avgL100km`. Affiche "Fenêtre passée" si le seuil est dépassé.
+- **"Dilution X"** — premier km où ajouter exactement 5 L (minimum pompe France) de diluant donne le taux cible exact. Formule : `r_B = [5 × (dilFrac − 0.85) − tank × (target − 0.85)] / (0.85 − ethFrac)`. Affiche "Maintenant" si déjà atteint.
+- Les deux seuils se recalculent en temps réel si l'utilisateur saisit un odomètre précis dans le champ du bas.
+
+**Recommandation hiver intelligente** (3 cas auto-détectés) :
+- Taux trop élevé (> target + tolerance) → ajouter seulement 15 L E85, diluer au prochain plein
+- E85 pur ok (résultat ≤ target + tolerance) → plein E85 + km avant que le prochain plein E85 dépasse le max
+- Dilution nécessaire → X L [E10|SP95] + Y L E85 (boîte bleue)
+
+**Fix rounding** : `Math.ceil(xIdeal)` remplacé par `Math.round(xIdeal)` — cela minimise le diluant utilisé (ex. 5 L E10 au lieu de 6 L), résultat plus proche de la cible. L'erreur max de 0.5 L ne peut pas sortir de la tolérance ±%.
+
+**Sélecteur diluant** : toujours visible en mode hiver (affect les deux seuils + la recommandation), caché en été.
+
+---
+
 ## What Was Done (Session of 2026-04-13)
 
 ### BlendCalculator — bug fixes
