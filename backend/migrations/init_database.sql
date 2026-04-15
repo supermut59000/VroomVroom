@@ -75,6 +75,9 @@ CREATE TABLE IF NOT EXISTS `fuel_entries` (
     `is_full_tank` BOOLEAN NOT NULL DEFAULT TRUE COMMENT 'Whether this was a full tank fill-up',
     `notes` TEXT NULL,
 
+    -- Soft delete
+    `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
+
     -- Timestamps
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -118,6 +121,9 @@ CREATE TABLE IF NOT EXISTS `maintenances` (
     -- Next maintenance reminder (optional)
     `next_maintenance_date` DATE NULL,
     `next_maintenance_odometer` INT NULL,
+
+    -- Soft delete
+    `is_active` BOOLEAN NOT NULL DEFAULT TRUE,
 
     -- Timestamps
     `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP,

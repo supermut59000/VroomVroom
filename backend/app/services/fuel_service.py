@@ -46,7 +46,7 @@ class FuelService:
 
     def get_fuel_entry(self, entry_id: int) -> Optional[FuelEntry]:
         """Get a fuel entry by ID"""
-        return self.db.query(FuelEntry).filter(FuelEntry.id == entry_id).first()
+        return self.db.query(FuelEntry).filter(FuelEntry.id == entry_id, FuelEntry.is_active == True).first()
 
     def get_fuel_entries(
         self,
@@ -60,8 +60,8 @@ class FuelService:
         order: str = "desc"
     ) -> List[FuelEntry]:
         """Get fuel entries with optional filters"""
-        query = self.db.query(FuelEntry)
-        
+        query = self.db.query(FuelEntry).filter(FuelEntry.is_active == True)
+
         # Apply filters
         if vehicle_id:
             query = query.filter(FuelEntry.vehicle_id == vehicle_id)
@@ -85,15 +85,15 @@ class FuelService:
         return query.offset(skip).limit(limit).all()
 
     def get_fuel_entries_by_vehicle(
-        self, 
-        vehicle_id: int, 
-        skip: int = 0, 
+        self,
+        vehicle_id: int,
+        skip: int = 0,
         limit: int = 100
     ) -> List[FuelEntry]:
         """Get all fuel entries for a specific vehicle"""
         return (
             self.db.query(FuelEntry)
-            .filter(FuelEntry.vehicle_id == vehicle_id)
+            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
             .order_by(desc(FuelEntry.fueling_date))
             .offset(skip)
             .limit(limit)
@@ -127,18 +127,18 @@ class FuelService:
         return db_fuel_entry
 
     def delete_fuel_entry(self, entry_id: int) -> bool:
-        """Delete a fuel entry"""
+        """Soft-delete a fuel entry (sets is_active=False)"""
         db_fuel_entry = self.get_fuel_entry(entry_id)
         if not db_fuel_entry:
             return False
-        
-        self.db.delete(db_fuel_entry)
+
+        db_fuel_entry.is_active = False
         self.db.commit()
         return True
 
     def get_distinct_station_names(self, vehicle_id: Optional[int] = None) -> List[str]:
         """Get distinct station names, optionally filtered by vehicle"""
-        query = self.db.query(FuelEntry.station_name).filter(FuelEntry.station_name.isnot(None))
+        query = self.db.query(FuelEntry.station_name).filter(FuelEntry.station_name.isnot(None), FuelEntry.is_active == True)
         if vehicle_id:
             query = query.filter(FuelEntry.vehicle_id == vehicle_id)
         results = query.distinct().order_by(FuelEntry.station_name).all()
@@ -151,6 +151,7 @@ class FuelService:
             self.db.query(FuelEntry)
             .filter(
                 FuelEntry.vehicle_id == vehicle_id,
+                FuelEntry.is_active == True,
                 FuelEntry.latitude.isnot(None),
                 FuelEntry.longitude.isnot(None),
                 FuelEntry.station_name.isnot(None),
@@ -168,7 +169,7 @@ class FuelService:
         """Get the latest fuel entry for a vehicle"""
         return (
             self.db.query(FuelEntry)
-            .filter(FuelEntry.vehicle_id == vehicle_id)
+            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
             .order_by(desc(FuelEntry.fueling_date), desc(FuelEntry.odometer_reading))
             .first()
         )
@@ -181,20 +182,20 @@ class FuelService:
         end_date: Optional[date] = None,
     ) -> int:
         """Get count of fuel entries with filters"""
-        query = self.db.query(FuelEntry)
-        
+        query = self.db.query(FuelEntry).filter(FuelEntry.is_active == True)
+
         if vehicle_id:
             query = query.filter(FuelEntry.vehicle_id == vehicle_id)
-        
+
         if fuel_type:
             query = query.filter(FuelEntry.fuel_type == fuel_type)
-        
+
         if start_date:
             query = query.filter(FuelEntry.fueling_date >= start_date)
-        
+
         if end_date:
             query = query.filter(FuelEntry.fueling_date <= end_date)
-        
+
         return query.count()
 
     def get_fuel_statistics_by_vehicle(self, vehicle_id: int) -> dict:
@@ -205,7 +206,7 @@ class FuelService:
         """
         entries = (
             self.db.query(FuelEntry)
-            .filter(FuelEntry.vehicle_id == vehicle_id)
+            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
             .order_by(FuelEntry.odometer_reading)
             .all()
         )
@@ -289,7 +290,7 @@ class FuelService:
         """
         entries = (
             self.db.query(FuelEntry)
-            .filter(FuelEntry.vehicle_id == vehicle_id)
+            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
             .order_by(FuelEntry.fueling_date, FuelEntry.odometer_reading)
             .all()
         )

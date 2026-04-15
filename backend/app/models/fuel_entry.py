@@ -35,6 +35,9 @@ class FuelEntry(Base):
     is_full_tank = Column(Boolean, nullable=False, default=True)
     notes = Column(Text, nullable=True)
 
+    # Soft delete
+    is_active = Column(Boolean, nullable=False, default=True)
+
     # Metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

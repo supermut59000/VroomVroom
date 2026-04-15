@@ -141,12 +141,12 @@ class VehicleService:
         """Return fuel entries and maintenance entries merged and sorted chronologically."""
         fuel_entries = (
             self.db.query(FuelEntry)
-            .filter(FuelEntry.vehicle_id == vehicle_id)
+            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
             .all()
         )
         maintenances = (
             self.db.query(Maintenance)
-            .filter(Maintenance.vehicle_id == vehicle_id)
+            .filter(Maintenance.vehicle_id == vehicle_id, Maintenance.is_active == True)
             .all()
         )
 
@@ -208,7 +208,7 @@ class VehicleService:
         # Get last odometer and days since last entry from fuel entries
         fuel_entries = (
             self.db.query(FuelEntry)
-            .filter(FuelEntry.vehicle_id == vehicle_id)
+            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
             .order_by(FuelEntry.odometer_reading.desc())
             .all()
         )

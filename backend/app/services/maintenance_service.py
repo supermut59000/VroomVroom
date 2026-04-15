@@ -40,7 +40,7 @@ class MaintenanceService:
 
     def get_maintenance(self, maintenance_id: int) -> Optional[Maintenance]:
         """Get a maintenance entry by ID"""
-        return self.db.query(Maintenance).filter(Maintenance.id == maintenance_id).first()
+        return self.db.query(Maintenance).filter(Maintenance.id == maintenance_id, Maintenance.is_active == True).first()
 
     def get_maintenances(
         self,
@@ -54,7 +54,7 @@ class MaintenanceService:
         order: str = "desc"
     ) -> List[Maintenance]:
         """Get maintenance entries with optional filters"""
-        query = self.db.query(Maintenance)
+        query = self.db.query(Maintenance).filter(Maintenance.is_active == True)
 
         # Apply filters
         if vehicle_id:
@@ -87,7 +87,7 @@ class MaintenanceService:
         """Get all maintenance entries for a specific vehicle"""
         return (
             self.db.query(Maintenance)
-            .filter(Maintenance.vehicle_id == vehicle_id)
+            .filter(Maintenance.vehicle_id == vehicle_id, Maintenance.is_active == True)
             .order_by(desc(Maintenance.maintenance_date))
             .offset(skip)
             .limit(limit)
@@ -115,12 +115,12 @@ class MaintenanceService:
         return db_maintenance
 
     def delete_maintenance(self, maintenance_id: int) -> bool:
-        """Delete a maintenance entry"""
+        """Soft-delete a maintenance entry (sets is_active=False)"""
         db_maintenance = self.get_maintenance(maintenance_id)
         if not db_maintenance:
             return False
 
-        self.db.delete(db_maintenance)
+        db_maintenance.is_active = False
         self.db.commit()
         return True
 
@@ -128,7 +128,7 @@ class MaintenanceService:
         """Get the latest maintenance entry for a vehicle"""
         return (
             self.db.query(Maintenance)
-            .filter(Maintenance.vehicle_id == vehicle_id)
+            .filter(Maintenance.vehicle_id == vehicle_id, Maintenance.is_active == True)
             .order_by(desc(Maintenance.maintenance_date), desc(Maintenance.odometer_reading))
             .first()
         )
@@ -141,7 +141,7 @@ class MaintenanceService:
         end_date: Optional[date] = None,
     ) -> int:
         """Get count of maintenance entries with filters"""
-        query = self.db.query(Maintenance)
+        query = self.db.query(Maintenance).filter(Maintenance.is_active == True)
 
         if vehicle_id:
             query = query.filter(Maintenance.vehicle_id == vehicle_id)
@@ -161,7 +161,7 @@ class MaintenanceService:
         """Get maintenance statistics for a vehicle"""
         entries = (
             self.db.query(Maintenance)
-            .filter(Maintenance.vehicle_id == vehicle_id)
+            .filter(Maintenance.vehicle_id == vehicle_id, Maintenance.is_active == True)
             .order_by(Maintenance.maintenance_date)
             .all()
         )
