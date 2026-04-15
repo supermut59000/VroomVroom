@@ -15,8 +15,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useUpdateFuelEntry, useStationSuggestions } from '@/hooks/use-fuel-entries'
 import { useVehicle } from '@/hooks/use-vehicles'
+import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { NearbyStationsList } from './NearbyStationsList'
 import type { FuelEntry } from '@/types'
@@ -26,6 +34,7 @@ const schema = z.object({
   odometer_reading: z.coerce.number().int().min(0),
   liters: z.coerce.number().positive(),
   price_per_liter: z.coerce.number().positive(),
+  fuel_type: z.enum(['essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85']),
   is_full_tank: z.boolean(),
   station_name: z.string().optional().or(z.literal('')),
   location: z.string().optional().or(z.literal('')),
@@ -41,6 +50,8 @@ interface FuelEditDialogProps {
 
 export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProps) {
   const { data: vehicle } = useVehicle(vehicleId)
+  const { data: flexfuelConversion } = useFlexfuelConversion(vehicleId)
+  const isFlexfuel = !!flexfuelConversion
   const updateFuelEntry = useUpdateFuelEntry(vehicleId)
   const { data: stations } = useStationSuggestions(vehicleId)
   const geo = useGeolocation()
@@ -54,6 +65,7 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
         odometer_reading: entry.odometer_reading,
         liters: entry.liters,
         price_per_liter: entry.price_per_liter,
+        fuel_type: entry.fuel_type as FormData['fuel_type'],
         is_full_tank: entry.is_full_tank,
         station_name: entry.station_name ?? '',
         location: entry.location ?? '',
@@ -67,7 +79,13 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
   const pricePerLiter = form.watch('price_per_liter')
   const totalCost = liters && pricePerLiter ? (liters * pricePerLiter).toFixed(2) : '0.00'
 
-  const fuelType = vehicle?.fuel_type ?? entry?.fuel_type ?? 'essence'
+  const selectedFuelType = form.watch('fuel_type')
+  const fuelTypeMismatch =
+    !isFlexfuel &&
+    vehicle?.fuel_type &&
+    vehicle.fuel_type !== 'hybride' &&
+    selectedFuelType &&
+    selectedFuelType !== vehicle.fuel_type
 
   const onSubmit = async (data: FormData) => {
     if (!entry) return
@@ -79,7 +97,7 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
           odometer_reading: data.odometer_reading,
           liters: data.liters,
           price_per_liter: data.price_per_liter,
-          fuel_type: vehicle?.fuel_type ?? entry.fuel_type,
+          fuel_type: data.fuel_type,
           is_full_tank: data.is_full_tank,
           station_name: data.station_name || null,
           location: data.location || null,
@@ -128,6 +146,40 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
                 <Input value={`${totalCost} €`} disabled className="font-medium" />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Type de carburant</Label>
+              <Select
+                value={form.watch('fuel_type')}
+                onValueChange={(v) => form.setValue('fuel_type', v as FormData['fuel_type'])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {isFlexfuel ? (
+                    <>
+                      <SelectItem value="e85">E85</SelectItem>
+                      <SelectItem value="essence">Essence (E10)</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="essence">Essence</SelectItem>
+                      <SelectItem value="diesel">Diesel</SelectItem>
+                      <SelectItem value="gpl">GPL</SelectItem>
+                      <SelectItem value="electrique">Électrique</SelectItem>
+                      <SelectItem value="hybride">Hybride</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {fuelTypeMismatch && (
+              <p className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-400">
+                ⚠ Le type sélectionné ({selectedFuelType}) diffère du carburant enregistré du véhicule ({vehicle?.fuel_type}).
+              </p>
+            )}
 
             <div className="flex items-center gap-2">
               <Checkbox
@@ -188,7 +240,7 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
               <NearbyStationsList
                 latitude={geo.latitude}
                 longitude={geo.longitude}
-                fuelType={fuelType}
+                fuelType={selectedFuelType}
                 onSelect={(stationName, location, price) => {
                   form.setValue('station_name', stationName)
                   form.setValue('location', location)
