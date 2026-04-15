@@ -287,7 +287,7 @@ export function VehicleCard({
               <AlertDialogCancel>Annuler</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                onClick={() => handleDelete(true)}
+                onClick={() => handleDelete(false)}
               >
                 Supprimer
               </AlertDialogAction>
