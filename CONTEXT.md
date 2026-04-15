@@ -353,6 +353,32 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-04-15
+
+### Bug fixes & soft delete
+
+**FuelEditDialog — fuel_type bug** (`frontend-react/src/components/fuel/FuelEditDialog.tsx`):
+- Bug: editing any fuel entry was overwriting its `fuel_type` with the vehicle's primary type (`vehicle?.fuel_type ?? entry.fuel_type`). An E85 car with a GASOLINE entry would turn it back to E85 on save.
+- Fix: use `entry.fuel_type` as ground truth in `onSubmit`. Also fixed `fuelType` variable used by `NearbyStationsList` to use entry type first.
+- Added fuel type `Select` to the edit form (same options as FuelAddDialog: FlexFuel vehicles get E85/Essence only, others get all 5 types). Pre-filled from `entry.fuel_type` on open. Mismatch warning shown if selected type differs from vehicle type.
+
+**Soft delete for fuel entries and maintenances**:
+- Added `is_active BOOLEAN NOT NULL DEFAULT TRUE` to `FuelEntry` and `Maintenance` models.
+- `FuelService.delete_fuel_entry` and `MaintenanceService.delete_maintenance` now set `is_active=False` instead of `db.delete`.
+- All queries in `fuel_service.py`, `maintenance_service.py`, and `vehicle_service.py` (timeline, stats, direct fuel_entries query) filter `is_active=True`.
+- Migration: `backend/migrations/add_soft_delete_fuel_maintenance.sql` (two `ALTER TABLE ADD COLUMN` statements).
+- **`Boolean` import was missing** from `maintenance.py` model — caused backend crash on deploy, fixed immediately.
+
+**Vehicle delete was also hard-deleting**:
+- `VehicleCard.tsx` delete button was hardcoded to `handleDelete(true)` (`?force=true`). Changed to `handleDelete(false)` so vehicle deletion is a soft delete (archives the vehicle).
+- Confirmation dialog text updated: no longer says "irréversible", now says the vehicle is archived and history is kept.
+
+**`useVehicles` was fetching inactive vehicles**:
+- Hook was calling `/vehicles/?active_only=false`, showing archived vehicles in the dashboard.
+- Fixed to `/vehicles/` (backend defaults to `active_only=true`).
+
+---
+
 ## Session log — 2026-04-14
 
 ### BlendCalculator — mode hiver intelligent + seuils km de référence

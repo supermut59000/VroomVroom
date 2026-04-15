@@ -345,6 +345,29 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 
 ---
 
+## What Was Done (Session of 2026-04-15)
+
+### FuelEditDialog — fuel_type bug fix + selector
+
+- **Bug**: editing any fuel entry overwrote its `fuel_type` with the vehicle's primary type (`vehicle?.fuel_type ?? entry.fuel_type`). An E85 car with a GASOLINE fill would revert to E85 on save.
+- **Fix**: `onSubmit` now sends `data.fuel_type` (from the form) instead of `vehicle?.fuel_type ?? entry.fuel_type`.
+- **Selector added**: `FuelEditDialog` now has a "Type de carburant" `Select`, pre-filled from the entry's actual type. FlexFuel vehicles see E85/Essence only; others see all 5 types. Same mismatch warning as FuelAddDialog.
+
+### Soft delete for fuel entries, maintenances, and vehicles
+
+**Backend**:
+- `FuelEntry` and `Maintenance` models: added `is_active = Column(Boolean, default=True)`.
+- `FuelService.delete_fuel_entry` and `MaintenanceService.delete_maintenance`: soft delete (`is_active=False`) instead of `db.delete`.
+- All list, stats, history, timeline, and consumption queries in `fuel_service.py`, `maintenance_service.py`, and `vehicle_service.py` filter `is_active=True`.
+- Migration: `backend/migrations/add_soft_delete_fuel_maintenance.sql`.
+
+**Frontend**:
+- `VehicleCard.tsx`: delete button was hardcoded to `handleDelete(true)` (`?force=true`). Changed to `handleDelete(false)` → soft delete.
+- Confirmation dialog text updated to reflect archiving (history is kept).
+- `useVehicles` hook was fetching with `active_only=false` → fixed to default (`active_only=true`), inactive vehicles no longer shown on dashboard.
+
+---
+
 ## What Was Done (Session of 2026-04-14)
 
 ### BlendCalculator — mode hiver intelligent + seuils km de référence
