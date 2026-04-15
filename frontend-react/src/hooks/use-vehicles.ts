@@ -14,7 +14,7 @@ import type {
 export function useVehicles() {
   return useQuery({
     queryKey: ['vehicles'],
-    queryFn: () => api.get<VehicleList[]>('/vehicles/?active_only=false'),
+    queryFn: () => api.get<VehicleList[]>('/vehicles/'),
   })
 }
 
