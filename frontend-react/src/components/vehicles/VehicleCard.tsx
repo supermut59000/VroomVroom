@@ -279,8 +279,7 @@ export function VehicleCard({
             <AlertDialogHeader>
               <AlertDialogTitle>Supprimer {vehicle.brand} {vehicle.model} ?</AlertDialogTitle>
               <AlertDialogDescription>
-                Cette action est irréversible. Toutes les données associées
-                (pleins, maintenances) seront également supprimées.
+                Le véhicule sera archivé et n'apparaîtra plus dans la liste. L'historique (pleins, maintenances) est conservé.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
