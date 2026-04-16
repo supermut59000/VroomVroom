@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Leaf, DollarSign, Navigation } from 'lucide-react'
+import { Pencil, Leaf, DollarSign, Navigation, History } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import { FUEL_TYPE_LABELS, FUEL_TYPE_COLORS } from '@/lib/constants'
 import { CostOfOwnershipSection } from './CostOfOwnershipSection'
 import { FlexfuelConversionDialog } from '@/components/flexfuel/FlexfuelConversionDialog'
 import { E10ReferencePriceDialog } from '@/components/flexfuel/E10ReferencePriceDialog'
+import { VehicleTimelineSheet } from './VehicleTimelineSheet'
 
 interface VehicleDetailsDialogProps {
   vehicleId: number | null
@@ -37,6 +38,7 @@ export function VehicleDetailsDialog({
 
   const [conversionDialogOpen, setConversionDialogOpen] = useState(false)
   const [e10PriceDialogOpen, setE10PriceDialogOpen] = useState(false)
+  const [timelineOpen, setTimelineOpen] = useState(false)
 
   const open = vehicleId !== null
 
@@ -377,6 +379,10 @@ export function VehicleDetailsDialog({
               <Button variant="outline" onClick={onClose}>
                 Fermer
               </Button>
+              <Button variant="outline" onClick={() => setTimelineOpen(true)}>
+                <History className="mr-2 h-4 w-4" />
+                Historique
+              </Button>
               <Button onClick={() => onEdit(vehicleId!)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Modifier
@@ -395,6 +401,13 @@ export function VehicleDetailsDialog({
       <E10ReferencePriceDialog
         open={e10PriceDialogOpen}
         onClose={() => setE10PriceDialogOpen(false)}
+      />
+
+      {/* Timeline sheet */}
+      <VehicleTimelineSheet
+        vehicleId={vehicleId}
+        open={timelineOpen}
+        onClose={() => setTimelineOpen(false)}
       />
     </Dialog>
   )

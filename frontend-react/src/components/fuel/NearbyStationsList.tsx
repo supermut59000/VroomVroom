@@ -1,21 +1,41 @@
 import { useEffect } from 'react'
-import { MapPin, Loader2, ChevronDown, ChevronUp } from 'lucide-react'
+import { MapPin, Loader2, ChevronDown, ChevronUp, BookMarked } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useNearbyStations } from '@/hooks/use-nearby-stations'
 import type { FuelType } from '@/types'
 import { useState } from 'react'
 
+interface HistoryEntry {
+  latitude: number | null
+  longitude: number | null
+  station_name: string | null
+}
+
 interface NearbyStationsListProps {
   latitude: number
   longitude: number
   fuelType: FuelType
+  /** Past fuel entries with GPS + station_name — used to override the raw API adresse */
+  historyEntries?: HistoryEntry[]
   onSelect: (stationName: string, location: string, pricePerLiter: number | null) => void
+}
+
+function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
 export function NearbyStationsList({
   latitude,
   longitude,
   fuelType,
+  historyEntries,
   onSelect,
 }: NearbyStationsListProps) {
   const [open, setOpen] = useState(true)
@@ -66,17 +86,35 @@ export function NearbyStationsList({
           )}
           {!loading && stations.length > 0 && (
             <div className="mt-1 max-h-48 space-y-1 overflow-y-auto">
-              {stations.map((s) => (
+              {stations.map((s) => {
+                const knownName = historyEntries
+                  ?.find(
+                    (e) =>
+                      e.latitude != null &&
+                      e.longitude != null &&
+                      e.station_name &&
+                      haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 150,
+                  )
+                  ?.station_name ?? null
+                const displayName = knownName ?? s.name
+                return (
                 <button
                   key={s.id}
                   type="button"
                   className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-muted"
                   onClick={() => {
-                    onSelect(s.name, [s.name, s.address].filter(Boolean).join(', '), s.price)
+                    onSelect(displayName, [displayName, s.address].filter(Boolean).join(', '), s.price)
                   }}
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{s.name}</p>
+                    <p className="truncate text-sm font-medium">
+                      {knownName ? (
+                        <span className="flex items-center gap-1">
+                          <BookMarked className="h-3 w-3 shrink-0 text-primary" />
+                          {knownName}
+                        </span>
+                      ) : s.name}
+                    </p>
                     <p className="truncate text-xs text-muted-foreground">
                       {s.address}
                     </p>
@@ -94,7 +132,8 @@ export function NearbyStationsList({
                     </p>
                   </div>
                 </button>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>

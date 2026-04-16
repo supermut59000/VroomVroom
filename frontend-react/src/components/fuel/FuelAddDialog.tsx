@@ -29,6 +29,7 @@ import {
   useLatestFuelEntry,
   useStationSuggestions,
   useNearestStation,
+  useAllFuelEntries,
 } from '@/hooks/use-fuel-entries'
 import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
@@ -58,6 +59,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const { data: vehicle } = useVehicle(vehicleId)
   const { data: latestEntry } = useLatestFuelEntry(vehicleId)
   const { data: stations } = useStationSuggestions(vehicleId)
+  const { data: allEntries } = useAllFuelEntries(vehicleId)
   const { data: flexfuelConversion } = useFlexfuelConversion(vehicleId)
   const createFuelEntry = useCreateFuelEntry()
   const geo = useGeolocation()
@@ -222,6 +224,9 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
               latitude={geo.latitude}
               longitude={geo.longitude}
               fuelType={form.watch('fuel_type')}
+              historyEntries={allEntries?.filter(
+                (e) => e.latitude != null && e.longitude != null && e.station_name,
+              )}
               onSelect={(stationName, location, price) => {
                 form.setValue('station_name', stationName)
                 form.setValue('location', location)

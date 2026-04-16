@@ -9,6 +9,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useVehicles } from '@/hooks/use-vehicles'
+import { useOffline } from '@/hooks/use-offline'
 import { VehicleGrid } from '@/components/vehicles/VehicleGrid'
 import { VehicleAddDialog } from '@/components/vehicles/VehicleAddDialog'
 import { VehicleDetailsDialog } from '@/components/vehicles/VehicleDetailsDialog'
@@ -21,6 +22,7 @@ import { BlendCalculatorDialog } from '@/components/flexfuel/BlendCalculatorDial
 
 export function Dashboard() {
   const { data: vehicles, isLoading, error, refetch } = useVehicles()
+  const { queue: offlineQueue } = useOffline()
 
   // Dialog state
   const [addVehicleOpen, setAddVehicleOpen] = useState(false)
@@ -115,6 +117,7 @@ export function Dashboard() {
 
       <VehicleGrid
         vehicles={vehicles}
+        offlineQueue={offlineQueue}
         onDetails={setDetailsVehicleId}
         onEdit={setEditVehicleId}
         onFuelAdd={setFuelAddVehicleId}
@@ -168,6 +171,11 @@ export function Dashboard() {
         <div className="relative">
           <Fuel className="h-6 w-6" />
           <Plus className="absolute -right-1.5 -top-1.5 h-3.5 w-3.5" />
+          {offlineQueue.length > 0 && (
+            <span className="absolute -right-3 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white leading-none">
+              {offlineQueue.length}
+            </span>
+          )}
         </div>
       </button>
 

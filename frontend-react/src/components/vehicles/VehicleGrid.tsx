@@ -1,8 +1,14 @@
 import type { VehicleList } from '@/types'
 import { VehicleCard } from './VehicleCard'
 
+interface QueueItem {
+  id: number
+  data: { vehicle_id: number }
+}
+
 interface VehicleGridProps {
   vehicles: VehicleList[]
+  offlineQueue?: QueueItem[]
   onDetails: (id: number) => void
   onEdit: (id: number) => void
   onFuelAdd: (id: number) => void
@@ -14,6 +20,7 @@ interface VehicleGridProps {
 
 export function VehicleGrid({
   vehicles,
+  offlineQueue,
   onDetails,
   onEdit,
   onFuelAdd,
@@ -28,6 +35,7 @@ export function VehicleGrid({
         <VehicleCard
           key={vehicle.id}
           vehicle={vehicle}
+          fuelQueueCount={offlineQueue?.filter((q) => q.data.vehicle_id === vehicle.id).length ?? 0}
           onDetails={() => onDetails(vehicle.id)}
           onEdit={() => onEdit(vehicle.id)}
           onFuelAdd={() => onFuelAdd(vehicle.id)}

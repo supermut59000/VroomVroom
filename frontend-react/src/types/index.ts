@@ -303,6 +303,20 @@ export interface E10ReferencePriceCreate {
   notes?: string | null
 }
 
+// Vehicle Timeline
+export interface VehicleTimelineEvent {
+  event_type: 'fuel' | 'maintenance'
+  event_date: string
+  event_id: number
+  odometer_reading: number
+  data: Record<string, unknown>
+}
+
+export interface VehicleTimeline {
+  vehicle_id: number
+  events: VehicleTimelineEvent[]
+}
+
 // FlexFuel Rentability
 export interface FlexfuelSavingsDataPoint {
   date: string

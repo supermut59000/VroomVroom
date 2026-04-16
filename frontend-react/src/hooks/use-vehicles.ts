@@ -7,6 +7,7 @@ import type {
   VehicleUpdate,
   VehicleStats,
   VehicleCostStats,
+  VehicleTimeline,
   FuelEntry,
   Maintenance,
 } from '@/types'
@@ -100,6 +101,14 @@ export function useUpdateVehicle() {
       queryClient.invalidateQueries({ queryKey: ['vehicle', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['vehicleStats', variables.id] })
     },
+  })
+}
+
+export function useVehicleTimeline(vehicleId: number | null) {
+  return useQuery({
+    queryKey: ['vehicleTimeline', vehicleId],
+    queryFn: () => api.get<VehicleTimeline>(`/vehicles/${vehicleId}/timeline`),
+    enabled: vehicleId !== null,
   })
 }
 

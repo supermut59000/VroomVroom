@@ -40,6 +40,7 @@ import { toast } from 'sonner'
 
 interface VehicleCardProps {
   vehicle: VehicleList
+  fuelQueueCount?: number
   onDetails: () => void
   onEdit: () => void
   onFuelAdd: () => void
@@ -51,6 +52,7 @@ interface VehicleCardProps {
 
 export function VehicleCard({
   vehicle,
+  fuelQueueCount = 0,
   onDetails,
   onFuelAdd,
   onFuelView,
@@ -219,11 +221,20 @@ export function VehicleCard({
       <CardFooter className="flex justify-center gap-2 border-t pt-3">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10" onClick={onFuelAdd} aria-label="Ajouter un plein">
+            <Button variant="ghost" size="icon" className="relative h-10 w-10" onClick={onFuelAdd} aria-label="Ajouter un plein">
               <Fuel className="h-5 w-5" />
+              {fuelQueueCount > 0 && (
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[10px] font-bold text-white leading-none">
+                  {fuelQueueCount}
+                </span>
+              )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Ajouter un plein</TooltipContent>
+          <TooltipContent>
+            {fuelQueueCount > 0
+              ? `Ajouter un plein · ${fuelQueueCount} en attente hors-ligne`
+              : 'Ajouter un plein'}
+          </TooltipContent>
         </Tooltip>
 
         <Tooltip>
