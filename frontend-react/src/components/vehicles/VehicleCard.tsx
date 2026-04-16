@@ -9,7 +9,6 @@ import {
   TrendingUp,
   Wallet,
   FlaskConical,
-  Navigation,
 } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -65,32 +64,6 @@ export function VehicleCard({
   const deleteVehicle = useDeleteVehicle()
 
   const fuelColors = FUEL_TYPE_COLORS[vehicle.fuel_type]
-
-  // Autonomy helpers
-  const currentMonth = new Date().getMonth() + 1 // 1–12
-  const currentSeason = (() => {
-    if (currentMonth >= 3 && currentMonth <= 5) return 'spring'
-    if (currentMonth >= 6 && currentMonth <= 8) return 'summer'
-    if (currentMonth >= 9 && currentMonth <= 11) return 'autumn'
-    return 'winter'
-  })()
-  const SEASON_LABELS = { spring: 'Printemps', summer: 'Été', autumn: 'Automne', winter: 'Hiver' } as const
-  const SEASON_SHORT  = { spring: 'Prin.', summer: 'Été', autumn: 'Auto.', winter: 'Hiver' } as const
-  const seasonRanges = {
-    spring: stats?.range_km_spring ?? null,
-    summer: stats?.range_km_summer ?? null,
-    autumn: stats?.range_km_autumn ?? null,
-    winter: stats?.range_km_winter ?? null,
-  }
-  const seasonConsos = {
-    spring: stats?.spring_avg_consumption ?? null,
-    summer: stats?.summer_avg_consumption ?? null,
-    autumn: stats?.autumn_avg_consumption ?? null,
-    winter: stats?.winter_avg_consumption ?? null,
-  }
-  const currentSeasonRange = seasonRanges[currentSeason] ?? stats?.range_km ?? null
-  const hasSeasonal = Object.values(seasonRanges).some(v => v != null)
-  const overFactor = flexfuelConversion ? 1 + flexfuelConversion.overconsumption_pct / 100 : null
 
   const handleDelete = async (force: boolean) => {
     try {
@@ -167,46 +140,6 @@ export function VehicleCard({
                 </span>
               </div>
             </div>
-
-            {/* Autonomy */}
-            {stats.range_km != null && (
-              <>
-                <Separator />
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Navigation className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="text-muted-foreground">Autonomie</span>
-                    <span className="text-xs text-muted-foreground">({SEASON_LABELS[currentSeason]})</span>
-                    <span className="ml-auto font-medium">~{Math.round(currentSeasonRange!)} km</span>
-                  </div>
-                  {flexfuelConversion && currentSeasonRange != null && overFactor != null && (
-                    <div className="ml-6 flex gap-4 text-xs text-muted-foreground">
-                      <span>E85 : ~{Math.round(currentSeasonRange)} km</span>
-                      <span>E10 : ~{Math.round(currentSeasonRange * overFactor)} km</span>
-                    </div>
-                  )}
-                  {hasSeasonal && (
-                    <div className="ml-6 grid grid-cols-4 gap-x-1 text-xs">
-                      {(['spring', 'summer', 'autumn', 'winter'] as const).map(s => {
-                        const r = seasonRanges[s]
-                        const c = seasonConsos[s]
-                        const isCurrent = s === currentSeason
-                        return (
-                          <div
-                            key={s}
-                            className={`text-center ${isCurrent ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}
-                          >
-                            <div>{SEASON_SHORT[s]}</div>
-                            <div>{r != null ? `~${Math.round(r)}` : '—'}</div>
-                            <div className="text-[10px] opacity-70">{c != null ? `${c.toFixed(1)}L` : ''}</div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
 
             {/* Insurance status */}
             {stats.current_insurance_km_limit != null && (
