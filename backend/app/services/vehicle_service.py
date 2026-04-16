@@ -311,9 +311,12 @@ class VehicleService:
         seasonal = self._compute_seasonal_consumption(vehicle_id)
         tank = vehicle.tank_capacity
 
+        CUSHION_L = 5.0  # reserve kept in tank — never count on the last 5 L
+
         def _range(conso: Optional[float]) -> Optional[float]:
             if conso and conso > 0 and tank:
-                return round(tank * 100 / conso, 0)
+                usable = max(0.0, tank - CUSHION_L)
+                return round(usable * 100 / conso, 0)
             return None
 
         return VehicleStats(

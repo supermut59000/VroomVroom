@@ -345,6 +345,25 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 
 ---
 
+## What Was Done (Session of 2026-04-16)
+
+### Autonomie estimée — VehicleDetailsDialog
+
+New section in the vehicle details popup showing estimated range per meteorological season.
+
+**Backend** (`vehicle_service.py` + `schemas/vehicle.py`):
+- New `_compute_seasonal_consumption()` method: groups fill-to-fill consumption values by season using the fill date of the full-tank entry. Same partial-fill accumulation as the main stats.
+- 9 new fields added to `VehicleStats`: `{spring,summer,autumn,winter}_avg_consumption` and `range_km{,_spring,_summer,_autumn,_winter}`.
+- **Range formula**: `(tank_capacity − 5 L) × 100 / avg_consumption`. The 5 L cushion keeps a safety reserve (warning light level).
+- Seasons: Printemps (3–5), Été (6–8), Automne (9–11), Hiver (12–2).
+
+**Frontend** (`VehicleDetailsDialog.tsx`):
+- Current season highlighted with a bordered card.
+- 4-season grid: range in km + L/100 per season.
+- FlexFuel E85/E10 split: `range_E10 = range_E85 × (1 + overconsumption_pct/100)` — approximation valid when vehicle fills mostly E85.
+
+---
+
 ## What Was Done (Session of 2026-04-15)
 
 ### FuelEditDialog — fuel_type bug fix + selector

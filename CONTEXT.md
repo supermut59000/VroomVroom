@@ -425,6 +425,56 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-04-16
+
+### Autonomie estimée (VehicleDetailsDialog)
+
+New "Autonomie estimée" section added to the vehicle details popup (not the card — too dense for mobile).
+
+#### What was added
+- **Backend** (`vehicle_service.py`): new `_compute_seasonal_consumption()` method + 9 new fields on `VehicleStats`:
+  - `spring/summer/autumn/winter_avg_consumption` (L/100km)
+  - `range_km`, `range_km_spring`, `range_km_summer`, `range_km_autumn`, `range_km_winter`
+- **Frontend** (`VehicleDetailsDialog.tsx`): section showing current-season range prominently, 4-season grid, E85/E10 split for FlexFuel vehicles.
+
+#### Seasonal grouping
+Meteorological seasons (by fill date month):
+| Season | Months |
+|--------|--------|
+| Printemps | mars–mai (3–5) |
+| Été | juin–août (6–8) |
+| Automne | septembre–novembre (9–11) |
+| Hiver | décembre–février (12, 1, 2) |
+
+Each season's average consumption is computed using the **same fill-to-fill algorithm** as the main stats:
+- Partial fills accumulate liters until the next `is_full_tank = true` entry
+- Consumption is only attributed to the **full-tank entry** (not the partial ones)
+- The fill date of the full-tank entry determines which season bucket the data point goes into
+- Average = simple mean of all fill-to-fill consumption values in that season
+
+#### Range formula
+```
+usable_liters = tank_capacity − 5     ← 5 L cushion (reserve, never rely on last 5 L)
+range_km = usable_liters × 100 / avg_consumption_L100km
+```
+The **5 L cushion** is a fixed constant (`CUSHION_L = 5.0` in `vehicle_service.py`). It accounts for the fact that the warning light typically comes on with ~5 L left, and driving to empty risks damaging the fuel pump.
+
+Example: tank = 50 L, hiver avg = 7.9 L/100km → `(50−5) × 100 / 7.9 = 569 km`
+
+#### FlexFuel E85 / E10 split
+The base range is computed from whatever the average consumption is (which reflects actual fill history — mostly E85 if the vehicle is converted). The E10 equivalent range is derived using `overconsumption_pct`:
+
+```
+range_E85 = (tank − 5) × 100 / avg_consumption          ← base
+range_E10 = range_E85 × (1 + overconsumption_pct / 100) ← E10 is more efficient → more range
+```
+
+Example: range_E85 = 569 km, overconsumption = 19.7% → range_E10 = 569 × 1.197 = 681 km
+
+**Assumption**: the stored `average_consumption` is dominated by E85 fills (true for a vehicle that fills with E85 most of the time after conversion). If the vehicle is used mixed (frequent E10 fills too), the displayed E85/E10 split will be less accurate — it's an approximation, not an exact model.
+
+---
+
 ## Pending / Ideas for Future Sessions
 
 - **Photo receipts** — snap a photo of pump receipt / maintenance invoice, attach to entry
