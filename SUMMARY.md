@@ -363,6 +363,14 @@ New section in the vehicle details popup showing estimated range per meteorologi
 - FlexFuel: E10 / E85 side-by-side cards with L/100 + range, plus "Mix réel : X% E85 / Y% E10".
 - 4-season grid: range + L/100 + fill count per season.
 
+### BlendCalculator — plein partiel E85 max + planificateur de trajet
+
+**Carte A — zone E85 pur** : nouvelle ligne sous odoA montrant les litres du plein complet → taux résultant · km ajoutés.
+
+**Carte A — zone morte (après odoA)** : remplace « Fenêtre passée » par « Partiel possible · X L E85 → Y% · +Z km ». Formule : `x = (remaining × targetMax − ethanolLiters) / (0.85 − targetMax)`, capé au réservoir plein.
+
+**Planificateur de trajet** (mode hiver uniquement) : champ « Trajet prévu (km) » → tableau comparant portée actuelle / portée après plein E85 / portée après blend, avec ✓/✗. La réserve 5 L est appliquée partout.
+
 ---
 
 ## What Was Done (Session of 2026-04-15)

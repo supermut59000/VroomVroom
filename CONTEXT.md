@@ -425,6 +425,44 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-04-16 (suite — BlendCalculator)
+
+### BlendCalculator — plein partiel E85 max + planificateur de trajet
+
+#### Plein partiel E85 max (`limitFill`)
+
+Nouvelle valeur calculée dans le composant à chaque rendu :
+
+```
+x = (remaining × targetMax − ethanolLiters) / (0.85 − targetMax)
+liters = min(x, tankCapacity − remaining)   ← cap au réservoir plein
+isFull = x ≥ (tankCapacity − remaining) − 0.5  ← plein complet si x_idéal dépasse la capacité
+resultPct = (ethanolLiters + liters × 0.85) / (remaining + liters) × 100
+addedKm = liters × 100 / avgL100km
+```
+
+**Zone E85 pur (avant odoA)** : x_idéal dépasse la capacité du réservoir → `isFull = true`, affiche « Plein complet : X L → Y% · +Z km » en bas de la carte A. Confirme que le plein complet reste sous la limite.
+
+**Zone morte (après odoA, avant odoB)** : x_idéal < capacité disponible → remplissage partiel actionnable. La carte A remplace « Fenêtre passée » par « Partiel possible · X L E85 → Y% · +Z km ». C'est la réponse à « puis-je quand même mettre de l'E85 sans dépasser la limite ? » — oui, mais en s'arrêtant à X L.
+
+**Cas limite** : si le taux actuel ≥ targetMax, `limitFill = null` (aucun E85 ne peut améliorer la situation, seul le diluant aide).
+
+#### Planificateur de trajet (`tripKm`)
+
+Nouveau champ de saisie « Trajet prévu (km) » en mode hiver uniquement, placé sous la recommandation. Affiche un tableau de comparaison :
+
+| Ligne | Calcul |
+|-------|--------|
+| Réservoir actuel | `(remaining − 5) × 100 / avgL100km` |
+| + X L E85 (partiel/plein) | `(remaining + limitFill.liters − 5) × 100 / avgL100km` |
+| + X L diluant + Y L E85 | `(remaining + dilutant + e85 − 5) × 100 / avgL100km` |
+
+La ligne « blend » n'apparaît que si la recommandation hiver est de type `blend`. La ligne E85 n'apparaît que si `limitFill` est disponible. Indicateurs ✓ / ✗ selon si la portée couvre le trajet.
+
+La **réserve de 5 L** est appliquée à toutes les portées (cohérent avec le calcul d'autonomie dans VehicleDetailsDialog).
+
+---
+
 ## Session log — 2026-04-16
 
 ### Autonomie estimée (VehicleDetailsDialog)
