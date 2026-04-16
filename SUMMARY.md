@@ -352,15 +352,16 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 New section in the vehicle details popup showing estimated range per meteorological season.
 
 **Backend** (`vehicle_service.py` + `schemas/vehicle.py`):
-- New `_compute_seasonal_consumption()` method: groups fill-to-fill consumption values by season using the fill date of the full-tank entry. Same partial-fill accumulation as the main stats.
-- 9 new fields added to `VehicleStats`: `{spring,summer,autumn,winter}_avg_consumption` and `range_km{,_spring,_summer,_autumn,_winter}`.
-- **Range formula**: `(tank_capacity − 5 L) × 100 / avg_consumption`. The 5 L cushion keeps a safety reserve (warning light level).
-- Seasons: Printemps (3–5), Été (6–8), Automne (9–11), Hiver (12–2).
+- New `SeasonStats` nested Pydantic model; `VehicleStats` now exposes `spring/summer/autumn/winter` (SeasonStats) + `range_km` (overall).
+- `_compute_seasonal_consumption(vehicle_id, overconsumption_pct, tank_capacity)`: tracks E85 liters per fill-to-fill segment, normalises **per segment before averaging** — correctly handles mixed E85/E10 history.
+- Backend looks up `FlexfuelConversion` → frontend receives finished numbers only.
+- **Range formula**: `(tank − 5 L) × 100 / consumption` on actual, e10, and e85 values.
+- **Normalisation**: `e10 = measured / (1 + opc × e85_fraction_per_segment)`, `e85 = e10 × (1 + opc)`. See CONTEXT.md for worked example.
 
 **Frontend** (`VehicleDetailsDialog.tsx`):
-- Current season highlighted with a bordered card.
-- 4-season grid: range in km + L/100 per season.
-- FlexFuel E85/E10 split: `range_E10 = range_E85 × (1 + overconsumption_pct/100)` — approximation valid when vehicle fills mostly E85.
+- Current season range headline.
+- FlexFuel: E10 / E85 side-by-side cards with L/100 + range, plus "Mix réel : X% E85 / Y% E10".
+- 4-season grid: range + L/100 + fill count per season.
 
 ---
 

@@ -69,6 +69,25 @@ export interface VehicleUpdate {
   is_active?: boolean
 }
 
+export interface SeasonStats {
+  /** Actual measured L/100km for that season (mixed fuel reality) */
+  avg_consumption: number | null
+  /** Fraction of E85 in fills added this season (0.0–1.0). null for non-FlexFuel. */
+  e85_fraction: number | null
+  /** Consumption normalised to pure E10 (null for non-FlexFuel) */
+  e10_consumption: number | null
+  /** Consumption normalised to pure E85 (null for non-FlexFuel) */
+  e85_consumption: number | null
+  /** Range on actual avg mix, 5 L cushion */
+  range_km: number | null
+  /** Range on pure E10 (null for non-FlexFuel) */
+  range_km_e10: number | null
+  /** Range on pure E85 (null for non-FlexFuel) */
+  range_km_e85: number | null
+  /** Number of fill-to-fill data points in this season */
+  fill_count: number
+}
+
 export interface VehicleStats {
   vehicle_id: number
   total_fuel_entries: number
@@ -83,16 +102,12 @@ export interface VehicleStats {
   current_insurance_km_limit: number | null
   insurance_km_remaining: number | null
   insurance_km_exceeded: boolean
-  // Autonomy / seasonal
-  spring_avg_consumption: number | null
-  summer_avg_consumption: number | null
-  autumn_avg_consumption: number | null
-  winter_avg_consumption: number | null
+  // Autonomy — overall + 4 meteorological seasons
   range_km: number | null
-  range_km_spring: number | null
-  range_km_summer: number | null
-  range_km_autumn: number | null
-  range_km_winter: number | null
+  spring: SeasonStats | null
+  summer: SeasonStats | null
+  autumn: SeasonStats | null
+  winter: SeasonStats | null
 }
 
 export interface VehicleCostStats {

@@ -6,8 +6,9 @@ from datetime import datetime, date
 from app.models.vehicle import Vehicle
 from app.models.fuel_entry import FuelEntry
 from app.models.maintenance import Maintenance
+from app.models.flexfuel_conversion import FlexfuelConversion
 
-from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleStats, VehicleTimeline, VehicleTimelineEvent
+from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleStats, SeasonStats, VehicleTimeline, VehicleTimelineEvent
 from app.core.enums import FuelType
 from app.services.fuel_service import FuelService
 
@@ -192,13 +193,38 @@ class VehicleService:
 
         return VehicleTimeline(vehicle_id=vehicle_id, events=events)
 
-    def _compute_seasonal_consumption(self, vehicle_id: int) -> dict:
+    def _compute_seasonal_consumption(
+        self,
+        vehicle_id: int,
+        overconsumption_pct: Optional[float],
+        tank_capacity: Optional[float],
+    ) -> dict:
         """
-        Compute average L/100km per meteorological season from fill-to-fill consumption history.
-        Seasons: Printemps (3-5), Été (6-8), Automne (9-11), Hiver (12-2).
-        Uses the fuel entry date to assign each consumption value to a season.
-        Returns dict with keys: spring, summer, autumn, winter (each Optional[float]).
+        Compute per-season consumption stats using the fill-to-fill method.
+
+        Seasons (by full-tank fill date):
+          Printemps: mars-mai (3-5)
+          Été:       juin-août (6-8)
+          Automne:   sept-nov (9-11)
+          Hiver:     déc-fév (12, 1, 2)
+
+        For each fill-to-fill segment we record:
+          - measured_l100  : actual L/100km (whatever fuel mix was used)
+          - e85_fraction   : fraction of E85 in fills added during this segment
+                             (e.g. 5 L E10 + 40 L E85 → fraction = 40/45 ≈ 0.889)
+
+        If overconsumption_pct is provided (FlexFuel vehicle), we also compute
+        normalised values per segment before averaging:
+          - e10_l100 = measured_l100 / (1 + opc × e85_fraction)
+          - e85_l100 = e10_l100 × (1 + opc)
+
+        This correctly handles a mixed fill history: a segment that is 50% E85
+        will be normalised differently from one that is 100% E85.
+
+        Returns a dict {season: SeasonStats} for all four seasons.
         """
+        CUSHION_L = 5.0
+
         entries = (
             self.db.query(FuelEntry)
             .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
@@ -206,52 +232,97 @@ class VehicleService:
             .all()
         )
 
-        if len(entries) < 2:
-            return {"spring": None, "summer": None, "autumn": None, "winter": None}
-
         def month_to_season(month: int) -> str:
             if month in (3, 4, 5):
                 return "spring"
-            elif month in (6, 7, 8):
+            if month in (6, 7, 8):
                 return "summer"
-            elif month in (9, 10, 11):
+            if month in (9, 10, 11):
                 return "autumn"
-            else:  # 12, 1, 2
-                return "winter"
+            return "winter"
 
-        season_buckets: dict = {"spring": [], "summer": [], "autumn": [], "winter": []}
+        # Each bucket entry: (measured_l100, e85_fraction)
+        season_buckets: dict[str, list[tuple[float, float]]] = {
+            "spring": [], "summer": [], "autumn": [], "winter": []
+        }
 
         accumulated_liters = 0.0
-        last_full_tank_odometer = None
+        accumulated_e85_liters = 0.0
+        last_full_tank_odometer: Optional[float] = None
 
         for i, entry in enumerate(entries):
             is_full = getattr(entry, "is_full_tank", True)
+            is_e85 = entry.fuel_type == FuelType.E85
 
             if i == 0:
+                last_full_tank_odometer = float(entry.odometer_reading)
                 if is_full:
-                    last_full_tank_odometer = float(entry.odometer_reading)
                     accumulated_liters = 0.0
+                    accumulated_e85_liters = 0.0
                 else:
-                    last_full_tank_odometer = float(entry.odometer_reading)
                     accumulated_liters = entry.liters
-            else:
-                if is_full:
-                    total_liters_for_calc = accumulated_liters + entry.liters
-                    if last_full_tank_odometer is not None:
-                        distance = float(entry.odometer_reading) - last_full_tank_odometer
-                        if distance > 0:
-                            consumption = (total_liters_for_calc * 100) / distance
-                            season = month_to_season(entry.fueling_date.month)
-                            season_buckets[season].append(consumption)
-                    last_full_tank_odometer = float(entry.odometer_reading)
-                    accumulated_liters = 0.0
-                else:
-                    accumulated_liters += entry.liters
+                    accumulated_e85_liters = entry.liters if is_e85 else 0.0
+                continue
 
-        return {
-            season: round(sum(vals) / len(vals), 2) if vals else None
-            for season, vals in season_buckets.items()
-        }
+            if is_full:
+                seg_liters = accumulated_liters + entry.liters
+                seg_e85 = accumulated_e85_liters + (entry.liters if is_e85 else 0.0)
+
+                if last_full_tank_odometer is not None and seg_liters > 0:
+                    distance = float(entry.odometer_reading) - last_full_tank_odometer
+                    if distance > 0:
+                        measured = (seg_liters * 100) / distance
+                        e85_frac = seg_e85 / seg_liters
+                        season = month_to_season(entry.fueling_date.month)
+                        season_buckets[season].append((measured, e85_frac))
+
+                last_full_tank_odometer = float(entry.odometer_reading)
+                accumulated_liters = 0.0
+                accumulated_e85_liters = 0.0
+            else:
+                accumulated_liters += entry.liters
+                if is_e85:
+                    accumulated_e85_liters += entry.liters
+
+        def _range(conso: Optional[float]) -> Optional[float]:
+            if conso and conso > 0 and tank_capacity:
+                return round(max(0.0, tank_capacity - CUSHION_L) * 100 / conso, 0)
+            return None
+
+        result: dict[str, SeasonStats] = {}
+        opc = overconsumption_pct / 100 if overconsumption_pct is not None else None
+
+        for season, data_points in season_buckets.items():
+            if not data_points:
+                result[season] = SeasonStats(fill_count=0)
+                continue
+
+            avg_measured = sum(m for m, _ in data_points) / len(data_points)
+            avg_e85_frac = sum(f for _, f in data_points) / len(data_points)
+
+            e10_consumption: Optional[float] = None
+            e85_consumption: Optional[float] = None
+
+            if opc is not None:
+                # Per-segment normalisation, then average — more accurate than
+                # normalising the already-averaged value
+                e10_vals = [m / (1 + opc * f) for m, f in data_points]
+                e85_vals = [v * (1 + opc) for v in e10_vals]
+                e10_consumption = round(sum(e10_vals) / len(e10_vals), 2)
+                e85_consumption = round(sum(e85_vals) / len(e85_vals), 2)
+
+            result[season] = SeasonStats(
+                avg_consumption=round(avg_measured, 2),
+                e85_fraction=round(avg_e85_frac, 3),
+                e10_consumption=e10_consumption,
+                e85_consumption=e85_consumption,
+                range_km=_range(avg_measured),
+                range_km_e10=_range(e10_consumption),
+                range_km_e85=_range(e85_consumption),
+                fill_count=len(data_points),
+            )
+
+        return result
 
     def get_vehicle_stats(self, vehicle_id: int) -> VehicleStats:
         """
@@ -307,24 +378,31 @@ class VehicleService:
             insurance_km_remaining = current_insurance_limit - ref_odometer
             insurance_km_exceeded = insurance_km_remaining < 0
 
-        # Seasonal consumption + range
-        seasonal = self._compute_seasonal_consumption(vehicle_id)
+        # Look up FlexFuel conversion for this vehicle (overconsumption_pct)
+        flexfuel = (
+            self.db.query(FlexfuelConversion)
+            .filter(FlexfuelConversion.vehicle_id == vehicle_id)
+            .first()
+        )
+        overconsumption_pct = flexfuel.overconsumption_pct if flexfuel else None
         tank = vehicle.tank_capacity
 
-        CUSHION_L = 5.0  # reserve kept in tank — never count on the last 5 L
+        # Overall range (actual avg, 5 L cushion)
+        avg_conso = fuel_stats["average_consumption"]
+        CUSHION_L = 5.0
+        overall_range = None
+        if avg_conso and avg_conso > 0 and tank:
+            overall_range = round(max(0.0, tank - CUSHION_L) * 100 / avg_conso, 0)
 
-        def _range(conso: Optional[float]) -> Optional[float]:
-            if conso and conso > 0 and tank:
-                usable = max(0.0, tank - CUSHION_L)
-                return round(usable * 100 / conso, 0)
-            return None
+        # Per-season stats with E10/E85 normalisation
+        seasonal = self._compute_seasonal_consumption(vehicle_id, overconsumption_pct, tank)
 
         return VehicleStats(
             vehicle_id=vehicle_id,
             total_fuel_entries=fuel_stats["total_entries"],
             total_fuel_quantity=fuel_stats["total_liters"],
             total_distance=total_distance,
-            average_consumption=fuel_stats["average_consumption"],
+            average_consumption=avg_conso,
             average_fuel_price=fuel_stats["average_price_per_liter"],
             total_fuel_cost=round(total_fuel_cost, 2),
             cost_per_km=round(cost_per_km, 3),
@@ -333,13 +411,9 @@ class VehicleService:
             current_insurance_km_limit=round(current_insurance_limit, 2) if current_insurance_limit else None,
             insurance_km_remaining=round(insurance_km_remaining, 2) if insurance_km_remaining is not None else None,
             insurance_km_exceeded=insurance_km_exceeded,
-            spring_avg_consumption=seasonal["spring"],
-            summer_avg_consumption=seasonal["summer"],
-            autumn_avg_consumption=seasonal["autumn"],
-            winter_avg_consumption=seasonal["winter"],
-            range_km=_range(fuel_stats["average_consumption"]),
-            range_km_spring=_range(seasonal["spring"]),
-            range_km_summer=_range(seasonal["summer"]),
-            range_km_autumn=_range(seasonal["autumn"]),
-            range_km_winter=_range(seasonal["winter"]),
+            range_km=overall_range,
+            spring=seasonal["spring"],
+            summer=seasonal["summer"],
+            autumn=seasonal["autumn"],
+            winter=seasonal["winter"],
         )

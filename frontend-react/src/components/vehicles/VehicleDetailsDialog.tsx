@@ -211,30 +211,14 @@ export function VehicleDetailsDialog({
 
               {/* Autonomy */}
               {stats?.range_km != null && (() => {
-                const currentMonth = new Date().getMonth() + 1
-                const currentSeason = currentMonth >= 3 && currentMonth <= 5 ? 'spring'
-                  : currentMonth >= 6 && currentMonth <= 8 ? 'summer'
-                  : currentMonth >= 9 && currentMonth <= 11 ? 'autumn'
-                  : 'winter'
+                const m = new Date().getMonth() + 1
+                const currentSeason = m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'
                 const SEASON_LABELS = { spring: 'Printemps', summer: 'Été', autumn: 'Automne', winter: 'Hiver' } as const
-                const SEASON_SHORT  = { spring: 'Prin.', summer: 'Été', autumn: 'Auto.', winter: 'Hiver' } as const
-                const seasonRanges = {
-                  spring: stats.range_km_spring,
-                  summer: stats.range_km_summer,
-                  autumn: stats.range_km_autumn,
-                  winter: stats.range_km_winter,
-                }
-                const seasonConsos = {
-                  spring: stats.spring_avg_consumption,
-                  summer: stats.summer_avg_consumption,
-                  autumn: stats.autumn_avg_consumption,
-                  winter: stats.winter_avg_consumption,
-                }
-                const baseRange = seasonRanges[currentSeason] ?? stats.range_km
-                const hasSeasonal = Object.values(seasonRanges).some(v => v != null)
-                const overFactor = flexfuelConversion
-                  ? 1 + flexfuelConversion.overconsumption_pct / 100
-                  : null
+                const SEASON_SHORT  = { spring: 'Prin.',     summer: 'Été', autumn: 'Auto.',   winter: 'Hiver' } as const
+                const seasons = ['spring', 'summer', 'autumn', 'winter'] as const
+                const current = stats[currentSeason]
+                const baseRange = current?.range_km ?? stats.range_km
+                const isFlexFuel = !!(current?.e10_consumption)
 
                 return (
                   <>
@@ -243,43 +227,55 @@ export function VehicleDetailsDialog({
                       <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
                         Autonomie estimée
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
+                        {/* Current season headline */}
                         <div className="flex items-center gap-2 text-sm">
                           <Navigation className="h-4 w-4 shrink-0 text-muted-foreground" />
                           <span className="text-muted-foreground">{SEASON_LABELS[currentSeason]} (saison actuelle) :</span>
                           <span className="font-semibold">~{Math.round(baseRange!)} km</span>
                         </div>
-                        {flexfuelConversion && overFactor != null && (
-                          <div className="ml-6 flex gap-6 text-sm">
-                            <div>
-                              <span className="text-muted-foreground">Sur E85 : </span>
-                              <span className="font-medium">~{Math.round(baseRange!)} km</span>
+
+                        {/* FlexFuel E10 / E85 split — computed by backend */}
+                        {isFlexFuel && current && (
+                          <div className="ml-6 grid grid-cols-2 gap-2 text-sm">
+                            <div className="rounded-md border p-2 text-center">
+                              <div className="text-xs text-muted-foreground">Sur E10</div>
+                              <div className="font-semibold">~{Math.round(current.range_km_e10!)} km</div>
+                              <div className="text-xs text-muted-foreground">{current.e10_consumption?.toFixed(1)} L/100</div>
                             </div>
-                            <div>
-                              <span className="text-muted-foreground">Sur E10 : </span>
-                              <span className="font-medium">~{Math.round(baseRange! * overFactor)} km</span>
+                            <div className="rounded-md border p-2 text-center">
+                              <div className="text-xs text-muted-foreground">Sur E85</div>
+                              <div className="font-semibold">~{Math.round(current.range_km_e85!)} km</div>
+                              <div className="text-xs text-muted-foreground">{current.e85_consumption?.toFixed(1)} L/100</div>
                             </div>
+                            {current.e85_fraction != null && (
+                              <div className="col-span-2 text-xs text-muted-foreground text-center">
+                                Mix réel cette saison : {Math.round(current.e85_fraction * 100)}% E85 / {Math.round((1 - current.e85_fraction) * 100)}% E10
+                              </div>
+                            )}
                           </div>
                         )}
-                        {hasSeasonal && (
-                          <div className="grid grid-cols-4 gap-2 pt-1 text-xs">
-                            {(['spring', 'summer', 'autumn', 'winter'] as const).map(s => {
-                              const r = seasonRanges[s]
-                              const c = seasonConsos[s]
-                              const isCurrent = s === currentSeason
-                              return (
-                                <div
-                                  key={s}
-                                  className={`rounded-md border p-2 text-center ${isCurrent ? 'border-primary bg-primary/5 font-semibold' : 'text-muted-foreground'}`}
-                                >
-                                  <div className="text-[11px]">{SEASON_SHORT[s]}</div>
-                                  <div className="mt-0.5">{r != null ? `~${Math.round(r)} km` : '—'}</div>
-                                  <div className="mt-0.5 opacity-70">{c != null ? `${c.toFixed(1)} L/100` : ''}</div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
+
+                        {/* 4-season grid */}
+                        <div className="grid grid-cols-4 gap-1.5 pt-1 text-xs">
+                          {seasons.map(s => {
+                            const ss = stats[s]
+                            const isCurrent = s === currentSeason
+                            return (
+                              <div
+                                key={s}
+                                className={`rounded-md border p-2 text-center ${isCurrent ? 'border-primary bg-primary/5 font-semibold' : 'text-muted-foreground'}`}
+                              >
+                                <div className="text-[11px]">{SEASON_SHORT[s]}</div>
+                                <div className="mt-0.5">{ss?.range_km != null ? `~${Math.round(ss.range_km)} km` : '—'}</div>
+                                <div className="mt-0.5 opacity-70">{ss?.avg_consumption != null ? `${ss.avg_consumption.toFixed(1)} L/100` : ''}</div>
+                                {isFlexFuel && ss?.fill_count != null && (
+                                  <div className="mt-0.5 opacity-50">{ss.fill_count} plein{ss.fill_count !== 1 ? 's' : ''}</div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
                       </div>
                     </section>
                   </>

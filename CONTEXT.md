@@ -452,26 +452,58 @@ Each season's average consumption is computed using the **same fill-to-fill algo
 - The fill date of the full-tank entry determines which season bucket the data point goes into
 - Average = simple mean of all fill-to-fill consumption values in that season
 
+#### Data structure
+`VehicleStats` now exposes a `SeasonStats` nested object for each season (`spring`, `summer`, `autumn`, `winter`) plus an `overall range_km`.
+Each `SeasonStats` contains:
+- `avg_consumption` — actual L/100km measured in that season (real fuel mix)
+- `e85_fraction` — fraction of E85 in fills during that season (0.0–1.0). FlexFuel only.
+- `e10_consumption` — L/100km normalised to pure E10. FlexFuel only.
+- `e85_consumption` — L/100km normalised to pure E85. FlexFuel only.
+- `range_km` — range on actual avg mix (5 L cushion)
+- `range_km_e10` / `range_km_e85` — range on pure fuels. FlexFuel only.
+- `fill_count` — number of fill-to-fill data points (reliability indicator)
+
 #### Range formula
 ```
-usable_liters = tank_capacity − 5     ← 5 L cushion (reserve, never rely on last 5 L)
-range_km = usable_liters × 100 / avg_consumption_L100km
+usable_liters = tank_capacity − 5     ← 5 L cushion (warning-light reserve)
+range_km = usable_liters × 100 / consumption_L100km
 ```
-The **5 L cushion** is a fixed constant (`CUSHION_L = 5.0` in `vehicle_service.py`). It accounts for the fact that the warning light typically comes on with ~5 L left, and driving to empty risks damaging the fuel pump.
+Applied to `avg_consumption`, `e10_consumption`, and `e85_consumption` independently.
 
-Example: tank = 50 L, hiver avg = 7.9 L/100km → `(50−5) × 100 / 7.9 = 569 km`
+Example: tank = 50 L, hiver avg = 7.5 L/100km → `45 × 100 / 7.5 = 600 km`
 
-#### FlexFuel E85 / E10 split
-The base range is computed from whatever the average consumption is (which reflects actual fill history — mostly E85 if the vehicle is converted). The E10 equivalent range is derived using `overconsumption_pct`:
+#### FlexFuel E10/E85 normalisation — per-segment, not on the average
+
+For each fill-to-fill segment the backend computes the **E85 fraction** of fills added in that segment (e.g. 5 L E10 + 40 L E85 → fraction = 40/45 ≈ 0.889). Then it normalises the measured consumption **before** averaging across the season:
 
 ```
-range_E85 = (tank − 5) × 100 / avg_consumption          ← base
-range_E10 = range_E85 × (1 + overconsumption_pct / 100) ← E10 is more efficient → more range
+For each segment i:
+  e85_fraction_i = e85_liters_i / total_liters_i
+  e10_l100_i     = measured_l100_i / (1 + opc × e85_fraction_i)
+  e85_l100_i     = e10_l100_i × (1 + opc)
+
+Season averages:
+  e10_consumption = mean(e10_l100_i for all i in season)
+  e85_consumption = mean(e85_l100_i for all i in season)
 ```
 
-Example: range_E85 = 569 km, overconsumption = 19.7% → range_E10 = 569 × 1.197 = 681 km
+Where `opc = overconsumption_pct / 100` (e.g. 0.197 for 19.7%).
 
-**Assumption**: the stored `average_consumption` is dominated by E85 fills (true for a vehicle that fills with E85 most of the time after conversion). If the vehicle is used mixed (frequent E10 fills too), the displayed E85/E10 split will be less accurate — it's an approximation, not an exact model.
+**Why per-segment and not on the average?**
+Normalising the already-averaged value assumes all segments had the same E85 fraction. In reality a hiver season might have some 100% E10 segments (cold start weeks) and some 80% E85 segments. Per-segment normalisation handles each differently and produces a more accurate E10 and E85 baseline.
+
+**Worked example** (hiver, 3 segments):
+| Segment | Measured | E85 frac | → E10 | → E85 |
+|---------|----------|----------|-------|-------|
+| 1 | 7.2 L/100 | 0.00 (pure E10) | 7.20 | 8.62 |
+| 2 | 7.5 L/100 | 0.50 | 7.50/(1+0.197×0.5)=6.83 | 8.18 |
+| 3 | 8.1 L/100 | 1.00 (pure E85) | 8.10/1.197=6.77 | 8.10 |
+
+→ `e10_consumption = (7.20+6.83+6.77)/3 = 6.93 L/100`
+→ `e85_consumption = (8.62+8.18+8.10)/3 = 8.30 L/100`
+→ With 50 L tank: E10 range = `45×100/6.93 = 649 km`, E85 range = `45×100/8.30 = 542 km`
+
+The `e85_fraction` reported in `SeasonStats` is the **average** fraction across segments in that season, shown in the UI as "Mix réel cette saison : X% E85 / Y% E10".
 
 ---
 

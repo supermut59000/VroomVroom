@@ -5,6 +5,31 @@ from pydantic import BaseModel, Field, field_validator
 from app.core.enums import FuelType
 
 
+class SeasonStats(BaseModel):
+    """Per-season consumption and range statistics.
+
+    avg_consumption  : actual measured L/100km for that season (mixed fuel)
+    e85_fraction     : fraction of E85 in fills added during that season (0.0–1.0)
+    e10_consumption  : avg consumption normalised to pure E10
+                       formula: avg_measured / (1 + opc × avg_e85_fraction)
+    e85_consumption  : avg consumption on pure E85
+                       formula: e10_consumption × (1 + opc)
+    range_km         : (tank − 5 L) × 100 / avg_consumption   (actual mix)
+    range_km_e10     : (tank − 5 L) × 100 / e10_consumption
+    range_km_e85     : (tank − 5 L) × 100 / e85_consumption
+    fill_count       : number of fill-to-fill data points (reliability indicator)
+    """
+
+    avg_consumption: Optional[float] = None
+    e85_fraction: Optional[float] = None
+    e10_consumption: Optional[float] = None
+    e85_consumption: Optional[float] = None
+    range_km: Optional[float] = None
+    range_km_e10: Optional[float] = None
+    range_km_e85: Optional[float] = None
+    fill_count: int = 0
+
+
 # Schéma de base partagé
 class VehicleBase(BaseModel):
     brand: str = Field(..., min_length=1, max_length=50, description="Marque du véhicule")
@@ -106,17 +131,13 @@ class VehicleStats(BaseModel):
     current_insurance_km_limit: Optional[float] = None
     insurance_km_remaining: Optional[float] = None
     insurance_km_exceeded: bool = False
-    # Autonomy / seasonal consumption (4 météorological seasons)
-    # Printemps=mars-mai, Été=juin-août, Automne=sept-nov, Hiver=déc-fév
-    spring_avg_consumption: Optional[float] = None
-    summer_avg_consumption: Optional[float] = None
-    autumn_avg_consumption: Optional[float] = None
-    winter_avg_consumption: Optional[float] = None
-    range_km: Optional[float] = None          # based on overall avg
-    range_km_spring: Optional[float] = None
-    range_km_summer: Optional[float] = None
-    range_km_autumn: Optional[float] = None
-    range_km_winter: Optional[float] = None
+    # Autonomy — overall + per meteorological season
+    # Seasons: Printemps (3-5), Été (6-8), Automne (9-11), Hiver (12-2)
+    range_km: Optional[float] = None  # overall (actual avg, 5 L cushion)
+    spring: Optional[SeasonStats] = None
+    summer: Optional[SeasonStats] = None
+    autumn: Optional[SeasonStats] = None
+    winter: Optional[SeasonStats] = None
 
 
 # Schéma pour la timeline unifiée
