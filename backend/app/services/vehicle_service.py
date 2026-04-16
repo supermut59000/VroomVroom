@@ -192,6 +192,67 @@ class VehicleService:
 
         return VehicleTimeline(vehicle_id=vehicle_id, events=events)
 
+    def _compute_seasonal_consumption(self, vehicle_id: int) -> dict:
+        """
+        Compute average L/100km per meteorological season from fill-to-fill consumption history.
+        Seasons: Printemps (3-5), Été (6-8), Automne (9-11), Hiver (12-2).
+        Uses the fuel entry date to assign each consumption value to a season.
+        Returns dict with keys: spring, summer, autumn, winter (each Optional[float]).
+        """
+        entries = (
+            self.db.query(FuelEntry)
+            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
+            .order_by(FuelEntry.fueling_date, FuelEntry.odometer_reading)
+            .all()
+        )
+
+        if len(entries) < 2:
+            return {"spring": None, "summer": None, "autumn": None, "winter": None}
+
+        def month_to_season(month: int) -> str:
+            if month in (3, 4, 5):
+                return "spring"
+            elif month in (6, 7, 8):
+                return "summer"
+            elif month in (9, 10, 11):
+                return "autumn"
+            else:  # 12, 1, 2
+                return "winter"
+
+        season_buckets: dict = {"spring": [], "summer": [], "autumn": [], "winter": []}
+
+        accumulated_liters = 0.0
+        last_full_tank_odometer = None
+
+        for i, entry in enumerate(entries):
+            is_full = getattr(entry, "is_full_tank", True)
+
+            if i == 0:
+                if is_full:
+                    last_full_tank_odometer = float(entry.odometer_reading)
+                    accumulated_liters = 0.0
+                else:
+                    last_full_tank_odometer = float(entry.odometer_reading)
+                    accumulated_liters = entry.liters
+            else:
+                if is_full:
+                    total_liters_for_calc = accumulated_liters + entry.liters
+                    if last_full_tank_odometer is not None:
+                        distance = float(entry.odometer_reading) - last_full_tank_odometer
+                        if distance > 0:
+                            consumption = (total_liters_for_calc * 100) / distance
+                            season = month_to_season(entry.fueling_date.month)
+                            season_buckets[season].append(consumption)
+                    last_full_tank_odometer = float(entry.odometer_reading)
+                    accumulated_liters = 0.0
+                else:
+                    accumulated_liters += entry.liters
+
+        return {
+            season: round(sum(vals) / len(vals), 2) if vals else None
+            for season, vals in season_buckets.items()
+        }
+
     def get_vehicle_stats(self, vehicle_id: int) -> VehicleStats:
         """
         Calcule les statistiques d'un véhicule basées sur les entrées de carburant.
@@ -246,6 +307,15 @@ class VehicleService:
             insurance_km_remaining = current_insurance_limit - ref_odometer
             insurance_km_exceeded = insurance_km_remaining < 0
 
+        # Seasonal consumption + range
+        seasonal = self._compute_seasonal_consumption(vehicle_id)
+        tank = vehicle.tank_capacity
+
+        def _range(conso: Optional[float]) -> Optional[float]:
+            if conso and conso > 0 and tank:
+                return round(tank * 100 / conso, 0)
+            return None
+
         return VehicleStats(
             vehicle_id=vehicle_id,
             total_fuel_entries=fuel_stats["total_entries"],
@@ -260,4 +330,13 @@ class VehicleService:
             current_insurance_km_limit=round(current_insurance_limit, 2) if current_insurance_limit else None,
             insurance_km_remaining=round(insurance_km_remaining, 2) if insurance_km_remaining is not None else None,
             insurance_km_exceeded=insurance_km_exceeded,
+            spring_avg_consumption=seasonal["spring"],
+            summer_avg_consumption=seasonal["summer"],
+            autumn_avg_consumption=seasonal["autumn"],
+            winter_avg_consumption=seasonal["winter"],
+            range_km=_range(fuel_stats["average_consumption"]),
+            range_km_spring=_range(seasonal["spring"]),
+            range_km_summer=_range(seasonal["summer"]),
+            range_km_autumn=_range(seasonal["autumn"]),
+            range_km_winter=_range(seasonal["winter"]),
         )

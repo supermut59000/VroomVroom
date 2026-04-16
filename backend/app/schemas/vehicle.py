@@ -106,6 +106,17 @@ class VehicleStats(BaseModel):
     current_insurance_km_limit: Optional[float] = None
     insurance_km_remaining: Optional[float] = None
     insurance_km_exceeded: bool = False
+    # Autonomy / seasonal consumption (4 météorological seasons)
+    # Printemps=mars-mai, Été=juin-août, Automne=sept-nov, Hiver=déc-fév
+    spring_avg_consumption: Optional[float] = None
+    summer_avg_consumption: Optional[float] = None
+    autumn_avg_consumption: Optional[float] = None
+    winter_avg_consumption: Optional[float] = None
+    range_km: Optional[float] = None          # based on overall avg
+    range_km_spring: Optional[float] = None
+    range_km_summer: Optional[float] = None
+    range_km_autumn: Optional[float] = None
+    range_km_winter: Optional[float] = None
 
 
 # Schéma pour la timeline unifiée

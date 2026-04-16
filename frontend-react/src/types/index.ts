@@ -83,6 +83,16 @@ export interface VehicleStats {
   current_insurance_km_limit: number | null
   insurance_km_remaining: number | null
   insurance_km_exceeded: boolean
+  // Autonomy / seasonal
+  spring_avg_consumption: number | null
+  summer_avg_consumption: number | null
+  autumn_avg_consumption: number | null
+  winter_avg_consumption: number | null
+  range_km: number | null
+  range_km_spring: number | null
+  range_km_summer: number | null
+  range_km_autumn: number | null
+  range_km_winter: number | null
 }
 
 export interface VehicleCostStats {
