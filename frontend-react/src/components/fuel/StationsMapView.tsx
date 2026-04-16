@@ -116,11 +116,10 @@ export function StationsMapView({
   }, [stations, selectedId])
 
   const handleViewportChange = (v: MapViewport) => {
-    setZoom(v.zoom)
-
-    if (!onViewportChangeRef.current) return
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
+      setZoom(v.zoom)
+      if (!onViewportChangeRef.current) return
       const map = mapRef.current
       if (!map) return
       const bounds = map.getBounds()

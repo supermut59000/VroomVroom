@@ -1270,7 +1270,7 @@ function MapClusterLayer<
       filter: ["has", "point_count"],
       layout: {
         "text-field": "{point_count_abbreviated}",
-        "text-font": ["Open Sans"],
+        "text-font": ["Open Sans Regular"],
         "text-size": 12,
       },
       paint: {
