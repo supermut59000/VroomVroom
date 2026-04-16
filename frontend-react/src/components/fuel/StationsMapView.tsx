@@ -43,6 +43,22 @@ const VIEWPORT_DEBOUNCE_MS = 600
 const DEFAULT_FRANCE_CENTER: [number, number] = [2.5, 46.5]
 const DEFAULT_FRANCE_ZOOM = 5
 
+// Carto's /fonts subdomain (tiles.basemaps.cartocdn.com) is unreachable in
+// some environments, which makes cluster-count glyphs fail to load and
+// triggers a tile reparse loop. Route glyph requests to MapLibre's public
+// font server instead, which serves "Open Sans Regular" glyphs.
+const transformRequest = (url: string) => {
+  if (url.includes('tiles.basemaps.cartocdn.com/fonts/')) {
+    return {
+      url: url.replace(
+        /https:\/\/tiles\.basemaps\.cartocdn\.com\/fonts/,
+        'https://demotiles.maplibre.org/font',
+      ),
+    }
+  }
+  return { url }
+}
+
 function formatUpdate(iso: string | null): string {
   if (!iso) return 'N/D'
   const d = new Date(iso)
@@ -150,6 +166,7 @@ export function StationsMapView({
         ref={mapRef}
         center={initialCenter}
         zoom={initialZoom}
+        transformRequest={transformRequest}
         onViewportChange={handleViewportChange}
       >
         <MapControls showLocate />
