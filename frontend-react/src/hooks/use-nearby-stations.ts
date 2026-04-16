@@ -201,7 +201,7 @@ export function useNearbyStations(): UseNearbyStationsReturn {
     _centerLat: number,
     _centerLon: number,
     fuelType?: FuelType | keyof StationPrices,
-    limit: number = 200,
+    limit: number = 100,
   ) => {
     const priceKey = resolvePriceKey(fuelType)
     // ODS QL doesn't support arbitrary polygon intersects on geo_point_2d,
