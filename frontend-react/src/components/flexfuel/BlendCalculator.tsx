@@ -298,6 +298,7 @@ export function BlendCalculator({
   const [dilutantType, setDilutantType] = useState<DilutantType>('e10')
   const [currentOdo, setCurrentOdo] = useState<string>('')
   const [season, setSeason] = useState<SeasonMode>(defaultSeasonMode)
+  const [tripKm, setTripKm] = useState<string>('')
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
@@ -333,6 +334,38 @@ export function BlendCalculator({
   }, [tankState, avgConsumption, inputOdo, tankCapacity])
 
   const ethanolLiters = (currentEthanolPct / 100) * remainingLiters
+
+  // ── Max E85 partial fill — largest amount of E85 you can add right now
+  //    without exceeding targetMax ethanol.
+  //
+  //    Solve: (ethanolLiters + x × 0.85) / (remaining + x) = targetMax
+  //    → x = (remaining × targetMax − ethanolLiters) / (0.85 − targetMax)
+  //
+  //    Capped at (tankCapacity − remaining) — can't overfill the tank.
+  //
+  //    In the E85-pur zone x ≥ full-tank capacity → show as "plein complet".
+  //    In the dead zone (past odoA) x < full-tank → actionable partial fill.
+  const limitFill = useMemo(() => {
+    const targetFrac = (target + tolerance) / 100
+    const denom = 0.85 - targetFrac
+    if (denom <= 0 || remainingLiters <= 0) return null
+    const ethFrac = remainingLiters > 0 ? ethanolLiters / remainingLiters : 0
+    if (ethFrac >= targetFrac) return null // already above limit, no E85 makes it better
+    const x = (remainingLiters * targetFrac - ethanolLiters) / denom
+    if (x <= 0) return null
+    const maxFill = tankCapacity - remainingLiters
+    const liters = Math.min(x, maxFill)
+    const resultPct = ((ethanolLiters + liters * 0.85) / (remainingLiters + liters)) * 100
+    const addedKm = avgConsumption ? Math.round(liters * 100 / avgConsumption) : null
+    const isFull = x >= maxFill - 0.5 // x_ideal >= full tank → this IS the full tank
+    return { liters, resultPct, addedKm, isFull }
+  }, [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, avgConsumption])
+
+  // ── Trip planning
+  const tripDistance = tripKm !== '' ? Number(tripKm) : null
+  const rangeNowKm = avgConsumption
+    ? Math.round(Math.max(0, remainingLiters - 5) * 100 / avgConsumption)
+    : null
 
   const thresholds = useMemo(
     () =>
@@ -407,7 +440,9 @@ export function BlendCalculator({
         className={`rounded-lg border p-3 ${
           odoA !== null
             ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
-            : 'border-border bg-muted/30'
+            : limitFill
+              ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/30'
+              : 'border-border bg-muted/30'
         }`}
       >
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
@@ -423,6 +458,26 @@ export function BlendCalculator({
             </p>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
               dans ~{(odoA - inputOdo).toLocaleString('fr-FR')} km
+            </p>
+            {limitFill && limitFill.addedKm !== null && (
+              <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-1 border-t border-emerald-200 dark:border-emerald-800 pt-1">
+                {limitFill.isFull
+                  ? `Plein complet: ${Math.round(limitFill.liters)} L → ${limitFill.resultPct.toFixed(0)}% · +${limitFill.addedKm} km`
+                  : `Max: ${Math.round(limitFill.liters)} L → ${limitFill.resultPct.toFixed(0)}% · +${limitFill.addedKm} km`}
+              </p>
+            )}
+          </>
+        ) : limitFill ? (
+          <>
+            <p className="text-xs text-yellow-700 dark:text-yellow-400 leading-tight">
+              Partiel possible
+            </p>
+            <p className="text-base font-bold text-yellow-800 dark:text-yellow-200">
+              {Math.round(limitFill.liters)} L E85
+            </p>
+            <p className="text-[11px] text-yellow-700 dark:text-yellow-500 mt-0.5">
+              → {limitFill.resultPct.toFixed(0)}%
+              {limitFill.addedKm !== null && ` · +${limitFill.addedKm} km`}
             </p>
           </>
         ) : (
@@ -612,6 +667,74 @@ export function BlendCalculator({
 
           {/* Recommendation */}
           {winterRecCard}
+        </>
+      )}
+
+      {/* Trip planning — only in winter mode */}
+      {season === 'hiver' && (
+        <>
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">Trajet prévu</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="Distance (km)"
+            value={tripKm}
+            onChange={(e) => setTripKm(e.target.value)}
+            className="h-10 text-base"
+            aria-label="Distance du trajet en km"
+          />
+          {tripDistance != null && tripDistance > 0 && rangeNowKm != null && (
+            <div className="rounded-lg border p-3 space-y-1.5 text-sm">
+              {/* Current fuel */}
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Réservoir actuel</span>
+                <span className={rangeNowKm >= tripDistance ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
+                  ~{rangeNowKm.toLocaleString('fr-FR')} km{rangeNowKm >= tripDistance ? ' ✓' : ''}
+                </span>
+              </div>
+
+              {rangeNowKm < tripDistance && (
+                <>
+                  {/* Option 1: partial E85 to limit */}
+                  {limitFill && limitFill.addedKm !== null && (() => {
+                    const rangeAfter = Math.round(Math.max(0, remainingLiters + limitFill.liters - 5) * 100 / (avgConsumption ?? 8))
+                    const ok = rangeAfter >= tripDistance
+                    return (
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">
+                          + {Math.round(limitFill.liters)} L E85{limitFill.isFull ? ' (plein)' : ' (partiel)'}
+                        </span>
+                        <span className={ok ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}>
+                          ~{rangeAfter.toLocaleString('fr-FR')} km{ok ? ' ✓' : ' ✗'}
+                        </span>
+                      </div>
+                    )
+                  })()}
+
+                  {/* Option 2: blend recommendation (if different from limitFill) */}
+                  {winterRec.type === 'blend' && (() => {
+                    const fill = winterRec.dilutantLiters + winterRec.e85Liters
+                    const rangeAfter = Math.round(Math.max(0, remainingLiters + fill - 5) * 100 / (avgConsumption ?? 8))
+                    const ok = rangeAfter >= tripDistance
+                    return (
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">
+                          + {winterRec.dilutantLiters} L {dilutantLabel} + {winterRec.e85Liters} L E85
+                        </span>
+                        <span className={ok ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}>
+                          ~{rangeAfter.toLocaleString('fr-FR')} km{ok ? ' ✓' : ' ✗'}
+                        </span>
+                      </div>
+                    )
+                  })()}
+                </>
+              )}
+            </div>
+          )}
         </>
       )}
 
