@@ -198,18 +198,22 @@ export function useNearbyStations(): UseNearbyStationsReturn {
 
   const fetchBBox = useCallback(async (
     bbox: BBox,
-    centerLat: number,
-    centerLon: number,
+    _centerLat: number,
+    _centerLon: number,
     fuelType?: FuelType | keyof StationPrices,
     limit: number = 200,
   ) => {
     const priceKey = resolvePriceKey(fuelType)
-    // ODS bbox polygon: POLYGON((west south, east south, east north, west north, west south))
+    // ODS QL doesn't support arbitrary polygon intersects on geo_point_2d,
+    // but `within_distance` is reliable — convert the bbox to an enclosing
+    // circle (center + radius to the farthest corner).
     const { west, south, east, north } = bbox
-    const polygon =
-      `POLYGON((${west} ${south}, ${east} ${south}, ${east} ${north}, ${west} ${north}, ${west} ${south}))`
-    const where = `intersects(geom, geom'${polygon}')`
-    await runQuery(where, centerLat, centerLon, priceKey, limit)
+    const bboxCenterLat = (south + north) / 2
+    const bboxCenterLon = (west + east) / 2
+    const radiusM = haversineM(bboxCenterLat, bboxCenterLon, north, east)
+    const radiusKm = Math.max(1, Math.ceil(radiusM / 1000))
+    const where = `within_distance(geom, geom'POINT(${bboxCenterLon} ${bboxCenterLat})', ${radiusKm}km)`
+    await runQuery(where, bboxCenterLat, bboxCenterLon, priceKey, limit)
   }, [runQuery])
 
   const clear = useCallback(() => {
