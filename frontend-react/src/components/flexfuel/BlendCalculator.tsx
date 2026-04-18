@@ -179,7 +179,6 @@ function computeThresholds(
 
 type WinterRec =
   | { type: 'tank_full'; currentPct: number }
-  | { type: 'too_high'; partialLiters: number; resultPct: number }
   | {
       type: 'pure_e85'
       e85Liters: number
@@ -207,14 +206,6 @@ function computeWinterRec(
 
   if (toAdd < MIN_PUMP_LITERS) {
     return { type: 'tank_full', currentPct }
-  }
-
-  // Too high → partial fill only
-  if (currentPct > targetPct + tolerancePct) {
-    const partialL = 15
-    const resultPct =
-      ((ethanolLiters + partialL * 0.85) / (remainingLiters + partialL)) * 100
-    return { type: 'too_high', partialLiters: partialL, resultPct }
   }
 
   // Pure E85 keeps ethanol within targetMax
@@ -534,23 +525,6 @@ export function BlendCalculator({
     winterRecCard = (
       <p className="text-sm text-muted-foreground">Réservoir presque plein.</p>
     )
-  } else if (winterRec.type === 'too_high') {
-    winterRecCard = (
-      <div className="rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
-        <p className="text-xs font-medium text-orange-700 dark:text-orange-400 mb-1">
-          Taux élevé ({currentEthanolPct.toFixed(0)}%) — ne pas faire le plein
-        </p>
-        <p className="text-lg font-bold text-orange-800 dark:text-orange-300">
-          {winterRec.partialLiters} L E85 uniquement
-        </p>
-        <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
-          Résultat : {winterRec.resultPct.toFixed(1)}%
-        </p>
-        <p className="mt-2 text-xs text-orange-600 dark:text-orange-500">
-          Au prochain plein, dilue avec {dilutantLabel}
-        </p>
-      </div>
-    )
   } else if (winterRec.type === 'pure_e85') {
     winterRecCard = (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
@@ -572,8 +546,14 @@ export function BlendCalculator({
     const resultColor = winterRec.withinTolerance
       ? 'text-emerald-600 dark:text-emerald-400'
       : 'text-orange-500'
+    const aboveLimit = currentEthanolPct > target + tolerance
     winterRecCard = (
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+        {aboveLimit && (
+          <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-2">
+            Taux actuel ({currentEthanolPct.toFixed(0)}%) au-dessus de la limite — dilution nécessaire
+          </p>
+        )}
         <p className="text-lg font-bold text-blue-800 dark:text-blue-300">
           {winterRec.dilutantLiters} L {dilutantLabel}&nbsp;+&nbsp;{winterRec.e85Liters} L E85
         </p>
