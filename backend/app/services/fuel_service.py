@@ -349,7 +349,7 @@ class FuelService:
                         "date": entry.fueling_date,
                         "consumption": consumption,
                         "odometer_reading": entry.odometer_reading,
-                        "liters": entry.liters,
+                        "liters": round(total_liters, 2),
                         "distance": distance,
                         "is_full_tank": True
                     })
