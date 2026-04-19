@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Leaf, DollarSign, Navigation, History } from 'lucide-react'
+import { Pencil, Leaf, DollarSign, Navigation, History, BarChart3 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { CostOfOwnershipSection } from './CostOfOwnershipSection'
 import { FlexfuelConversionDialog } from '@/components/flexfuel/FlexfuelConversionDialog'
 import { E10ReferencePriceDialog } from '@/components/flexfuel/E10ReferencePriceDialog'
 import { VehicleTimelineSheet } from './VehicleTimelineSheet'
+import { MonthlyBilanSheet } from './MonthlyBilanSheet'
 
 interface VehicleDetailsDialogProps {
   vehicleId: number | null
@@ -39,6 +40,7 @@ export function VehicleDetailsDialog({
   const [conversionDialogOpen, setConversionDialogOpen] = useState(false)
   const [e10PriceDialogOpen, setE10PriceDialogOpen] = useState(false)
   const [timelineOpen, setTimelineOpen] = useState(false)
+  const [bilanOpen, setBilanOpen] = useState(false)
 
   const open = vehicleId !== null
 
@@ -379,6 +381,10 @@ export function VehicleDetailsDialog({
               <Button variant="outline" onClick={onClose}>
                 Fermer
               </Button>
+              <Button variant="outline" onClick={() => setBilanOpen(true)}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Bilan
+              </Button>
               <Button variant="outline" onClick={() => setTimelineOpen(true)}>
                 <History className="mr-2 h-4 w-4" />
                 Historique
@@ -401,6 +407,14 @@ export function VehicleDetailsDialog({
       <E10ReferencePriceDialog
         open={e10PriceDialogOpen}
         onClose={() => setE10PriceDialogOpen(false)}
+      />
+
+      {/* Bilan mensuel sheet */}
+      <MonthlyBilanSheet
+        vehicleId={vehicleId}
+        isFlexFuel={vehicle?.fuel_type === 'e85'}
+        open={bilanOpen}
+        onClose={() => setBilanOpen(false)}
       />
 
       {/* Timeline sheet */}
