@@ -24,12 +24,6 @@ const ETHANOL_FRACTION: Record<string, number> = {
 const MIN_PUMP_LITERS = 5
 
 type DilutantType = 'e10' | 'sp95'
-type SeasonMode = 'hiver' | 'ete'
-
-function defaultSeasonMode(): SeasonMode {
-  const m = new Date().getMonth()
-  return m >= 3 && m <= 8 ? 'ete' : 'hiver'
-}
 
 interface TankState {
   litersInTank: number
@@ -288,7 +282,6 @@ export function BlendCalculator({
 }: BlendCalculatorProps) {
   const [dilutantType, setDilutantType] = useState<DilutantType>('e10')
   const [currentOdo, setCurrentOdo] = useState<string>('')
-  const [season, setSeason] = useState<SeasonMode>(defaultSeasonMode)
   const [tripKm, setTripKm] = useState<string>('')
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
@@ -409,19 +402,7 @@ export function BlendCalculator({
     )
   }
 
-  // ── Summer ────────────────────────────────────────────────────────────────
-  const summerCard = (
-    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-      <p className="text-lg font-bold text-amber-800 dark:text-amber-300">
-        {Math.round(tankCapacity - remainingLiters)} L E85
-      </p>
-      <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
-        Plein E85 pur — économies maximales
-      </p>
-    </div>
-  )
-
-  // ── Winter threshold cards ────────────────────────────────────────────────
+  // ── Threshold cards ───────────────────────────────────────────────────────
   const { odoA, odoB, odoBNow } = thresholds
 
   const thresholdCards = (
@@ -566,93 +547,60 @@ export function BlendCalculator({
 
   const content = (
     <div className="space-y-3">
-      {/* Season toggle */}
-      <div className="flex rounded-md border overflow-hidden text-sm font-medium w-fit">
-        <button
-          type="button"
-          onClick={() => setSeason('hiver')}
-          className={`px-3 py-2 transition-colors ${
-            season === 'hiver'
-              ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
-              : 'text-muted-foreground hover:bg-muted'
-          }`}
+      {/* Dilutant selector */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">Diluant</span>
+        <Select
+          value={dilutantType}
+          onValueChange={(v) => setDilutantType(v as DilutantType)}
         >
-          ❄ Hiver
-        </button>
-        <button
-          type="button"
-          onClick={() => setSeason('ete')}
-          className={`px-3 py-2 transition-colors ${
-            season === 'ete'
-              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200'
-              : 'text-muted-foreground hover:bg-muted'
-          }`}
-        >
-          ☀ Été
-        </button>
+          <SelectTrigger className="h-8 w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="e10">E10</SelectItem>
+            <SelectItem value="sp95">SP95</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
-      {season === 'ete' ? (
-        <>
-          {/* Summer: odometer input + pure E85 card */}
-          <Input
-            type="number"
-            inputMode="numeric"
-            placeholder={String(lastOdo)}
-            value={currentOdo}
-            onChange={(e) => setCurrentOdo(e.target.value)}
-            className="h-10 text-base"
-            aria-label="Odomètre actuel (km)"
-          />
-          {summerCard}
-        </>
-      ) : (
-        <>
-          {/* Winter: dilutant selector + reference thresholds */}
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-muted-foreground">Diluant</span>
-            <Select
-              value={dilutantType}
-              onValueChange={(v) => setDilutantType(v as DilutantType)}
-            >
-              <SelectTrigger className="h-8 w-24">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="e10">E10</SelectItem>
-                <SelectItem value="sp95">SP95</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      {thresholdCards}
 
-          {thresholdCards}
+      {/* Separator */}
+      <div className="flex items-center gap-2">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">Calculer pour un odomètre précis</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
 
-          {/* Separator */}
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">Calculer pour un odomètre précis</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
+      {/* Odometer input + quick increments */}
+      <div className="flex gap-2">
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder={String(lastOdo)}
+          value={currentOdo}
+          onChange={(e) => setCurrentOdo(e.target.value)}
+          className="h-10 text-base flex-1"
+          aria-label="Odomètre actuel (km)"
+        />
+        {([50, 100, 200] as const).map((delta) => (
+          <button
+            key={delta}
+            type="button"
+            onClick={() => setCurrentOdo(String(inputOdo + delta))}
+            className="h-10 px-2.5 rounded-md border border-input bg-background text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+          >
+            +{delta}
+          </button>
+        ))}
+      </div>
 
-          {/* Odometer input */}
-          <Input
-            type="number"
-            inputMode="numeric"
-            placeholder={String(lastOdo)}
-            value={currentOdo}
-            onChange={(e) => setCurrentOdo(e.target.value)}
-            className="h-10 text-base"
-            aria-label="Odomètre actuel (km)"
-          />
+      {/* Recommendation */}
+      {winterRecCard}
 
-          {/* Recommendation */}
-          {winterRecCard}
-        </>
-      )}
-
-      {/* Trip planning — only in winter mode */}
-      {season === 'hiver' && (
-        <>
+      {/* Trip planning */}
+      <>
           <div className="flex items-center gap-2">
             <div className="h-px flex-1 bg-border" />
             <span className="text-xs text-muted-foreground">Trajet prévu</span>
@@ -716,7 +664,6 @@ export function BlendCalculator({
             </div>
           )}
         </>
-      )}
 
       {/* Details */}
       <div className="flex gap-4 text-xs text-muted-foreground">
