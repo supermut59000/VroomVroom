@@ -8,23 +8,29 @@ from app.core.enums import FuelType
 class SeasonStats(BaseModel):
     """Per-season consumption and range statistics.
 
-    avg_consumption  : actual measured L/100km for that season (mixed fuel)
+    avg_consumption  : distance-weighted L/100km for that season (total_liters/total_km × 100)
+    min_consumption  : lowest fill-to-fill L/100km recorded (best conditions)
+    max_consumption  : highest fill-to-fill L/100km recorded (worst conditions)
     e85_fraction     : fraction of E85 in fills added during that season (0.0–1.0)
-    e10_consumption  : avg consumption normalised to pure E10
-                       formula: avg_measured / (1 + opc × avg_e85_fraction)
-    e85_consumption  : avg consumption on pure E85
-                       formula: e10_consumption × (1 + opc)
+    e10_consumption  : distance-weighted consumption normalised to pure E10
+    e85_consumption  : distance-weighted consumption normalised to pure E85
     range_km         : (tank − 5 L) × 100 / avg_consumption   (actual mix)
+    range_km_best    : (tank − 5 L) × 100 / min_consumption   (best conditions)
+    range_km_worst   : (tank − 5 L) × 100 / max_consumption   (worst conditions)
     range_km_e10     : (tank − 5 L) × 100 / e10_consumption
     range_km_e85     : (tank − 5 L) × 100 / e85_consumption
     fill_count       : number of fill-to-fill data points (reliability indicator)
     """
 
     avg_consumption: Optional[float] = None
+    min_consumption: Optional[float] = None
+    max_consumption: Optional[float] = None
     e85_fraction: Optional[float] = None
     e10_consumption: Optional[float] = None
     e85_consumption: Optional[float] = None
     range_km: Optional[float] = None
+    range_km_best: Optional[float] = None
+    range_km_worst: Optional[float] = None
     range_km_e10: Optional[float] = None
     range_km_e85: Optional[float] = None
     fill_count: int = 0

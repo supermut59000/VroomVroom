@@ -237,6 +237,16 @@ export function VehicleDetailsDialog({
                           <span className="font-semibold">~{Math.round(baseRange!)} km</span>
                         </div>
 
+                        {/* Range band: worst → best conditions */}
+                        {current?.range_km_worst != null && current?.range_km_best != null && (
+                          <div className="ml-6 text-xs text-muted-foreground">
+                            De <span className="font-medium text-foreground">~{Math.round(current.range_km_worst)} km</span>
+                            {' '}(ville) à{' '}
+                            <span className="font-medium text-foreground">~{Math.round(current.range_km_best)} km</span>
+                            {' '}(route) · moy. {current.avg_consumption?.toFixed(1)} L/100
+                          </div>
+                        )}
+
                         {/* FlexFuel E10 / E85 split — computed by backend */}
                         {isFlexFuel && current && (
                           <div className="ml-6 grid grid-cols-2 gap-2 text-sm">
@@ -271,6 +281,11 @@ export function VehicleDetailsDialog({
                                 <div className="text-[11px]">{SEASON_SHORT[s]}</div>
                                 <div className="mt-0.5">{ss?.range_km != null ? `~${Math.round(ss.range_km)} km` : '—'}</div>
                                 <div className="mt-0.5 opacity-70">{ss?.avg_consumption != null ? `${ss.avg_consumption.toFixed(1)} L/100` : ''}</div>
+                                {ss?.range_km_worst != null && ss?.range_km_best != null && (
+                                  <div className="mt-0.5 opacity-50 text-[10px]">
+                                    {Math.round(ss.range_km_worst)}–{Math.round(ss.range_km_best)}
+                                  </div>
+                                )}
                                 {isFlexFuel && ss?.fill_count != null && (
                                   <div className="mt-0.5 opacity-50">{ss.fill_count} plein{ss.fill_count !== 1 ? 's' : ''}</div>
                                 )}

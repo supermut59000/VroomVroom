@@ -208,18 +208,14 @@ class VehicleService:
           Automne:   sept-nov (9-11)
           Hiver:     déc-fév (12, 1, 2)
 
-        For each fill-to-fill segment we record:
-          - measured_l100  : actual L/100km (whatever fuel mix was used)
-          - e85_fraction   : fraction of E85 in fills added during this segment
-                             (e.g. 5 L E10 + 40 L E85 → fraction = 40/45 ≈ 0.889)
+        avg_consumption uses a distance-weighted mean (total_liters / total_km × 100)
+        so that a 400 km highway segment is not flattened by a 100 km city segment.
 
-        If overconsumption_pct is provided (FlexFuel vehicle), we also compute
-        normalised values per segment before averaging:
-          - e10_l100 = measured_l100 / (1 + opc × e85_fraction)
-          - e85_l100 = e10_l100 × (1 + opc)
+        min/max_consumption track the per-segment extremes to expose the spread
+        between best (highway) and worst (city-only) conditions.
 
-        This correctly handles a mixed fill history: a segment that is 50% E85
-        will be normalised differently from one that is 100% E85.
+        For FlexFuel vehicles, per-segment normalisation before distance-weighted
+        averaging gives accurate E10 and E85 baselines even with a mixed history.
 
         Returns a dict {season: SeasonStats} for all four seasons.
         """
@@ -241,8 +237,8 @@ class VehicleService:
                 return "autumn"
             return "winter"
 
-        # Each bucket entry: (measured_l100, e85_fraction)
-        season_buckets: dict[str, list[tuple[float, float]]] = {
+        # Each bucket entry: (distance_km, liters, e85_liters, measured_l100)
+        season_buckets: dict[str, list[tuple[float, float, float, float]]] = {
             "spring": [], "summer": [], "autumn": [], "winter": []
         }
 
@@ -272,9 +268,8 @@ class VehicleService:
                     distance = float(entry.odometer_reading) - last_full_tank_odometer
                     if distance > 0:
                         measured = (seg_liters * 100) / distance
-                        e85_frac = seg_e85 / seg_liters
                         season = month_to_season(entry.fueling_date.month)
-                        season_buckets[season].append((measured, e85_frac))
+                        season_buckets[season].append((distance, seg_liters, seg_e85, measured))
 
                 last_full_tank_odometer = float(entry.odometer_reading)
                 accumulated_liters = 0.0
@@ -297,26 +292,40 @@ class VehicleService:
                 result[season] = SeasonStats(fill_count=0)
                 continue
 
-            avg_measured = sum(m for m, _ in data_points) / len(data_points)
-            avg_e85_frac = sum(f for _, f in data_points) / len(data_points)
+            total_km = sum(d for d, _, _, _ in data_points)
+            total_liters = sum(l for _, l, _, _ in data_points)
+            total_e85_liters = sum(e for _, _, e, _ in data_points)
+
+            # Distance-weighted average: long segments matter proportionally more
+            avg_measured = (total_liters * 100) / total_km
+            avg_e85_frac = total_e85_liters / total_liters
+
+            all_measured = [m for _, _, _, m in data_points]
+            min_conso = round(min(all_measured), 2)
+            max_conso = round(max(all_measured), 2)
 
             e10_consumption: Optional[float] = None
             e85_consumption: Optional[float] = None
 
             if opc is not None:
-                # Per-segment normalisation, then average — more accurate than
-                # normalising the already-averaged value
-                e10_vals = [m / (1 + opc * f) for m, f in data_points]
-                e85_vals = [v * (1 + opc) for v in e10_vals]
-                e10_consumption = round(sum(e10_vals) / len(e10_vals), 2)
-                e85_consumption = round(sum(e85_vals) / len(e85_vals), 2)
+                # Per-segment normalisation with distance weighting
+                e10_vals = [
+                    (d / total_km) * (m / (1 + opc * (e / l)))
+                    for d, l, e, m in data_points
+                ]
+                e10_consumption = round(sum(e10_vals), 2)
+                e85_consumption = round(e10_consumption * (1 + opc), 2)
 
             result[season] = SeasonStats(
                 avg_consumption=round(avg_measured, 2),
+                min_consumption=min_conso,
+                max_consumption=max_conso,
                 e85_fraction=round(avg_e85_frac, 3),
                 e10_consumption=e10_consumption,
                 e85_consumption=e85_consumption,
                 range_km=_range(avg_measured),
+                range_km_best=_range(min_conso),
+                range_km_worst=_range(max_conso),
                 range_km_e10=_range(e10_consumption),
                 range_km_e85=_range(e85_consumption),
                 fill_count=len(data_points),

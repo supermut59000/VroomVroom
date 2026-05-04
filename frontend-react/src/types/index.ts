@@ -70,8 +70,12 @@ export interface VehicleUpdate {
 }
 
 export interface SeasonStats {
-  /** Actual measured L/100km for that season (mixed fuel reality) */
+  /** Distance-weighted L/100km for that season (total_liters/total_km × 100) */
   avg_consumption: number | null
+  /** Lowest fill-to-fill L/100km recorded this season (best conditions) */
+  min_consumption: number | null
+  /** Highest fill-to-fill L/100km recorded this season (worst conditions) */
+  max_consumption: number | null
   /** Fraction of E85 in fills added this season (0.0–1.0). null for non-FlexFuel. */
   e85_fraction: number | null
   /** Consumption normalised to pure E10 (null for non-FlexFuel) */
@@ -80,6 +84,10 @@ export interface SeasonStats {
   e85_consumption: number | null
   /** Range on actual avg mix, 5 L cushion */
   range_km: number | null
+  /** Range at min_consumption (best conditions) */
+  range_km_best: number | null
+  /** Range at max_consumption (worst conditions) */
+  range_km_worst: number | null
   /** Range on pure E10 (null for non-FlexFuel) */
   range_km_e10: number | null
   /** Range on pure E85 (null for non-FlexFuel) */
