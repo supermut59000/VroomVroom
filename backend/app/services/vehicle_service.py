@@ -300,21 +300,27 @@ class VehicleService:
             avg_measured = (total_liters * 100) / total_km
             avg_e85_frac = total_e85_liters / total_liters
 
-            all_measured = [m for _, _, _, m in data_points]
-            min_conso = round(min(all_measured), 2)
-            max_conso = round(max(all_measured), 2)
-
             e10_consumption: Optional[float] = None
             e85_consumption: Optional[float] = None
 
             if opc is not None:
-                # Per-segment normalisation with distance weighting
-                e10_vals = [
-                    (d / total_km) * (m / (1 + opc * (e / l)))
-                    for d, l, e, m in data_points
-                ]
-                e10_consumption = round(sum(e10_vals), 2)
+                # Per-segment normalisation
+                e10_per_seg = [m / (1 + opc * (e / l)) for _, l, e, m in data_points]
+                e85_per_seg = [v * (1 + opc) for v in e10_per_seg]
+
+                # Distance-weighted averages
+                e10_consumption = round(sum(
+                    (d / total_km) * v for (d, _, _, _), v in zip(data_points, e10_per_seg)
+                ), 2)
                 e85_consumption = round(e10_consumption * (1 + opc), 2)
+
+                # Range band on E85-normalised values: removes the bias from
+                # transition segments where Essence was still in the tank
+                min_conso = round(min(e85_per_seg), 2)
+                max_conso = round(max(e85_per_seg), 2)
+            else:
+                min_conso = round(min(m for _, _, _, m in data_points), 2)
+                max_conso = round(max(m for _, _, _, m in data_points), 2)
 
             result[season] = SeasonStats(
                 avg_consumption=round(avg_measured, 2),
