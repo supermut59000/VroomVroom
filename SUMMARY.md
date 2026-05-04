@@ -1,6 +1,6 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-04-05 (session 5)
+Last updated: 2026-04-27
 
 ---
 
@@ -342,6 +342,30 @@ First entry has no consumption. Partial fills accumulate liters until next full 
 - E10 equivalent cost = equivalent E10 liters × latest E10 reference price at fill date
 - Savings per fill = E10 equivalent cost - actual E85 cost
 - Break-even = when cumulative savings >= kit cost
+
+---
+
+## What Was Done (Session of 2026-05-04)
+
+### Autonomie — moyenne pondérée par distance + fourchette ville/route
+
+**Backend** (`vehicle_service.py`, `schemas/vehicle.py`):
+- `avg_consumption` passe d'une moyenne simple à une moyenne pondérée par distance (`total_liters × 100 / total_km`) — les longs segments highway ne sont plus écrasés par des courts segments urbains.
+- Nouveaux champs `SeasonStats` : `min_consumption`, `max_consumption`, `range_km_best`, `range_km_worst`.
+- Pour FlexFuel : min/max calculés sur la consommation **normalisée E85** par segment, pas sur le brut mesuré. Élimine le biais des segments de transition post-conversion (réservoir encore en Essence).
+
+**Frontend** (`VehicleDetailsDialog.tsx`):
+- Fourchette affichée sous l'autonomie moyenne : « De ~X km (ville) à ~Y km (route) ».
+- Grille 4 saisons : chaque cellule affiche aussi la fourchette min–max.
+
+---
+
+## What Was Done (Session of 2026-04-27)
+
+### BlendCalculator — mode toutes saisons + boutons incrémentaux odomètre
+
+- **Suppression du toggle saison** (Hiver / Été) : le calculateur affiche maintenant toujours le mode blend complet (sélecteur diluant, cartes seuils, recommandation, planificateur de trajet). Le mode été (E85 pur systématique) était trop réducteur.
+- **Boutons +50 / +100 / +200** ajoutés inline à droite du champ odomètre. Clique sur le dernier odomètre connu si le champ est vide, sinon incrémente la valeur affichée. Permet de saisir rapidement « j'ai fait environ 150 km depuis le dernier plein » sans connaître le km exact.
 
 ---
 

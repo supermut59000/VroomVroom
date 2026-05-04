@@ -425,6 +425,38 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-05-04
+
+### Autonomie — moyenne pondérée par distance + fourchette ville/route
+
+**Problème identifié** : la moyenne saisonnière utilisait une moyenne simple des segments fill-to-fill (chaque segment comptait pour 1 quel que soit le nombre de km). Un segment de 100 km pesait autant qu'un segment de 500 km, ce qui biaisait le résultat et donnait une autonomie affichée supérieure au ressenti réel.
+
+**Deuxième problème** : la fourchette min/max était calculée sur la consommation mesurée brute. Le meilleur cas (684 km) venait d'un segment de transition post-conversion où le réservoir avait encore de l'Essence, donnant 6.58 L/100km non représentatif d'un plein E85.
+
+**Fixes backend** (`vehicle_service.py`, `schemas/vehicle.py`) :
+- `avg_consumption` → moyenne pondérée par distance : `total_liters × 100 / total_km`
+- `season_buckets` stocke `(distance_km, liters, e85_liters, measured_l100)` par segment
+- Nouveaux champs `SeasonStats` : `min_consumption`, `max_consumption`, `range_km_best`, `range_km_worst`
+- Pour FlexFuel : `min_consumption`/`max_consumption` calculés sur la consommation **normalisée E85** par segment (`measured / (1 + opc × e85_frac) × (1 + opc)`) — élimine le biais des segments de transition où l'Essence était encore dans le réservoir
+- Pour non-FlexFuel : min/max sur la consommation brute mesurée
+- La normalisation E10/E85 reste par segment avant moyenne pondérée (inchangé dans sa logique, réécrit pour partager `e10_per_seg`)
+
+**Fix frontend** (`VehicleDetailsDialog.tsx`, `types/index.ts`) :
+- Sous le titre de saison : « De ~X km (ville) à ~Y km (route) · moy. Z L/100 »
+- Dans chaque cellule de la grille 4 saisons : ligne `min–max` en sous-texte
+
+---
+
+## Session log — 2026-04-27
+
+### BlendCalculator — mode toutes saisons + boutons incrémentaux odomètre
+
+- Supprimé le toggle Hiver/Été et `SeasonMode` type + `defaultSeasonMode()` function.
+- Le calculateur affiche maintenant toujours le contenu "hiver" (sélecteur diluant, cartes seuils A/B, recommandation blend, planificateur de trajet). La carte "été" (E85 pur, fond amber) est supprimée.
+- Ajouté boutons `+50` / `+100` / `+200` inline à droite du champ odomètre. Chaque clic fait `setCurrentOdo(String(inputOdo + delta))` — `inputOdo` vaut `lastOdo` si le champ est vide, sinon la valeur saisie. Les clics sont cumulables.
+
+---
+
 ## Session log — 2026-04-16 (suite — BlendCalculator)
 
 ### BlendCalculator — plein partiel E85 max + planificateur de trajet
