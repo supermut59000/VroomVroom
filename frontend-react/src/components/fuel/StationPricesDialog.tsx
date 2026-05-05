@@ -101,12 +101,15 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
     setCityLoading(true)
     try {
       const isPostal = /^\d+$/.test(q)
-      const params = new URLSearchParams({
-        [isPostal ? 'codePostal' : 'q']: q,
-        fields: 'nom,codesPostaux,centre',
-        limit: '8',
-        ...(isPostal ? {} : { boost: 'population' }),
-      })
+      const params = new URLSearchParams()
+      if (isPostal) {
+        params.set('codePostal', q)
+      } else {
+        params.set('q', q)
+        params.set('boost', 'population')
+      }
+      params.set('fields', 'nom,codesPostaux,centre')
+      params.set('limit', '8')
       const res = await window.fetch(`${GEO_API}?${params}`)
       if (!res.ok) throw new Error()
       const data: Commune[] = await res.json()
