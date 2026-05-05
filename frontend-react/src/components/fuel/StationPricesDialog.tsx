@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation, X } from 'lucide-react'
+import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -42,6 +42,11 @@ type SortMode = 'price' | 'distance'
 
 const GEO_API = 'https://geo.api.gouv.fr/communes'
 
+function communeLabel(c: Commune): string {
+  const cp = c.codesPostaux[0] ?? ''
+  return cp ? `${c.nom} (${cp})` : c.nom
+}
+
 export function StationPricesDialog({ open, onClose }: StationPricesDialogProps) {
   const [fuelKey, setFuelKey] = useState<keyof StationPrices>('e10')
   const [sortMode, setSortMode] = useState<SortMode>('price')
@@ -49,7 +54,6 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
   const [origin, setOrigin] = useState<SearchOrigin | null>(null)
   const [cityInput, setCityInput] = useState('')
   const [suggestions, setSuggestions] = useState<Commune[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const [cityLoading, setCityLoading] = useState(false)
   const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -66,7 +70,6 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
       setOrigin(null)
       setCityInput('')
       setSuggestions([])
-      setShowSuggestions(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -123,31 +126,20 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
 
   const handleCityInput = (value: string) => {
     setCityInput(value)
-    setShowSuggestions(true)
+
+    // If the typed value exactly matches a datalist option, use those coords
+    const match = suggestions.find((c) => communeLabel(c) === value)
+    if (match) {
+      const [lon, lat] = match.centre.coordinates
+      setOrigin({ lat, lon, label: communeLabel(match), mode: 'city' })
+      return
+    }
+
+    // Clear city origin when user edits the field freely
+    if (origin?.mode === 'city') setOrigin(null)
+
     if (suggestTimer.current) clearTimeout(suggestTimer.current)
     suggestTimer.current = setTimeout(() => fetchSuggestions(value), 300)
-  }
-
-  const handleSelectCity = (commune: Commune) => {
-    const [lon, lat] = commune.centre.coordinates
-    const cp = commune.codesPostaux[0] ?? ''
-    const label = cp ? `${commune.nom} (${cp})` : commune.nom
-    setOrigin({ lat, lon, label, mode: 'city' })
-    setCityInput(label)
-    setSuggestions([])
-    setShowSuggestions(false)
-  }
-
-  const clearCitySearch = () => {
-    setCityInput('')
-    setSuggestions([])
-    setShowSuggestions(false)
-    if (geo.status === 'success' && geo.latitude != null && geo.longitude != null) {
-      setOrigin({ lat: geo.latitude, lon: geo.longitude, label: 'GPS', mode: 'gps' })
-    } else {
-      setOrigin(null)
-      clear()
-    }
   }
 
   const sorted = [...stations].sort((a, b) => {
@@ -174,50 +166,24 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
           </DialogTitle>
         </DialogHeader>
 
-        {/* City search bar */}
-        <div className="relative">
-          <div className="relative flex items-center">
-            <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-8 pr-8"
-              placeholder="Ville ou code postal…"
-              value={cityInput}
-              onChange={(e) => handleCityInput(e.target.value)}
-              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-            />
-            {cityLoading && (
-              <Loader2 className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-            )}
-            {cityInput && !cityLoading && (
-              <button
-                type="button"
-                onClick={clearCitySearch}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-              {suggestions.map((c) => {
-                const cp = c.codesPostaux[0] ?? ''
-                return (
-                  <button
-                    key={c.nom + cp}
-                    type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
-                    onMouseDown={() => handleSelectCity(c)}
-                  >
-                    <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <span className="font-medium">{c.nom}</span>
-                    {cp && <span className="text-muted-foreground">{cp}</span>}
-                  </button>
-                )
-              })}
-            </div>
+        {/* City search bar — native datalist, same pattern as station name in FuelAddDialog */}
+        <div className="relative flex items-center">
+          <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-8 pr-8"
+            placeholder="Ville ou code postal…"
+            list="commune-suggestions"
+            value={cityInput}
+            onChange={(e) => handleCityInput(e.target.value)}
+          />
+          {cityLoading && (
+            <Loader2 className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
           )}
+          <datalist id="commune-suggestions">
+            {suggestions.map((c) => (
+              <option key={c.nom + (c.codesPostaux[0] ?? '')} value={communeLabel(c)} />
+            ))}
+          </datalist>
         </div>
 
         {/* Controls */}
@@ -327,7 +293,6 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                       <p className="truncate text-xs text-muted-foreground">
                         {s.address}
                       </p>
-                      {/* Other prices inline */}
                       <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
                         {STATION_FUEL_OPTIONS.filter((o) => o.key !== fuelKey).map((o) => {
                           const p = s.prices[o.key]
