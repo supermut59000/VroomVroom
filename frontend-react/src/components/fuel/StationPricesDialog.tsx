@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation, X } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -19,6 +20,19 @@ import { useNearbyStations, STATION_FUEL_OPTIONS } from '@/hooks/use-nearby-stat
 import { useGeolocation } from '@/hooks/use-geolocation'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
 
+interface Commune {
+  nom: string
+  codesPostaux: string[]
+  centre: { type: string; coordinates: [number, number] } // [lon, lat]
+}
+
+interface SearchOrigin {
+  lat: number
+  lon: number
+  label: string
+  mode: 'gps' | 'city'
+}
+
 interface StationPricesDialogProps {
   open: boolean
   onClose: () => void
@@ -26,31 +40,112 @@ interface StationPricesDialogProps {
 
 type SortMode = 'price' | 'distance'
 
+const GEO_API = 'https://geo.api.gouv.fr/communes'
+
 export function StationPricesDialog({ open, onClose }: StationPricesDialogProps) {
   const [fuelKey, setFuelKey] = useState<keyof StationPrices>('e10')
   const [sortMode, setSortMode] = useState<SortMode>('price')
   const [radiusKm, setRadiusKm] = useState(5)
-  const geo = useGeolocation()
-  const { stations, loading, error, fetch, clear } = useNearbyStations()
+  const [origin, setOrigin] = useState<SearchOrigin | null>(null)
+  const [cityInput, setCityInput] = useState('')
+  const [suggestions, setSuggestions] = useState<Commune[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [cityLoading, setCityLoading] = useState(false)
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Auto-request GPS when dialog opens
+  const geo = useGeolocation()
+  const { stations, loading, error, fetch: fetchStations, clear } = useNearbyStations()
+
+  // Reset on open/close
   useEffect(() => {
     if (open) {
       geo.capture()
     } else {
       geo.reset()
       clear()
+      setOrigin(null)
+      setCityInput('')
+      setSuggestions([])
+      setShowSuggestions(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  // Fetch stations when GPS is ready
+  // GPS → origin (only if not in city mode)
   useEffect(() => {
-    if (geo.status === 'success' && geo.latitude != null && geo.longitude != null) {
-      fetch(geo.latitude, geo.longitude, fuelKey, radiusKm)
+    if (
+      geo.status === 'success' &&
+      geo.latitude != null &&
+      geo.longitude != null &&
+      origin?.mode !== 'city'
+    ) {
+      setOrigin({ lat: geo.latitude, lon: geo.longitude, label: 'GPS', mode: 'gps' })
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [geo.status, geo.latitude, geo.longitude, fuelKey, radiusKm])
+  }, [geo.status, geo.latitude, geo.longitude])
+
+  // Fetch stations whenever origin / fuelKey / radiusKm changes
+  useEffect(() => {
+    if (origin != null) {
+      fetchStations(origin.lat, origin.lon, fuelKey, radiusKm)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [origin, fuelKey, radiusKm])
+
+  // Autocomplete from geo.api.gouv.fr
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 2) {
+      setSuggestions([])
+      return
+    }
+    setCityLoading(true)
+    try {
+      const isPostal = /^\d+$/.test(q)
+      const params = new URLSearchParams({
+        [isPostal ? 'codePostal' : 'q']: q,
+        fields: 'nom,codesPostaux,centre',
+        limit: '8',
+        ...(isPostal ? {} : { boost: 'population' }),
+      })
+      const res = await window.fetch(`${GEO_API}?${params}`)
+      if (!res.ok) throw new Error()
+      const data: Commune[] = await res.json()
+      setSuggestions(data)
+    } catch {
+      setSuggestions([])
+    } finally {
+      setCityLoading(false)
+    }
+  }, [])
+
+  const handleCityInput = (value: string) => {
+    setCityInput(value)
+    setShowSuggestions(true)
+    if (suggestTimer.current) clearTimeout(suggestTimer.current)
+    suggestTimer.current = setTimeout(() => fetchSuggestions(value), 300)
+  }
+
+  const handleSelectCity = (commune: Commune) => {
+    const [lon, lat] = commune.centre.coordinates
+    const cp = commune.codesPostaux[0] ?? ''
+    const label = cp ? `${commune.nom} (${cp})` : commune.nom
+    setOrigin({ lat, lon, label, mode: 'city' })
+    setCityInput(label)
+    setSuggestions([])
+    setShowSuggestions(false)
+  }
+
+  const clearCitySearch = () => {
+    setCityInput('')
+    setSuggestions([])
+    setShowSuggestions(false)
+    if (geo.status === 'success' && geo.latitude != null && geo.longitude != null) {
+      setOrigin({ lat: geo.latitude, lon: geo.longitude, label: 'GPS', mode: 'gps' })
+    } else {
+      setOrigin(null)
+      clear()
+    }
+  }
 
   const sorted = [...stations].sort((a, b) => {
     if (sortMode === 'price') {
@@ -75,6 +170,52 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
             Prix des stations proches
           </DialogTitle>
         </DialogHeader>
+
+        {/* City search bar */}
+        <div className="relative">
+          <div className="relative flex items-center">
+            <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              className="pl-8 pr-8"
+              placeholder="Ville ou code postal…"
+              value={cityInput}
+              onChange={(e) => handleCityInput(e.target.value)}
+              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+              onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+            />
+            {cityLoading && (
+              <Loader2 className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            )}
+            {cityInput && !cityLoading && (
+              <button
+                type="button"
+                onClick={clearCitySearch}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+              {suggestions.map((c) => {
+                const cp = c.codesPostaux[0] ?? ''
+                return (
+                  <button
+                    key={c.nom + cp}
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+                    onMouseDown={() => handleSelectCity(c)}
+                  >
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="font-medium">{c.nom}</span>
+                    {cp && <span className="text-muted-foreground">{cp}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2">
@@ -112,32 +253,38 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
             {sortMode === 'price' ? 'Tri: prix' : 'Tri: distance'}
           </Button>
 
-          {geo.status === 'success' && geo.latitude != null && (
+          {origin != null && (
             <Badge variant="outline" className="h-9 gap-1 px-2 text-xs">
-              <Navigation className="h-3 w-3" />
-              GPS actif
+              {origin.mode === 'gps' ? (
+                <Navigation className="h-3 w-3" />
+              ) : (
+                <MapPin className="h-3 w-3" />
+              )}
+              {origin.mode === 'gps' ? 'GPS actif' : origin.label}
             </Badge>
           )}
         </div>
 
         {/* GPS status */}
-        {geo.status === 'loading' && (
+        {geo.status === 'loading' && origin == null && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Obtention de votre position…
           </div>
         )}
-        {geo.status === 'error' && (
-          <div className="space-y-2">
-            <p className="text-sm text-destructive">{geo.error}</p>
+        {geo.status === 'error' && origin?.mode !== 'city' && (
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted-foreground">
+              GPS indisponible — recherchez une ville ci-dessus.
+            </p>
             <Button variant="outline" size="sm" onClick={geo.capture}>
-              <MapPin className="mr-1 h-3.5 w-3.5" />
+              <Navigation className="mr-1 h-3.5 w-3.5" />
               Réessayer
             </Button>
           </div>
         )}
 
-        {/* Loading */}
+        {/* Loading stations */}
         {loading && (
           <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -207,7 +354,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
           </div>
         )}
 
-        {!loading && !error && sorted.length === 0 && geo.status === 'success' && (
+        {!loading && !error && sorted.length === 0 && origin != null && (
           <p className="py-4 text-center text-sm text-muted-foreground">
             Aucune station trouvée dans un rayon de {radiusKm} km.
           </p>
