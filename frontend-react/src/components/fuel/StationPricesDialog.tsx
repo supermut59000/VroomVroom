@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation } from 'lucide-react'
+import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation, BookMarked } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -300,7 +300,14 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="truncate text-sm font-medium">{displayName}</p>
+                        <p className="truncate text-sm font-medium">
+                          {knownName ? (
+                            <span className="flex items-center gap-1">
+                              <BookMarked className="h-3 w-3 shrink-0 text-primary" />
+                              {knownName}
+                            </span>
+                          ) : displayName}
+                        </p>
                         {isCheapest && (
                           <Badge className="shrink-0 border-0 bg-green-100 px-1.5 text-xs text-green-700">
                             moins cher

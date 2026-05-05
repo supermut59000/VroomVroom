@@ -38,6 +38,8 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 - Fuel type selector: E10, SP95, SP98, Diesel, E85, GPL
 - Toggle sort: by price (cheapest first, green "moins cher" badge) or by distance
 - Each row shows the selected fuel price prominently + all other available prices inline
+- **City search**: native `<datalist>` autocomplete from `geo.api.gouv.fr/communes` (param `nom=` for text, `codePostal=` for digits). Selecting a city overrides GPS as search origin. Badge shows city name or "GPS actif".
+- **Known name override**: haversine < 150m match against `useGlobalStationHistory` (all entries with GPS + station_name across all vehicles). Shows user's saved name + `BookMarked` icon instead of raw API adresse.
 - Data source: data.economie.gouv.fr API (`prix-des-carburants-en-france-flux-instantane-v2`), updated every 10 minutes
 - API field notes: no `name` field — uses `adresse` as station name; prices are doubles (€/L); geo field is `geom` (geo_point_2d → `{lat, lon}`)
 - In FuelAddDialog: GPS capture shows a "Stations proches" panel (fixed 5km) — click any station to auto-fill station name, location, and price/L
@@ -199,6 +201,27 @@ VroomVroom/
 ├── docker-compose.prod.yml         # Prod (remote DB only)
 └── CLAUDE.md                       # Full reference for AI
 ```
+
+---
+
+## What Was Done (Session of 2026-05-05)
+
+### StationPricesDialog — city search + known name override
+
+**City search bar** (`StationPricesDialog.tsx`):
+- Native `<Input list="commune-suggestions">` + `<datalist>` — same pattern as FuelAddDialog station name field.
+- Debounced (300ms) call to `geo.api.gouv.fr/communes?nom=QUERY&boost=population&limit=8` (or `?codePostal=QUERY` when input is all digits). Correct param is `nom=`, not `q=`.
+- On `onChange`, exact-match check against fetched suggestions → if match, extract `[lon, lat]` from `commune.centre.coordinates` and set as search origin.
+- Search origin state (`{ lat, lon, label, mode: 'gps' | 'city' }`) drives station fetches. GPS still auto-captures; city selection takes priority.
+- Badge shows "GPS actif" (Navigation icon) or city name (MapPin icon).
+
+**Known station name override** (`useGlobalStationHistory` in `use-fuel-entries.ts`):
+- Calls `GET /fuel-entries/?per_page=500` → response is `FuelEntryListResponse { entries: FuelEntry[] }` (not a plain array — important gotcha).
+- `select` unwraps `.entries` and filters to entries with `latitude != null && longitude != null && station_name != null`.
+- In `StationPricesDialog`, for each API station: haversine < 150m match against history → show user's saved name + `BookMarked` icon (same as `NearbyStationsList`). Falls back to raw API `adresse`.
+
+**Bug fixed — `useCallback` in conditional JSX** (`FuelAddDialog.tsx`):
+- `onSelect={useCallback(...)}` was written inside `{geo.status === 'success' && ... && <NearbyStationsList onSelect={useCallback(...)} />}`. Violated Rules of Hooks (conditional hook call) → React error #310 on GPS capture. Hoisted to `handleStationSelect` at component top level.
 
 ---
 

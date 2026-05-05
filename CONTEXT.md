@@ -131,6 +131,8 @@ When making schema changes:
 - Standalone dialog (header button): nearby stations from gouv.fr API, adjustable radius 2-50km
 - Sort by price (cheapest highlighted green) or distance
 - Shows all 6 fuel type prices per station
+- **City search bar**: `<Input list="commune-suggestions">` + `<datalist>` (same pattern as FuelAddDialog station name). Type city name or postal code → debounced call to `geo.api.gouv.fr/communes?nom=...` (or `?codePostal=...` when input is digits) → browser-native dropdown. Selecting a city uses its coordinates as search origin. GPS remains available and falls back automatically.
+- **Known station name override**: `useGlobalStationHistory` hook fetches `GET /fuel-entries/?per_page=500` → filters to entries with GPS + station_name → for each API station, haversine < 150m match → if found, shows the user's saved name instead of the raw API `adresse`, with a `BookMarked` icon (same as NearbyStationsList). Response is `FuelEntryListResponse { entries: [...] }`, not a plain array.
 - In FuelAddDialog/FuelEditDialog: after GPS capture, shows clickable list → auto-fills form
 
 ### Charts (in graphs popup)
@@ -422,6 +424,26 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 - `run.py`: `timeout_graceful_shutdown=5` added to Uvicorn.
 - Docker healthcheck added to backend service in both compose files.
 - Station map cluster radius: 50m → 100m.
+
+---
+
+## Session log — 2026-05-05
+
+### StationPricesDialog — recherche par ville + nom personnalisé depuis l'historique
+
+**Recherche par ville** :
+- Barre de recherche avec `<Input list="commune-suggestions">` + `<datalist>` — même pattern que le champ station dans FuelAddDialog.
+- Appel debounced (300ms) à `geo.api.gouv.fr/communes?nom=QUERY` (ou `?codePostal=QUERY` si l'input est entièrement numérique). Le bon paramètre est `nom=` et non `q=` (erreur initiale).
+- Détection de la sélection dans `onChange` : si la valeur correspond exactement à un label de suggestion (`"Nieppe (59850)"`), on extrait `[lon, lat]` depuis `commune.centre.coordinates` et on met à jour l'origine.
+- État `origin { lat, lon, label, mode: 'gps' | 'city' }` pilote les fetches de stations. Le GPS s'active toujours au démarrage ; la ville sélectionnée prend la priorité.
+
+**Nom personnalisé depuis l'historique** :
+- Hook `useGlobalStationHistory` (`use-fuel-entries.ts`) : appelle `GET /fuel-entries/?per_page=500`.
+- **Gotcha** : la réponse est `FuelEntryListResponse { entries: FuelEntry[] }` et non un tableau direct — le `select` doit déstructurer `.entries` avant de filtrer.
+- Pour chaque station API, haversine < 150m contre l'historique → si match, affiche le nom sauvegardé + icône `BookMarked` (identique à `NearbyStationsList`). Fallback sur l'`adresse` API.
+
+**Bug corrigé — `useCallback` dans un rendu conditionnel** (`FuelAddDialog.tsx`) :
+- `onSelect={useCallback(...)}` était dans un bloc `{geo.status === 'success' && ... && <NearbyStationsList ... />}`. Violation des Rules of Hooks → React error #310 au premier succès GPS. Déplacé en `handleStationSelect` au niveau racine du composant.
 
 ---
 
