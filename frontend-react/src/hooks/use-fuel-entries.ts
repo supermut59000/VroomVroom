@@ -81,6 +81,20 @@ export function useStationSuggestions(vehicleId: number | null) {
   })
 }
 
+/** All entries across all vehicles that have GPS + station_name — used for station name overrides */
+export function useGlobalStationHistory() {
+  return useQuery({
+    queryKey: ['globalStationHistory'],
+    queryFn: () => api.get<FuelEntry[]>('/fuel-entries/?per_page=500'),
+    staleTime: 5 * 60 * 1000,
+    select: (entries) =>
+      entries.filter(
+        (e): e is FuelEntry & { latitude: number; longitude: number; station_name: string } =>
+          e.latitude != null && e.longitude != null && e.station_name != null,
+      ),
+  })
+}
+
 export function useCreateFuelEntry() {
   const queryClient = useQueryClient()
   return useMutation({

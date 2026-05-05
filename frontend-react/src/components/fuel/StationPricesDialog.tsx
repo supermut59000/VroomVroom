@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/select'
 import { useNearbyStations, STATION_FUEL_OPTIONS } from '@/hooks/use-nearby-stations'
 import { useGeolocation } from '@/hooks/use-geolocation'
+import { useGlobalStationHistory } from '@/hooks/use-fuel-entries'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
 
 interface Commune {
@@ -42,6 +43,17 @@ type SortMode = 'price' | 'distance'
 
 const GEO_API = 'https://geo.api.gouv.fr/communes'
 
+function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000
+  const toRad = (d: number) => (d * Math.PI) / 180
+  const dLat = toRad(lat2 - lat1)
+  const dLon = toRad(lon2 - lon1)
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
 function communeLabel(c: Commune): string {
   const cp = c.codesPostaux[0] ?? ''
   return cp ? `${c.nom} (${cp})` : c.nom
@@ -59,6 +71,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
 
   const geo = useGeolocation()
   const { stations, loading, error, fetch: fetchStations, clear } = useNearbyStations()
+  const { data: stationHistory = [] } = useGlobalStationHistory()
 
   // Reset on open/close
   useEffect(() => {
@@ -276,6 +289,10 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
               {sorted.map((s, idx) => {
                 const stationPrice = s.prices[fuelKey]
                 const isCheapest = idx === 0 && stationPrice != null && sortMode === 'price'
+                const knownName = stationHistory.find(
+                  (e) => haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 150,
+                )?.station_name ?? null
+                const displayName = knownName ?? s.name
                 return (
                   <div
                     key={s.id}
@@ -283,7 +300,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        <p className="truncate text-sm font-medium">{s.name}</p>
+                        <p className="truncate text-sm font-medium">{displayName}</p>
                         {isCheapest && (
                           <Badge className="shrink-0 border-0 bg-green-100 px-1.5 text-xs text-green-700">
                             moins cher
