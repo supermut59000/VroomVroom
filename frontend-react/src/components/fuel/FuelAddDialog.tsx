@@ -150,6 +150,15 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
     }
   }
 
+  const handleStationSelect = useCallback(
+    (stationName: string, location: string, price: number | null) => {
+      form.setValue('station_name', stationName)
+      form.setValue('location', location)
+      if (price != null) form.setValue('price_per_liter', price)
+    },
+    [form],
+  )
+
   const open = vehicleId !== null
 
   return (
@@ -214,11 +223,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
                 (e) => e.latitude != null && e.longitude != null && e.station_name,
               )}
               autoSelect
-              onSelect={useCallback((stationName: string, location: string, price: number | null) => {
-                form.setValue('station_name', stationName)
-                form.setValue('location', location)
-                if (price != null) form.setValue('price_per_liter', price)
-              }, [form])}
+              onSelect={handleStationSelect}
             />
           )}
 
