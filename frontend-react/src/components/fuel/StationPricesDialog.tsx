@@ -105,7 +105,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
       if (isPostal) {
         params.set('codePostal', q)
       } else {
-        params.set('q', q)
+        params.set('nom', q)
         params.set('boost', 'population')
       }
       params.set('fields', 'nom,codesPostaux,centre')
