@@ -85,9 +85,9 @@ export function useStationSuggestions(vehicleId: number | null) {
 export function useGlobalStationHistory() {
   return useQuery({
     queryKey: ['globalStationHistory'],
-    queryFn: () => api.get<FuelEntry[]>('/fuel-entries/?per_page=500'),
+    queryFn: () => api.get<{ entries: FuelEntry[] }>('/fuel-entries/?per_page=500'),
     staleTime: 5 * 60 * 1000,
-    select: (entries) =>
+    select: ({ entries }) =>
       entries.filter(
         (e): e is FuelEntry & { latitude: number; longitude: number; station_name: string } =>
           e.latitude != null && e.longitude != null && e.station_name != null,
