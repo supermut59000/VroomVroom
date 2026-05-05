@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -28,7 +28,6 @@ import {
   useCreateFuelEntry,
   useLatestFuelEntry,
   useStationSuggestions,
-  useNearestStation,
   useAllFuelEntries,
 } from '@/hooks/use-fuel-entries'
 import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
@@ -64,11 +63,6 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const createFuelEntry = useCreateFuelEntry()
   const geo = useGeolocation()
   const { isOnline, addToQueue } = useOffline()
-  const { data: nearestStation } = useNearestStation(
-    vehicleId,
-    geo.latitude ?? null,
-    geo.longitude ?? null,
-  )
 
   const isFlexfuel = !!flexfuelConversion
 
@@ -96,14 +90,6 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       form.setValue('fuel_type', vehicle.fuel_type as FormData['fuel_type'])
     }
   }, [latestEntry, vehicle, form])
-
-  // Auto-fill station from nearest past fill (backend calculation)
-  useEffect(() => {
-    if (nearestStation) {
-      if (nearestStation.station_name) form.setValue('station_name', nearestStation.station_name)
-      if (nearestStation.location) form.setValue('location', nearestStation.location)
-    }
-  }, [nearestStation, form])
 
   const liters = form.watch('liters')
   const pricePerLiter = form.watch('price_per_liter')
@@ -227,11 +213,12 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
               historyEntries={allEntries?.filter(
                 (e) => e.latitude != null && e.longitude != null && e.station_name,
               )}
-              onSelect={(stationName, location, price) => {
+              autoSelect
+              onSelect={useCallback((stationName: string, location: string, price: number | null) => {
                 form.setValue('station_name', stationName)
                 form.setValue('location', location)
                 if (price != null) form.setValue('price_per_liter', price)
-              }}
+              }, [form])}
             />
           )}
 
@@ -301,7 +288,6 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
             <Input
               id="fuel-station"
               list="station-suggestions"
-              placeholder={nearestStation ? `${nearestStation.station_name} (${nearestStation.distance_m}m)` : ''}
               {...form.register('station_name')}
             />
             {stations && stations.length > 0 && (

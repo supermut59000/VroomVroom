@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { MapPin, Loader2, ChevronDown, ChevronUp, BookMarked } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useNearbyStations } from '@/hooks/use-nearby-stations'
@@ -18,6 +18,8 @@ interface NearbyStationsListProps {
   /** Past fuel entries with GPS + station_name — used to override the raw API adresse */
   historyEntries?: HistoryEntry[]
   onSelect: (stationName: string, location: string, pricePerLiter: number | null) => void
+  /** Auto-select the nearest station with a valid price */
+  autoSelect?: boolean
 }
 
 function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -37,14 +39,45 @@ export function NearbyStationsList({
   fuelType,
   historyEntries,
   onSelect,
+  autoSelect = false,
 }: NearbyStationsListProps) {
   const [open, setOpen] = useState(true)
   const { stations, loading, error, fetch, clear } = useNearbyStations()
+  const hasAutoSelected = useRef(false)
 
   useEffect(() => {
     fetch(latitude, longitude, fuelType)
-    return () => clear()
+    return () => {
+      clear()
+      hasAutoSelected.current = false
+    }
   }, [latitude, longitude, fuelType, fetch, clear])
+
+  // Auto-select the nearest station with a valid price
+  useEffect(() => {
+    if (!autoSelect || loading || error || stations.length === 0 || hasAutoSelected.current) return
+
+    const best = stations.reduce<(typeof stations)[number] | null>((best, s) => {
+      if (s.price == null) return best
+      if (best == null || s.distanceM < best.distanceM) return s
+      return best
+    }, null)
+
+    if (best) {
+      hasAutoSelected.current = true
+      const knownName = historyEntries
+        ?.find(
+          (e) =>
+            e.latitude != null &&
+            e.longitude != null &&
+            e.station_name &&
+            haversineM(e.latitude, e.longitude, best.latitude, best.longitude) < 150,
+        )
+        ?.station_name ?? null
+      const displayName = knownName ?? best.name
+      onSelect(displayName, [displayName, best.address].filter(Boolean).join(', '), best.price)
+    }
+  }, [autoSelect, loading, error, stations, historyEntries, onSelect])
 
   const formatDistance = (m: number) =>
     m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`
@@ -86,7 +119,9 @@ export function NearbyStationsList({
           )}
           {!loading && stations.length > 0 && (
             <div className="mt-1 max-h-48 space-y-1 overflow-y-auto">
-              {stations.map((s) => {
+              {[...stations]
+                .sort((a, b) => a.distanceM - b.distanceM)
+                .map((s) => {
                 const knownName = historyEntries
                   ?.find(
                     (e) =>
