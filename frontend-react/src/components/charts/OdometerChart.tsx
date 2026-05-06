@@ -7,12 +7,15 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import type { FuelEntry } from '@/types'
+import { useVehicleStats } from '@/hooks/use-vehicles'
+import type { FuelEntry, Vehicle } from '@/types'
 
 interface OdometerChartProps {
+  vehicle: Vehicle
   entries: FuelEntry[]  // must be allEntries (unfiltered)
 }
 
@@ -22,7 +25,9 @@ type ChartPoint = {
   odomProj?: number
 }
 
-export function OdometerChart({ entries }: OdometerChartProps) {
+export function OdometerChart({ vehicle, entries }: OdometerChartProps) {
+  const { data: stats } = useVehicleStats(vehicle.id)
+
   const currentMonthKey = useMemo(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
@@ -67,16 +72,29 @@ export function OdometerChart({ entries }: OdometerChartProps) {
     const avgMonthlyKm =
       last3.length > 0 ? last3.reduce((s, d) => s + d.diff, 0) / last3.length : 0
 
-    // Project 12 months forward
+    // Insurance limit (authoritative from backend stats, skipped when unlimited)
+    const limit =
+      !vehicle.insurance_unlimited && stats?.current_insurance_km_limit != null
+        ? stats.current_insurance_km_limit
+        : null
+
+    // Project forward — extend until limit is hit or 36 months (cap at 12 if no limit)
     const projectedPoints: ChartPoint[] = []
+    let monthsUntilLimit: number | null = null
+
     if (avgMonthlyKm > 0) {
-      for (let i = 1; i <= 12; i++) {
+      const maxMonths = limit != null ? 36 : 12
+      for (let i = 1; i <= maxMonths; i++) {
         const proj = Math.round(lastOdometer + i * avgMonthlyKm)
         const date = new Date(ly, lm - 1 + i, 1)
         projectedPoints.push({
           month: date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
           odomProj: proj,
         })
+        if (limit != null && proj >= limit) {
+          monthsUntilLimit = i
+          break
+        }
       }
     }
 
@@ -85,10 +103,11 @@ export function OdometerChart({ entries }: OdometerChartProps) {
       actualPoints[actualPoints.length - 1].odomProj = lastOdometer
     }
 
-    // Y-axis domain framed around the data range
+    // Y-axis domain — include limit in range if present
     const allOdom = [
       ...actualPoints.map((p) => p.odomActual ?? Infinity),
       ...projectedPoints.map((p) => p.odomProj ?? -Infinity),
+      ...(limit != null ? [limit] : []),
     ].filter((v) => v !== Infinity && v !== -Infinity)
     const minOdom = Math.min(...allOdom)
     const maxOdom = Math.max(...allOdom)
@@ -101,24 +120,52 @@ export function OdometerChart({ entries }: OdometerChartProps) {
     return {
       chartData: [...actualPoints, ...projectedPoints],
       projectedAnnualKm,
+      limit,
+      remaining: stats?.insurance_km_remaining ?? null,
+      isExceeded: stats?.insurance_km_exceeded ?? false,
+      monthsUntilLimit,
       yMin,
       yMax,
     }
-  }, [entries, currentMonthKey])
+  }, [entries, currentMonthKey, vehicle, stats])
 
   if (!result) return null
-  const { chartData, projectedAnnualKm, yMin, yMax } = result
+  const { chartData, projectedAnnualKm, limit, remaining, isExceeded, monthsUntilLimit, yMin, yMax } = result
 
   return (
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <CardTitle className="text-base">Progression kilométrique</CardTitle>
-          {projectedAnnualKm != null && (
-            <Badge variant="outline">
-              ~{projectedAnnualKm.toLocaleString('fr-FR')} km/an projeté
-            </Badge>
-          )}
+          <div>
+            <CardTitle className="text-base">Progression kilométrique</CardTitle>
+            {limit != null && (
+              <p className="text-sm font-normal text-muted-foreground">
+                Limite : {Math.round(limit).toLocaleString('fr-FR')} km
+              </p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {projectedAnnualKm != null && (
+              <Badge variant="outline">
+                ~{projectedAnnualKm.toLocaleString('fr-FR')} km/an projeté
+              </Badge>
+            )}
+            {limit != null && (
+              isExceeded ? (
+                <Badge className="border-0 bg-red-100 text-red-700">
+                  Dépassé de {Math.abs(Math.round(remaining!)).toLocaleString('fr-FR')} km
+                </Badge>
+              ) : monthsUntilLimit != null ? (
+                <Badge className="border-0 bg-orange-100 text-orange-700">
+                  Limite dans ~{monthsUntilLimit} mois
+                </Badge>
+              ) : remaining != null ? (
+                <Badge variant="outline">
+                  {Math.round(remaining).toLocaleString('fr-FR')} km restants
+                </Badge>
+              ) : null
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -138,6 +185,19 @@ export function OdometerChart({ entries }: OdometerChartProps) {
                 name === 'odomActual' ? 'Compteur' : 'Projection',
               ]}
             />
+            {limit != null && (
+              <ReferenceLine
+                y={limit}
+                stroke="hsl(0, 72%, 51%)"
+                strokeDasharray="5 5"
+                label={{
+                  value: `Limite ${Math.round(limit).toLocaleString('fr-FR')} km`,
+                  position: 'insideTopRight',
+                  fontSize: 10,
+                  fill: 'hsl(0, 72%, 51%)',
+                }}
+              />
+            )}
             <Line
               type="monotone"
               dataKey="odomActual"
