@@ -34,6 +34,7 @@ export interface VehicleList {
   license_plate: string
   fuel_type: FuelType
   is_active: boolean
+  insurance_unlimited: boolean
 }
 
 export interface VehicleCreate {

@@ -118,6 +118,7 @@ class VehicleList(BaseModel):
     license_plate: str
     fuel_type: FuelType
     is_active: bool
+    insurance_unlimited: bool = False
 
     class Config:
         from_attributes = True

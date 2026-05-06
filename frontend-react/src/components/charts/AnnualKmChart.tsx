@@ -34,7 +34,7 @@ export function AnnualKmChart({ entries }: AnnualKmChartProps) {
     // Group consecutive monthly diffs by calendar year
     const yearMap = new Map<string, number>()
     for (let i = 1; i < sortedMonths.length; i++) {
-      const [prevKey, prevOdo] = sortedMonths[i - 1]
+      const [, prevOdo] = sortedMonths[i - 1]
       const [curKey, curOdo] = sortedMonths[i]
       const diff = curOdo - prevOdo
       if (diff <= 0) continue
@@ -89,8 +89,8 @@ export function AnnualKmChart({ entries }: AnnualKmChartProps) {
               tickFormatter={(v) => v.toLocaleString('fr-FR')}
             />
             <Tooltip
-              formatter={(value: number, _: string, item: { payload: { isPartial: boolean } }) => [
-                `${value.toLocaleString('fr-FR')} km${item.payload.isPartial ? ' (année en cours)' : ''}`,
+              formatter={(value: number, _: string, item) => [
+                `${(value as number).toLocaleString('fr-FR')} km${item?.payload?.isPartial ? ' (année en cours)' : ''}`,
                 'Kilométrage',
               ]}
             />
