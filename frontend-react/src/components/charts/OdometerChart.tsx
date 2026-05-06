@@ -23,6 +23,11 @@ type ChartPoint = {
 }
 
 export function OdometerChart({ entries }: OdometerChartProps) {
+  const currentMonthKey = useMemo(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  }, [])
+
   const result = useMemo(() => {
     if (entries.length === 0) return null
 
@@ -48,13 +53,19 @@ export function OdometerChart({ entries }: OdometerChartProps) {
     const lastKey = sortedMonths[sortedMonths.length - 1][0]
     const [ly, lm] = lastKey.split('-').map(Number)
 
-    // Avg km/month from last 3 consecutive diffs
-    const diffs: number[] = []
-    for (let i = Math.max(1, sortedMonths.length - 3); i < sortedMonths.length; i++) {
+    // Consecutive month diffs — same method as DistanceChart
+    const allDiffs: { monthKey: string; diff: number }[] = []
+    for (let i = 1; i < sortedMonths.length; i++) {
       const diff = sortedMonths[i][1] - sortedMonths[i - 1][1]
-      if (diff > 0) diffs.push(diff)
+      if (diff > 0) allDiffs.push({ monthKey: sortedMonths[i][0], diff })
     }
-    const avgMonthlyKm = diffs.length > 0 ? diffs.reduce((a, b) => a + b, 0) / diffs.length : 0
+
+    // Avg from last 3 completed months only (exclude current partial month)
+    const completedDiffs = allDiffs.filter((d) => d.monthKey < currentMonthKey)
+    const base = completedDiffs.length > 0 ? completedDiffs : allDiffs
+    const last3 = base.slice(-Math.min(3, base.length))
+    const avgMonthlyKm =
+      last3.length > 0 ? last3.reduce((s, d) => s + d.diff, 0) / last3.length : 0
 
     // Project 12 months forward
     const projectedPoints: ChartPoint[] = []
@@ -93,7 +104,7 @@ export function OdometerChart({ entries }: OdometerChartProps) {
       yMin,
       yMax,
     }
-  }, [entries])
+  }, [entries, currentMonthKey])
 
   if (!result) return null
   const { chartData, projectedAnnualKm, yMin, yMax } = result
