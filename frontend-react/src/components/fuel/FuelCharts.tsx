@@ -21,7 +21,7 @@ import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilit
 import { EthanolHistoryChart } from '@/components/charts/EthanolHistoryChart'
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
-import { AnnualKmChart } from '@/components/charts/AnnualKmChart'
+import { OdometerChart } from '@/components/charts/OdometerChart'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 interface FuelChartsProps {
@@ -139,7 +139,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <ErrorBoundary><MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} /></ErrorBoundary>
           <ErrorBoundary><DistanceChart entries={filteredEntries} /></ErrorBoundary>
           {vehicle && allEntries && (
-            <ErrorBoundary><AnnualKmChart entries={allEntries} /></ErrorBoundary>
+            <ErrorBoundary><OdometerChart entries={allEntries} /></ErrorBoundary>
           )}
           <ErrorBoundary><StationsMap entries={filteredEntries} /></ErrorBoundary>
 
