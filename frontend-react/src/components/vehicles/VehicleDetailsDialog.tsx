@@ -135,38 +135,46 @@ export function VehicleDetailsDialog({
               )}
 
               {/* Insurance tracking */}
-              {stats?.current_insurance_km_limit != null && (
+              {(vehicle.insurance_unlimited || stats?.current_insurance_km_limit != null) && (
                 <>
                   <section>
                     <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
                       Suivi kilométrique assurance
                     </h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Limite actuelle:</span>{' '}
-                        {Math.round(stats.current_insurance_km_limit).toLocaleString('fr-FR')} km
-                      </div>
-                      {stats.insurance_km_remaining != null && (
-                        <div>
-                          <span className="text-muted-foreground">Restant:</span>{' '}
-                          {Math.round(stats.insurance_km_remaining).toLocaleString('fr-FR')} km
+                    {vehicle.insurance_unlimited ? (
+                      <Badge className="border-0 bg-blue-100 text-blue-700">
+                        Kilométrage illimité
+                      </Badge>
+                    ) : stats?.current_insurance_km_limit != null ? (
+                      <>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Limite actuelle:</span>{' '}
+                            {Math.round(stats.current_insurance_km_limit).toLocaleString('fr-FR')} km
+                          </div>
+                          {stats.insurance_km_remaining != null && (
+                            <div>
+                              <span className="text-muted-foreground">Restant:</span>{' '}
+                              {Math.round(stats.insurance_km_remaining).toLocaleString('fr-FR')} km
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    {stats.insurance_km_exceeded ? (
-                      <Badge variant="destructive" className="mt-2">
-                        Limite dépassée
-                      </Badge>
-                    ) : stats.insurance_km_remaining != null &&
-                      stats.insurance_km_remaining <= stats.current_insurance_km_limit * 0.1 ? (
-                      <Badge className="mt-2 border-0 bg-orange-100 text-orange-700">
-                        Attention — proche de la limite
-                      </Badge>
-                    ) : (
-                      <Badge className="mt-2 border-0 bg-green-100 text-green-700">
-                        OK
-                      </Badge>
-                    )}
+                        {stats.insurance_km_exceeded ? (
+                          <Badge variant="destructive" className="mt-2">
+                            Limite dépassée
+                          </Badge>
+                        ) : stats.insurance_km_remaining != null &&
+                          stats.insurance_km_remaining <= stats.current_insurance_km_limit * 0.1 ? (
+                          <Badge className="mt-2 border-0 bg-orange-100 text-orange-700">
+                            Attention — proche de la limite
+                          </Badge>
+                        ) : (
+                          <Badge className="mt-2 border-0 bg-green-100 text-green-700">
+                            OK
+                          </Badge>
+                        )}
+                      </>
+                    ) : null}
                   </section>
                   <Separator />
                 </>

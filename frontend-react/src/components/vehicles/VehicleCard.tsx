@@ -144,17 +144,21 @@ export function VehicleCard({
             </div>
 
             {/* Insurance status */}
-            {stats.current_insurance_km_limit != null && (
+            {(vehicle.insurance_unlimited || stats.current_insurance_km_limit != null) && (
               <>
                 <Separator />
                 <div className="text-sm">
-                  {stats.insurance_km_exceeded ? (
+                  {vehicle.insurance_unlimited ? (
+                    <Badge className="border-0 bg-blue-100 text-xs text-blue-700">
+                      Kilométrage illimité
+                    </Badge>
+                  ) : stats.insurance_km_exceeded ? (
                     <Badge variant="destructive" className="text-xs">
                       Limite km assurance dépassée
                     </Badge>
                   ) : stats.insurance_km_remaining != null &&
                     stats.insurance_km_remaining <=
-                      stats.current_insurance_km_limit * 0.1 ? (
+                      stats.current_insurance_km_limit! * 0.1 ? (
                     <Badge className="border-0 bg-orange-100 text-xs text-orange-700">
                       {Math.round(stats.insurance_km_remaining).toLocaleString('fr-FR')} km restants
                     </Badge>

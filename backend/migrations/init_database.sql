@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS `vehicles` (
     `insurance_km_limit` FLOAT NULL COMMENT 'Initial kilometer limit from insurance',
     `insurance_km_annual_increase` FLOAT NULL COMMENT 'Annual kilometer increase (e.g., 20000)',
     `insurance_km_start_date` DATE NULL COMMENT 'Start date for insurance kilometer tracking',
+    `insurance_unlimited` BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'No km cap on insurance plan',
 
     -- Metadata
     `description` TEXT NULL,

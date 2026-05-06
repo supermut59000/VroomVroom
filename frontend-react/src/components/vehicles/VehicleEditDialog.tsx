@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useVehicle, useUpdateVehicle } from '@/hooks/use-vehicles'
 import { FUEL_TYPE_LABELS, FUEL_TYPES } from '@/lib/constants'
@@ -36,6 +37,7 @@ const schema = z.object({
   tank_capacity: z.coerce.number().positive().optional().or(z.literal('')),
   acquisition_date: z.string().optional().or(z.literal('')),
   purchase_price: z.coerce.number().min(0).optional().or(z.literal('')),
+  insurance_unlimited: z.boolean().default(false),
   insurance_km_limit: z.coerce.number().min(0).optional().or(z.literal('')),
   insurance_km_annual_increase: z.coerce.number().min(0).optional().or(z.literal('')),
   insurance_km_start_date: z.string().optional().or(z.literal('')),
@@ -58,6 +60,7 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
   })
+  const insuranceUnlimited = useWatch({ control: form.control, name: 'insurance_unlimited' })
 
   useEffect(() => {
     if (vehicle) {
@@ -71,6 +74,7 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
         tank_capacity: vehicle.tank_capacity ?? '',
         acquisition_date: vehicle.acquisition_date ?? '',
         purchase_price: vehicle.purchase_price ?? '',
+        insurance_unlimited: vehicle.insurance_unlimited ?? false,
         insurance_km_limit: vehicle.insurance_km_limit ?? '',
         insurance_km_annual_increase: vehicle.insurance_km_annual_increase ?? '',
         insurance_km_start_date: vehicle.insurance_km_start_date ?? '',
@@ -95,11 +99,10 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
           tank_capacity: data.tank_capacity ? Number(data.tank_capacity) : null,
           acquisition_date: data.acquisition_date || null,
           purchase_price: data.purchase_price ? Number(data.purchase_price) : null,
-          insurance_km_limit: data.insurance_km_limit ? Number(data.insurance_km_limit) : null,
-          insurance_km_annual_increase: data.insurance_km_annual_increase
-            ? Number(data.insurance_km_annual_increase)
-            : null,
-          insurance_km_start_date: data.insurance_km_start_date || null,
+          insurance_unlimited: data.insurance_unlimited,
+          insurance_km_limit: data.insurance_unlimited ? null : (data.insurance_km_limit ? Number(data.insurance_km_limit) : null),
+          insurance_km_annual_increase: data.insurance_unlimited ? null : (data.insurance_km_annual_increase ? Number(data.insurance_km_annual_increase) : null),
+          insurance_km_start_date: data.insurance_unlimited ? null : (data.insurance_km_start_date || null),
           description: data.description || null,
           is_active: data.is_active,
         },
@@ -191,19 +194,33 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
               <Input id="edit-purchase_price" type="number" step="0.01" {...form.register('purchase_price')} />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-insurance_km_limit">Limite km</Label>
-                <Input id="edit-insurance_km_limit" type="number" {...form.register('insurance_km_limit')} />
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-insurance_unlimited"
+                  checked={insuranceUnlimited ?? false}
+                  onCheckedChange={(v) => form.setValue('insurance_unlimited', v === true)}
+                />
+                <Label htmlFor="edit-insurance_unlimited" className="font-normal cursor-pointer">
+                  Kilométrage illimité
+                </Label>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-insurance_annual">Augm. /an</Label>
-                <Input id="edit-insurance_annual" type="number" {...form.register('insurance_km_annual_increase')} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-insurance_start">Début</Label>
-                <Input id="edit-insurance_start" type="date" {...form.register('insurance_km_start_date')} />
-              </div>
+              {!insuranceUnlimited && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-insurance_km_limit">Limite km</Label>
+                    <Input id="edit-insurance_km_limit" type="number" {...form.register('insurance_km_limit')} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-insurance_annual">Augm. /an</Label>
+                    <Input id="edit-insurance_annual" type="number" {...form.register('insurance_km_annual_increase')} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-insurance_start">Début</Label>
+                    <Input id="edit-insurance_start" type="date" {...form.register('insurance_km_start_date')} />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

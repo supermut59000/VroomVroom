@@ -117,7 +117,10 @@ class VehicleService:
     def _calculate_current_insurance_limit(self, vehicle: Vehicle) -> Optional[float]:
         """
         Calculate the current insurance km limit based on the start date and annual increases.
+        Returns None when unlimited or when required fields are missing.
         """
+        if vehicle.insurance_unlimited:
+            return None
         if not vehicle.insurance_km_limit or not vehicle.insurance_km_start_date:
             return None
 

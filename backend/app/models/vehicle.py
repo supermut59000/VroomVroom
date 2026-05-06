@@ -31,6 +31,7 @@ class Vehicle(Base):
     insurance_km_limit = Column(Float, nullable=True)  # Initial km limit
     insurance_km_annual_increase = Column(Float, nullable=True)  # Annual km increase
     insurance_km_start_date = Column(Date, nullable=True)  # When the limit starts
+    insurance_unlimited = Column(Boolean, default=False, nullable=False)  # No km cap
 
     # Métadonnées
     description = Column(Text, nullable=True)

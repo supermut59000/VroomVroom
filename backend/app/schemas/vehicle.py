@@ -50,6 +50,7 @@ class VehicleBase(BaseModel):
     insurance_km_limit: Optional[float] = Field(None, ge=0, description="Limite kilométrique initiale d'assurance")
     insurance_km_annual_increase: Optional[float] = Field(None, ge=0, description="Augmentation annuelle de la limite (km)")
     insurance_km_start_date: Optional[date] = Field(None, description="Date de début du suivi kilométrique")
+    insurance_unlimited: bool = Field(default=False, description="Kilométrage illimité (pas de plafond)")
     description: Optional[str] = Field(None, max_length=1000, description="Description ou notes")
     is_active: bool = Field(default=True, description="Véhicule actif ou non")
 
@@ -83,6 +84,7 @@ class VehicleUpdate(BaseModel):
     insurance_km_limit: Optional[float] = Field(None, ge=0)
     insurance_km_annual_increase: Optional[float] = Field(None, ge=0)
     insurance_km_start_date: Optional[date] = None
+    insurance_unlimited: Optional[bool] = None
     description: Optional[str] = Field(None, max_length=1000)
     is_active: Optional[bool] = None
 

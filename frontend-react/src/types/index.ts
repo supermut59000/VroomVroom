@@ -19,6 +19,7 @@ export interface Vehicle {
   insurance_km_limit: number | null
   insurance_km_annual_increase: number | null
   insurance_km_start_date: string | null
+  insurance_unlimited: boolean
   description: string | null
   is_active: boolean
   created_at: string
@@ -48,6 +49,7 @@ export interface VehicleCreate {
   insurance_km_limit?: number | null
   insurance_km_annual_increase?: number | null
   insurance_km_start_date?: string | null
+  insurance_unlimited?: boolean
   description?: string | null
   is_active?: boolean
 }
@@ -65,6 +67,7 @@ export interface VehicleUpdate {
   insurance_km_limit?: number | null
   insurance_km_annual_increase?: number | null
   insurance_km_start_date?: string | null
+  insurance_unlimited?: boolean
   description?: string | null
   is_active?: boolean
 }
