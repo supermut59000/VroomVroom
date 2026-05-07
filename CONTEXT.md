@@ -132,7 +132,7 @@ When making schema changes:
 - Sort by price (cheapest highlighted green) or distance
 - Shows all 6 fuel type prices per station
 - **City search bar**: `<Input list="commune-suggestions">` + `<datalist>` (same pattern as FuelAddDialog station name). Type city name or postal code → debounced call to `geo.api.gouv.fr/communes?nom=...` (or `?codePostal=...` when input is digits) → browser-native dropdown. Selecting a city uses its coordinates as search origin. GPS remains available and falls back automatically.
-- **Known station name override**: `useGlobalStationHistory` hook fetches `GET /fuel-entries/?per_page=500` → filters to entries with GPS + station_name → for each API station, haversine < 150m match → if found, shows the user's saved name instead of the raw API `adresse`, with a `BookMarked` icon (same as NearbyStationsList). Response is `FuelEntryListResponse { entries: [...] }`, not a plain array.
+- **Known station name override**: `useGlobalStationHistory` hook fetches `GET /fuel-entries/?per_page=500` → filters to entries with GPS + station_name → for each API station, haversine < 200m match → if found, shows the user's saved name instead of the raw API `adresse`, with a `BookMarked` icon (same as NearbyStationsList). Response is `FuelEntryListResponse { entries: [...] }`, not a plain array.
 - In FuelAddDialog/FuelEditDialog: after GPS capture, shows clickable list → auto-fills form
 
 ### Charts (in graphs popup)
@@ -440,7 +440,7 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 **Nom personnalisé depuis l'historique** :
 - Hook `useGlobalStationHistory` (`use-fuel-entries.ts`) : appelle `GET /fuel-entries/?per_page=500`.
 - **Gotcha** : la réponse est `FuelEntryListResponse { entries: FuelEntry[] }` et non un tableau direct — le `select` doit déstructurer `.entries` avant de filtrer.
-- Pour chaque station API, haversine < 150m contre l'historique → si match, affiche le nom sauvegardé + icône `BookMarked` (identique à `NearbyStationsList`). Fallback sur l'`adresse` API.
+- Pour chaque station API, haversine < 200m contre l'historique → si match, affiche le nom sauvegardé + icône `BookMarked` (identique à `NearbyStationsList`). Fallback sur l'`adresse` API.
 
 **Bug corrigé — `useCallback` dans un rendu conditionnel** (`FuelAddDialog.tsx`) :
 - `onSelect={useCallback(...)}` était dans un bloc `{geo.status === 'success' && ... && <NearbyStationsList ... />}`. Violation des Rules of Hooks → React error #310 au premier succès GPS. Déplacé en `handleStationSelect` au niveau racine du composant.

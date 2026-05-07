@@ -71,7 +71,7 @@ export function NearbyStationsList({
             e.latitude != null &&
             e.longitude != null &&
             e.station_name &&
-            haversineM(e.latitude, e.longitude, best.latitude, best.longitude) < 150,
+            haversineM(e.latitude, e.longitude, best.latitude, best.longitude) < 200,
         )
         ?.station_name ?? null
       const displayName = knownName ?? best.name
@@ -128,7 +128,7 @@ export function NearbyStationsList({
                       e.latitude != null &&
                       e.longitude != null &&
                       e.station_name &&
-                      haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 150,
+                      haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 200,
                   )
                   ?.station_name ?? null
                 const displayName = knownName ?? s.name
