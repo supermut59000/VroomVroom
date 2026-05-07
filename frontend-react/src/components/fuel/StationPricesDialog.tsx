@@ -290,7 +290,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                 const stationPrice = s.prices[fuelKey]
                 const isCheapest = idx === 0 && stationPrice != null && sortMode === 'price'
                 const knownName = stationHistory.find(
-                  (e) => haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 150,
+                  (e) => haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 200,
                 )?.station_name ?? null
                 const displayName = knownName ?? s.name
                 return (
