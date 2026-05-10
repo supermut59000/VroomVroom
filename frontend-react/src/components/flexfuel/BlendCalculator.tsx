@@ -218,7 +218,7 @@ function computeWinterRec(
     }
     return {
       type: 'pure_e85',
-      e85Liters: Math.round(toAdd),
+      e85Liters: Math.round(toAdd * 10) / 10,
       resultPct: afterE85Pct * 100,
       kmSafe,
       kmRelative,
@@ -236,26 +236,26 @@ function computeWinterRec(
   } else if (xIdeal < MIN_PUMP_LITERS) {
     x = MIN_PUMP_LITERS
   } else {
-    x = Math.round(xIdeal)
+    x = Math.round(xIdeal * 10) / 10
     if (x < MIN_PUMP_LITERS) x = MIN_PUMP_LITERS
   }
 
   if (x > 0 && toAdd - x < MIN_PUMP_LITERS) {
-    x = Math.ceil(toAdd - MIN_PUMP_LITERS)
+    x = Math.ceil((toAdd - MIN_PUMP_LITERS) * 10) / 10
     if (x < MIN_PUMP_LITERS) x = 0
   }
 
   if (x === 0) {
     return {
       type: 'pure_e85',
-      e85Liters: Math.round(toAdd),
+      e85Liters: Math.round(toAdd * 10) / 10,
       resultPct: afterE85Pct * 100,
       kmSafe: null,
       kmRelative: null,
     }
   }
 
-  const e85 = Math.round(toAdd - x)
+  const e85 = Math.round((toAdd - x) * 10) / 10
   const resultEthanol = ethanolLiters + x * dilutantEthFraction + e85 * 0.85
   const resultTotal = remainingLiters + x + e85
   const resultPct = resultTotal > 0 ? (resultEthanol / resultTotal) * 100 : 0
@@ -263,6 +263,69 @@ function computeWinterRec(
     resultPct <= targetPct + tolerancePct && resultPct >= targetPct - tolerancePct
 
   return { type: 'blend', dilutantLiters: x, e85Liters: e85, resultPct, withinTolerance }
+}
+
+// ─── Future fills simulation ───────────────────────────────────────────────
+
+interface FutureFill {
+  fillNum: number
+  odo: number
+  dilutantLiters: number
+  e85Liters: number
+  resultPct: number
+  type: 'blend' | 'pure_e85'
+  withinTolerance: boolean
+}
+
+function simulateFutureFills(
+  startRemaining: number,
+  startEthanol: number,
+  fromOdo: number,
+  intervalKm: number,
+  tankCapacity: number,
+  avgL100km: number,
+  targetPct: number,
+  tolerancePct: number,
+  dilutantEthFraction: number,
+  count = 4,
+): FutureFill[] {
+  const fills: FutureFill[] = []
+  let rem = startRemaining
+  let eth = startEthanol
+
+  for (let i = 0; i < count; i++) {
+    const consumed = (intervalKm * avgL100km) / 100
+    const remAfter = Math.max(0, rem - consumed)
+    const ethAfter = rem > 0 ? eth * (remAfter / rem) : 0
+    const odo = fromOdo + (i + 1) * intervalKm
+
+    const rec = computeWinterRec(
+      remAfter, ethAfter, tankCapacity, targetPct, tolerancePct,
+      dilutantEthFraction, avgL100km, odo,
+    )
+
+    let dilLiters: number, e85Liters: number, resultPct: number, type: FutureFill['type']
+    if (rec.type === 'pure_e85') {
+      dilLiters = 0; e85Liters = rec.e85Liters; resultPct = rec.resultPct; type = 'pure_e85'
+    } else if (rec.type === 'blend') {
+      dilLiters = rec.dilutantLiters; e85Liters = rec.e85Liters; resultPct = rec.resultPct; type = 'blend'
+    } else {
+      dilLiters = 0; e85Liters = 0
+      resultPct = remAfter > 0 ? (ethAfter / remAfter) * 100 : 0
+      type = 'pure_e85'
+    }
+
+    fills.push({
+      fillNum: i + 1, odo, dilutantLiters: dilLiters, e85Liters,
+      resultPct, type,
+      withinTolerance: resultPct >= targetPct - tolerancePct && resultPct <= targetPct + tolerancePct,
+    })
+
+    rem = Math.min(remAfter + dilLiters + e85Liters, tankCapacity)
+    eth = Math.min(ethAfter + dilLiters * dilutantEthFraction + e85Liters * 0.85, tankCapacity)
+  }
+
+  return fills
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -283,6 +346,7 @@ export function BlendCalculator({
   const [dilutantType, setDilutantType] = useState<DilutantType>('e10')
   const [currentOdo, setCurrentOdo] = useState<string>('')
   const [tripKm, setTripKm] = useState<string>('')
+  const [intervalKm, setIntervalKm] = useState<string>('300')
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
@@ -381,6 +445,25 @@ export function BlendCalculator({
     [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo],
   )
 
+  const intervalKmNum = intervalKm !== '' ? Number(intervalKm) : 300
+  const futureFills = useMemo(
+    () =>
+      avgConsumption && intervalKmNum > 0
+        ? simulateFutureFills(
+            remainingLiters,
+            ethanolLiters,
+            inputOdo,
+            intervalKmNum,
+            tankCapacity,
+            avgConsumption,
+            target,
+            tolerance,
+            dilutantEthFraction,
+          )
+        : [],
+    [remainingLiters, ethanolLiters, inputOdo, intervalKmNum, tankCapacity, avgConsumption, target, tolerance, dilutantEthFraction],
+  )
+
   if (!avgConsumption) {
     const noDataContent = (
       <p className="text-sm text-muted-foreground">
@@ -434,8 +517,8 @@ export function BlendCalculator({
             {limitFill && limitFill.addedKm !== null && (
               <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-1 border-t border-emerald-200 dark:border-emerald-800 pt-1">
                 {limitFill.isFull
-                  ? `Plein complet: ${Math.round(limitFill.liters)} L → ${limitFill.resultPct.toFixed(0)}% · +${limitFill.addedKm} km`
-                  : `Max: ${Math.round(limitFill.liters)} L → ${limitFill.resultPct.toFixed(0)}% · +${limitFill.addedKm} km`}
+                  ? `Plein complet: ${limitFill.liters.toFixed(1)} L → ${limitFill.resultPct.toFixed(1)}% · +${limitFill.addedKm} km`
+                  : `Max: ${limitFill.liters.toFixed(1)} L → ${limitFill.resultPct.toFixed(1)}% · +${limitFill.addedKm} km`}
               </p>
             )}
           </>
@@ -445,10 +528,10 @@ export function BlendCalculator({
               Partiel possible
             </p>
             <p className="text-base font-bold text-yellow-800 dark:text-yellow-200">
-              {Math.round(limitFill.liters)} L E85
+              {limitFill.liters.toFixed(1)} L E85
             </p>
             <p className="text-[11px] text-yellow-700 dark:text-yellow-500 mt-0.5">
-              → {limitFill.resultPct.toFixed(0)}%
+              → {limitFill.resultPct.toFixed(1)}%
               {limitFill.addedKm !== null && ` · +${limitFill.addedKm} km`}
             </p>
           </>
@@ -510,7 +593,7 @@ export function BlendCalculator({
     winterRecCard = (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
         <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
-          {winterRec.e85Liters} L E85 pur
+          {winterRec.e85Liters.toFixed(1)} L E85 pur
         </p>
         <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
           Résultat : {winterRec.resultPct.toFixed(1)}% — cible ≤ {target + tolerance}%
@@ -536,7 +619,7 @@ export function BlendCalculator({
           </p>
         )}
         <p className="text-lg font-bold text-blue-800 dark:text-blue-300">
-          {winterRec.dilutantLiters} L {dilutantLabel}&nbsp;+&nbsp;{winterRec.e85Liters} L E85
+          {winterRec.dilutantLiters.toFixed(1)} L {dilutantLabel}&nbsp;+&nbsp;{winterRec.e85Liters.toFixed(1)} L E85
         </p>
         <p className={`mt-1 text-sm ${resultColor}`}>
           Résultat : {winterRec.resultPct.toFixed(1)}% — cible ≤ {target + tolerance}%
@@ -651,7 +734,7 @@ export function BlendCalculator({
                     return (
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">
-                          + {winterRec.dilutantLiters} L {dilutantLabel} + {winterRec.e85Liters} L E85
+                          + {winterRec.dilutantLiters.toFixed(1)} L {dilutantLabel} + {winterRec.e85Liters.toFixed(1)} L E85
                         </span>
                         <span className={ok ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}>
                           ~{rangeAfter.toLocaleString('fr-FR')} km{ok ? ' ✓' : ' ✗'}
@@ -664,6 +747,56 @@ export function BlendCalculator({
             </div>
           )}
         </>
+
+      {/* Future fills planner */}
+      <div className="flex items-center gap-2">
+        <div className="h-px flex-1 bg-border" />
+        <span className="text-xs text-muted-foreground">Pleins futurs</span>
+        <div className="h-px flex-1 bg-border" />
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-muted-foreground shrink-0">Tous les</span>
+        <Input
+          type="number"
+          inputMode="numeric"
+          placeholder="300"
+          value={intervalKm}
+          onChange={(e) => setIntervalKm(e.target.value)}
+          className="h-8 text-sm flex-1"
+          aria-label="Km entre les pleins"
+        />
+        <span className="text-xs text-muted-foreground shrink-0">km</span>
+      </div>
+      {futureFills.length > 0 && (
+        <div className="rounded-lg border overflow-hidden text-xs">
+          <table className="w-full">
+            <thead className="bg-muted/50">
+              <tr>
+                <th className="py-1.5 px-2 text-left font-medium text-muted-foreground">#</th>
+                <th className="py-1.5 px-2 text-left font-medium text-muted-foreground">km</th>
+                <th className="py-1.5 px-2 text-left font-medium text-muted-foreground">Mélange</th>
+                <th className="py-1.5 px-2 text-right font-medium text-muted-foreground">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {futureFills.map((fill) => (
+                <tr key={fill.fillNum} className="border-t border-border/50">
+                  <td className="py-1.5 px-2 text-muted-foreground">{fill.fillNum}</td>
+                  <td className="py-1.5 px-2">{fill.odo.toLocaleString('fr-FR')}</td>
+                  <td className="py-1.5 px-2">
+                    {fill.type === 'pure_e85'
+                      ? `${fill.e85Liters.toFixed(1)} L E85 pur`
+                      : `${fill.dilutantLiters.toFixed(1)} L ${dilutantLabel} + ${fill.e85Liters.toFixed(1)} L E85`}
+                  </td>
+                  <td className={`py-1.5 px-2 text-right font-semibold ${fill.withinTolerance ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-500'}`}>
+                    {fill.resultPct.toFixed(1)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Details */}
       <div className="flex gap-4 text-xs text-muted-foreground">
