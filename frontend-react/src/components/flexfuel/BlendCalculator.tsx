@@ -348,6 +348,7 @@ export function BlendCalculator({
   const [currentOdo, setCurrentOdo] = useState<string>('')
   const [intervalKm, setIntervalKm] = useState<string>('300')
   const [intervalOverrides, setIntervalOverrides] = useState<Record<number, number>>({})
+  const [showFutureFills, setShowFutureFills] = useState(false)
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
@@ -680,25 +681,32 @@ export function BlendCalculator({
       {winterRecCard}
 
       {/* Future fills planner */}
-      <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setShowFutureFills((v) => !v)}
+        className="flex items-center gap-2 w-full group"
+      >
         <div className="h-px flex-1 bg-border" />
-        <span className="text-xs text-muted-foreground">Pleins futurs</span>
+        <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+          Pleins futurs {showFutureFills ? '▴' : '▾'}
+        </span>
         <div className="h-px flex-1 bg-border" />
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground shrink-0">Tous les</span>
-        <Input
-          type="number"
-          inputMode="numeric"
-          placeholder="300"
-          value={intervalKm}
-          onChange={(e) => setIntervalKm(e.target.value)}
-          className="h-8 text-sm flex-1"
-          aria-label="Km entre les pleins"
-        />
-        <span className="text-xs text-muted-foreground shrink-0">km</span>
-      </div>
-      {futureFills.length > 0 && (
+      </button>
+      {showFutureFills && <>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground shrink-0">Tous les</span>
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="300"
+            value={intervalKm}
+            onChange={(e) => setIntervalKm(e.target.value)}
+            className="h-8 text-sm flex-1"
+            aria-label="Km entre les pleins"
+          />
+          <span className="text-xs text-muted-foreground shrink-0">km</span>
+        </div>
+        {futureFills.length > 0 && (
         <div className="rounded-lg border overflow-hidden text-xs">
           <table className="w-full">
             <thead className="bg-muted/50">
@@ -742,7 +750,8 @@ export function BlendCalculator({
             </tbody>
           </table>
         </div>
-      )}
+        )}
+      </>}
 
       {/* Details */}
       <div className="flex gap-4 text-xs text-muted-foreground">

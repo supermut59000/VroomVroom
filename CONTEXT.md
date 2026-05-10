@@ -427,6 +427,27 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-05-10
+
+### BlendCalculator — décimales + planificateur de pleins futurs
+
+**Contexte mathématique établi en session** :
+- Réservoir Corsa E : 50L physique (pas 45L)
+- Consommation : 6.6 L/100km E10, 7.9 L/100km E85 (+19.7%)
+- Ratio optimal pour 70% éthanol : 80% E85 + 20% E10 par volume
+- Minimum pompe France : 5L (obligation métrologique DGCCRF). Certaines pompes récentes : 2L.
+- À 300km entre les pleins (~26L restants), x_ideal ≈ 4.5L → forcé à 5L par le minimum pompe → résultat 68.6% au lieu de 70%. Pas un bug du code, contrainte physique.
+- Pour que x_ideal dépasse naturellement 5L : attendre ~350-400km (≤22L restants).
+
+**Changements `BlendCalculator.tsx`** :
+- Arrondi 0.1L (`Math.round(x * 10) / 10`) sur tous les montants, affichage `.toFixed(1)` partout
+- Suppression section "Trajet prévu" (tripKm state + UI entièrement retirés)
+- `simulateFutureFills(intervals: number[])` : simule les 4 prochains pleins depuis l'état actuel du réservoir
+- Section "Pleins futurs" collapsible (▴/▾, fermée par défaut) : input intervalle global + tableau km/mélange/%
+- Boutons −50/+50km par ligne dans le tableau pour ajuster la distance d'un plein individuel sans affecter les autres (`intervalOverrides: Record<number, number>`)
+
+---
+
 ## Session log — 2026-05-05
 
 ### StationPricesDialog — recherche par ville + nom personnalisé depuis l'historique
