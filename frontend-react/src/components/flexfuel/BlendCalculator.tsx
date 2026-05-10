@@ -270,6 +270,7 @@ function computeWinterRec(
 interface FutureFill {
   fillNum: number
   odo: number
+  intervalKm: number
   dilutantLiters: number
   e85Liters: number
   resultPct: number
@@ -281,19 +282,19 @@ function simulateFutureFills(
   startRemaining: number,
   startEthanol: number,
   fromOdo: number,
-  intervalKm: number,
+  intervals: number[],
   tankCapacity: number,
   avgL100km: number,
   targetPct: number,
   tolerancePct: number,
   dilutantEthFraction: number,
-  count = 4,
 ): FutureFill[] {
   const fills: FutureFill[] = []
   let rem = startRemaining
   let eth = startEthanol
 
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < intervals.length; i++) {
+    const intervalKm = intervals[i]
     const consumed = (intervalKm * avgL100km) / 100
     const remAfter = Math.max(0, rem - consumed)
     const ethAfter = rem > 0 ? eth * (remAfter / rem) : 0
@@ -316,7 +317,7 @@ function simulateFutureFills(
     }
 
     fills.push({
-      fillNum: i + 1, odo, dilutantLiters: dilLiters, e85Liters,
+      fillNum: i + 1, odo, intervalKm, dilutantLiters: dilLiters, e85Liters,
       resultPct, type,
       withinTolerance: resultPct >= targetPct - tolerancePct && resultPct <= targetPct + tolerancePct,
     })
@@ -345,8 +346,8 @@ export function BlendCalculator({
 }: BlendCalculatorProps) {
   const [dilutantType, setDilutantType] = useState<DilutantType>('e10')
   const [currentOdo, setCurrentOdo] = useState<string>('')
-  const [tripKm, setTripKm] = useState<string>('')
   const [intervalKm, setIntervalKm] = useState<string>('300')
+  const [intervalOverrides, setIntervalOverrides] = useState<Record<number, number>>({})
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
@@ -409,12 +410,6 @@ export function BlendCalculator({
     return { liters, resultPct, addedKm, isFull }
   }, [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, avgConsumption])
 
-  // ── Trip planning
-  const tripDistance = tripKm !== '' ? Number(tripKm) : null
-  const rangeNowKm = avgConsumption
-    ? Math.round(Math.max(0, remainingLiters - 5) * 100 / avgConsumption)
-    : null
-
   const thresholds = useMemo(
     () =>
       computeThresholds(
@@ -446,14 +441,15 @@ export function BlendCalculator({
   )
 
   const intervalKmNum = intervalKm !== '' ? Number(intervalKm) : 300
+  const intervals = Array.from({ length: 4 }, (_, i) => intervalOverrides[i] ?? intervalKmNum)
   const futureFills = useMemo(
     () =>
-      avgConsumption && intervalKmNum > 0
+      avgConsumption && intervals.every((v) => v > 0)
         ? simulateFutureFills(
             remainingLiters,
             ethanolLiters,
             inputOdo,
-            intervalKmNum,
+            intervals,
             tankCapacity,
             avgConsumption,
             target,
@@ -461,7 +457,8 @@ export function BlendCalculator({
             dilutantEthFraction,
           )
         : [],
-    [remainingLiters, ethanolLiters, inputOdo, intervalKmNum, tankCapacity, avgConsumption, target, tolerance, dilutantEthFraction],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [remainingLiters, ethanolLiters, inputOdo, JSON.stringify(intervals), tankCapacity, avgConsumption, target, tolerance, dilutantEthFraction],
   )
 
   if (!avgConsumption) {
@@ -682,72 +679,6 @@ export function BlendCalculator({
       {/* Recommendation */}
       {winterRecCard}
 
-      {/* Trip planning */}
-      <>
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">Trajet prévu</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <Input
-            type="number"
-            inputMode="numeric"
-            placeholder="Distance (km)"
-            value={tripKm}
-            onChange={(e) => setTripKm(e.target.value)}
-            className="h-10 text-base"
-            aria-label="Distance du trajet en km"
-          />
-          {tripDistance != null && tripDistance > 0 && rangeNowKm != null && (
-            <div className="rounded-lg border p-3 space-y-1.5 text-sm">
-              {/* Current fuel */}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Réservoir actuel</span>
-                <span className={rangeNowKm >= tripDistance ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>
-                  ~{rangeNowKm.toLocaleString('fr-FR')} km{rangeNowKm >= tripDistance ? ' ✓' : ''}
-                </span>
-              </div>
-
-              {rangeNowKm < tripDistance && (
-                <>
-                  {/* Option 1: partial E85 to limit */}
-                  {limitFill && limitFill.addedKm !== null && (() => {
-                    const rangeAfter = Math.round(Math.max(0, remainingLiters + limitFill.liters - 5) * 100 / (avgConsumption ?? 8))
-                    const ok = rangeAfter >= tripDistance
-                    return (
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">
-                          + {Math.round(limitFill.liters)} L E85{limitFill.isFull ? ' (plein)' : ' (partiel)'}
-                        </span>
-                        <span className={ok ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}>
-                          ~{rangeAfter.toLocaleString('fr-FR')} km{ok ? ' ✓' : ' ✗'}
-                        </span>
-                      </div>
-                    )
-                  })()}
-
-                  {/* Option 2: blend recommendation (if different from limitFill) */}
-                  {winterRec.type === 'blend' && (() => {
-                    const fill = winterRec.dilutantLiters + winterRec.e85Liters
-                    const rangeAfter = Math.round(Math.max(0, remainingLiters + fill - 5) * 100 / (avgConsumption ?? 8))
-                    const ok = rangeAfter >= tripDistance
-                    return (
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">
-                          + {winterRec.dilutantLiters.toFixed(1)} L {dilutantLabel} + {winterRec.e85Liters.toFixed(1)} L E85
-                        </span>
-                        <span className={ok ? 'font-semibold text-emerald-600 dark:text-emerald-400' : 'text-orange-600 dark:text-orange-400'}>
-                          ~{rangeAfter.toLocaleString('fr-FR')} km{ok ? ' ✓' : ' ✗'}
-                        </span>
-                      </div>
-                    )
-                  })()}
-                </>
-              )}
-            </div>
-          )}
-        </>
-
       {/* Future fills planner */}
       <div className="flex items-center gap-2">
         <div className="h-px flex-1 bg-border" />
@@ -779,10 +710,25 @@ export function BlendCalculator({
               </tr>
             </thead>
             <tbody>
-              {futureFills.map((fill) => (
+              {futureFills.map((fill, i) => (
                 <tr key={fill.fillNum} className="border-t border-border/50">
                   <td className="py-1.5 px-2 text-muted-foreground">{fill.fillNum}</td>
-                  <td className="py-1.5 px-2">{fill.odo.toLocaleString('fr-FR')}</td>
+                  <td className="py-1.5 px-2">
+                    <div>{fill.odo.toLocaleString('fr-FR')}</div>
+                    <div className="flex items-center gap-0.5 mt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setIntervalOverrides((prev) => ({ ...prev, [i]: Math.max(50, (prev[i] ?? intervalKmNum) - 50) }))}
+                        className="h-4 w-5 rounded text-[10px] border border-input bg-background hover:bg-muted leading-none"
+                      >−</button>
+                      <span className="text-[10px] text-muted-foreground w-9 text-center">{fill.intervalKm}km</span>
+                      <button
+                        type="button"
+                        onClick={() => setIntervalOverrides((prev) => ({ ...prev, [i]: (prev[i] ?? intervalKmNum) + 50 }))}
+                        className="h-4 w-5 rounded text-[10px] border border-input bg-background hover:bg-muted leading-none"
+                      >+</button>
+                    </div>
+                  </td>
                   <td className="py-1.5 px-2">
                     {fill.type === 'pure_e85'
                       ? `${fill.e85Liters.toFixed(1)} L E85 pur`
