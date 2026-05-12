@@ -1,14 +1,12 @@
 import { useState } from 'react'
-import { Car, Sun, Moon, Fuel, Route } from 'lucide-react'
+import { Car, Sun, Moon, Fuel } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { StationPricesDialog } from '@/components/fuel/StationPricesDialog'
-import { RouteStationDialog } from '@/components/fuel/RouteStationDialog'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
   const [stationPricesOpen, setStationPricesOpen] = useState(false)
-  const [routeStationOpen, setRouteStationOpen] = useState(false)
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -23,15 +21,6 @@ export function Header() {
             <h1 className="text-xl font-bold tracking-tight">VroomVroom</h1>
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setRouteStationOpen(true)}
-              title="Station la moins chère sur l'itinéraire"
-            >
-              <Route className="h-5 w-5" />
-              <span className="sr-only">Station sur l'itinéraire</span>
-            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -53,10 +42,6 @@ export function Header() {
       <StationPricesDialog
         open={stationPricesOpen}
         onClose={() => setStationPricesOpen(false)}
-      />
-      <RouteStationDialog
-        open={routeStationOpen}
-        onClose={() => setRouteStationOpen(false)}
       />
     </>
   )
