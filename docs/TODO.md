@@ -9,21 +9,6 @@ Prioritized feature and improvement checklist. Edit, reorder, add, or delete fre
 
 ## Code Fixes & Improvements
 
-- [ ] [#1] **Odometer monotonicity check** — `P0` `S`
-  Prevent decreasing odometer entries that silently corrupt consumption calculations. Validate in `fuel_service.py:create_fuel_entry()`. Add optional override flag for legitimate resets.
-
-- [ ] [#2] **Soft-delete for FlexFuel conversions & E10 prices** — `P1` `M`
-  Add `is_active` column to `FlexfuelConversion` and `E10ReferencePrice` models. Filter active in queries. Change delete methods to soft delete. Migration needed.
-
-- [ ] [#3] **FlexFuel service/endpoint tests** — `P1` `M`
-  Create `tests/test_flexfuel.py`. Cover: conversion CRUD, duplicate prevention, E10 price CRUD, rentability calculation (savings, break-even, skipped fills, monthly averages).
-
-- [ ] [#4] **Typed VehicleStats merge** — `P2` `S`
-  Have `FuelService.get_fuel_statistics_by_vehicle()` return a typed dataclass/Pydantic model instead of plain dict.
-
-- [ ] [#5] **Pydantic v2 migration: `.model_dump()` instead of `.dict()`** — `P2` `M`
-  Replace `.dict(exclude_unset=True)` with `.model_dump(exclude_unset=True)` in all endpoint partial-update methods. Test every update endpoint.
-
 - [ ] [#6] **`.env` in git history cleanup** — `P2` `S`
   `git filter-repo` to remove `.env` files from history, force push, rotate DB password. Low priority (private repo, homelab-only).
 
@@ -51,20 +36,3 @@ A unified **route planner dialog** (currently `RouteStationDialog.tsx`) combinin
 - Display: total toll cost, total detour cost if bypassed, net savings recommendation
 - Vehicle-aware: use the selected vehicle's average consumption and current fuel price per liter
 - **No paid API** — use OSRM + OSM toll way tags or a static French toll dataset
-
----
-
-## Station & Refueling Features
-
-- [ ] [#B1] **Station favorites** — `P2` `M`
-  Mark stations as favorites. Star icon. Sort to top in lists. "Mes stations" filter. New model + CRUD backend needed.
-
-- [ ] [#B2] **Refueling pattern report** — `P2` `S`
-  Histogram: km between fills. Bar chart: fills by day of week. Pie chart: fills by fuel type. Average cost per fill badge. Pure client-side computation.
-
----
-
-## New Graphs
-
-- [ ] [#C1] **Consumption vs season scatter plot** — `P2` `S`
-  Scatter: L/100km vs month, polynomial trend line overlay. Visual proof of winter consumption penalty. Client-side.
