@@ -69,10 +69,9 @@ export function ConsumptionScatterChart({ dataPoints }: Props) {
     return { seasonPoints: sp, trendLine: trend }
   }, [dataPoints])
 
-  if (seasonPoints.length < 3) return null
-
   // Merge scatter points and trend into one dataset for ComposedChart
   const mergedData = useMemo(() => {
+    if (seasonPoints.length === 0) return []
     const byMonth: Record<number, { x: number; trend?: number; points: typeof seasonPoints }> = {}
     for (let m = 1; m <= 12; m++) byMonth[m] = { x: m, points: [] }
     for (const p of seasonPoints) byMonth[p.x].points.push(p)
@@ -86,9 +85,11 @@ export function ConsumptionScatterChart({ dataPoints }: Props) {
     return Object.values(byMonth)
   }, [seasonPoints, trendLine])
 
-  const yMin = Math.floor(Math.min(...seasonPoints.map((p) => p.y)) - 0.5)
-  const yMax = Math.ceil(Math.max(...seasonPoints.map((p) => p.y)) + 0.5)
-  const avg = parseFloat((seasonPoints.reduce((s, p) => s + p.y, 0) / seasonPoints.length).toFixed(2))
+  const yMin = seasonPoints.length > 0 ? Math.floor(Math.min(...seasonPoints.map((p) => p.y)) - 0.5) : 0
+  const yMax = seasonPoints.length > 0 ? Math.ceil(Math.max(...seasonPoints.map((p) => p.y)) + 0.5) : 10
+  const avg = seasonPoints.length > 0 ? parseFloat((seasonPoints.reduce((s, p) => s + p.y, 0) / seasonPoints.length).toFixed(2)) : 0
+
+  if (seasonPoints.length < 3) return null
 
   return (
     <div className="space-y-2">
