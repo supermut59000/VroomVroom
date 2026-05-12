@@ -23,7 +23,6 @@ import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
 import { OdometerChart } from '@/components/charts/OdometerChart'
 import { RefuelingPatternChart } from '@/components/charts/RefuelingPatternChart'
-import { ConsumptionScatterChart } from '@/components/charts/ConsumptionScatterChart'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 interface FuelChartsProps {
@@ -137,8 +136,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
 
         <div className="space-y-6">
           <ErrorBoundary><ConsumptionChart dataPoints={filteredConsumptionData} /></ErrorBoundary>
-          <ErrorBoundary><ConsumptionScatterChart dataPoints={filteredConsumptionData} /></ErrorBoundary>
-          <ErrorBoundary><PriceChart entries={filteredEntries} /></ErrorBoundary>
+<ErrorBoundary><PriceChart entries={filteredEntries} /></ErrorBoundary>
           <ErrorBoundary><MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} /></ErrorBoundary>
           <ErrorBoundary><DistanceChart entries={filteredEntries} /></ErrorBoundary>
           {vehicle && allEntries && (
