@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import and_, desc, asc
 from app.models.fuel_entry import FuelEntry
 from app.core.enums import FuelType
-from app.schemas.fuel_entry import FuelEntryCreate, FuelEntryUpdate
+from app.schemas.fuel_entry import FuelEntryCreate, FuelEntryUpdate, FuelStatisticsResponse
 from datetime import date, datetime
 
 
@@ -16,9 +16,23 @@ class FuelService:
         if not self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first():
             raise ValueError(f"Véhicule avec l'id {vehicle_id} introuvable")
 
-    def create_fuel_entry(self, fuel_entry: FuelEntryCreate) -> FuelEntry:
+    def create_fuel_entry(self, fuel_entry: FuelEntryCreate, allow_odometer_decrease: bool = False) -> FuelEntry:
         """Create a new fuel entry"""
         self._assert_vehicle_exists(fuel_entry.vehicle_id)
+
+        # Odometer monotonicity — allow equal (blend fills share same odometer)
+        if not allow_odometer_decrease:
+            latest = (
+                self.db.query(FuelEntry)
+                .filter(FuelEntry.vehicle_id == fuel_entry.vehicle_id, FuelEntry.is_active == True)
+                .order_by(FuelEntry.odometer_reading.desc())
+                .first()
+            )
+            if latest and fuel_entry.odometer_reading < latest.odometer_reading:
+                raise ValueError(
+                    f"Le kilométrage {fuel_entry.odometer_reading} km est inférieur "
+                    f"au dernier relevé ({latest.odometer_reading} km)"
+                )
 
         # Calculate total cost
         total_cost = fuel_entry.liters * fuel_entry.price_per_liter
@@ -111,7 +125,7 @@ class FuelService:
             return None
         
         # Update fields
-        update_data = fuel_entry_update.dict(exclude_unset=True)
+        update_data = fuel_entry_update.model_dump(exclude_unset=True)
         
         # Recalculate total cost if liters or price_per_liter changed
         if "liters" in update_data or "price_per_liter" in update_data:
@@ -198,7 +212,7 @@ class FuelService:
 
         return query.count()
 
-    def get_fuel_statistics_by_vehicle(self, vehicle_id: int) -> dict:
+    def get_fuel_statistics_by_vehicle(self, vehicle_id: int) -> FuelStatisticsResponse:
         """Get fuel statistics for a vehicle.
 
         Average consumption is calculated only from full tank entries,
@@ -212,14 +226,14 @@ class FuelService:
         )
 
         if not entries:
-            return {
-                "total_entries": 0,
-                "total_liters": 0,
-                "total_cost": 0,
-                "average_price_per_liter": 0,
-                "total_distance": 0,
-                "average_consumption": None,
-            }
+            return FuelStatisticsResponse(
+                total_entries=0,
+                total_liters=0,
+                total_cost=0,
+                average_price_per_liter=0,
+                total_distance=0,
+                average_consumption=None,
+            )
 
         total_liters = sum(entry.liters for entry in entries)
         total_cost = sum(entry.total_cost for entry in entries)
@@ -272,14 +286,14 @@ class FuelService:
             if consumption_values:
                 average_consumption = round(sum(consumption_values) / len(consumption_values), 2)
 
-        return {
-            "total_entries": len(entries),
-            "total_liters": round(total_liters, 2),
-            "total_cost": round(total_cost, 2),
-            "average_price_per_liter": round(total_cost / total_liters if total_liters > 0 else 0, 2),
-            "total_distance": total_distance,
-            "average_consumption": average_consumption,
-        }
+        return FuelStatisticsResponse(
+            total_entries=len(entries),
+            total_liters=round(total_liters, 2),
+            total_cost=round(total_cost, 2),
+            average_price_per_liter=round(total_cost / total_liters if total_liters > 0 else 0, 2),
+            total_distance=total_distance,
+            average_consumption=average_consumption,
+        )
 
     def get_consumption_history(self, vehicle_id: int) -> dict:
         """Get consumption history for a vehicle with calculated L/100km for each fill-up.

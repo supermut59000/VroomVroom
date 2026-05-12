@@ -58,7 +58,7 @@ class VehicleService:
         """
         Créé un nouveau véhicule.
         """
-        db_vehicle = Vehicle(**vehicle_data.dict())
+        db_vehicle = Vehicle(**vehicle_data.model_dump())
         self.db.add(db_vehicle)
         self.db.commit()
         self.db.refresh(db_vehicle)
@@ -73,7 +73,7 @@ class VehicleService:
             raise ValueError("Véhicule non trouvé")
         
         # Mise à jour uniquement des champs fournis
-        update_data = vehicle_data.dict(exclude_unset=True)
+        update_data = vehicle_data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(db_vehicle, field, value)
         
@@ -377,13 +377,13 @@ class VehicleService:
             # Distance = last odometer - initial odometer
             if last_odometer and vehicle.initial_odometer is not None:
                 total_distance = last_odometer - float(vehicle.initial_odometer)
-            elif fuel_stats["total_distance"] > 0:
-                total_distance = float(fuel_stats["total_distance"])
+            elif fuel_stats.total_distance > 0:
+                total_distance = float(fuel_stats.total_distance)
         else:
             last_odometer = vehicle.initial_odometer
 
         # Cost per km
-        total_fuel_cost = fuel_stats["total_cost"]
+        total_fuel_cost = fuel_stats.total_cost
         cost_per_km = total_fuel_cost / total_distance if total_distance > 0 else 0
 
         # Insurance limit calculation
@@ -406,7 +406,7 @@ class VehicleService:
         tank = vehicle.tank_capacity
 
         # Overall range (actual avg, 5 L cushion)
-        avg_conso = fuel_stats["average_consumption"]
+        avg_conso = fuel_stats.average_consumption
         CUSHION_L = 5.0
         overall_range = None
         if avg_conso and avg_conso > 0 and tank:
@@ -417,11 +417,11 @@ class VehicleService:
 
         return VehicleStats(
             vehicle_id=vehicle_id,
-            total_fuel_entries=fuel_stats["total_entries"],
-            total_fuel_quantity=fuel_stats["total_liters"],
+            total_fuel_entries=fuel_stats.total_entries,
+            total_fuel_quantity=fuel_stats.total_liters,
             total_distance=total_distance,
             average_consumption=avg_conso,
-            average_fuel_price=fuel_stats["average_price_per_liter"],
+            average_fuel_price=fuel_stats.average_price_per_liter,
             total_fuel_cost=round(total_fuel_cost, 2),
             cost_per_km=round(cost_per_km, 3),
             last_odometer=last_odometer,

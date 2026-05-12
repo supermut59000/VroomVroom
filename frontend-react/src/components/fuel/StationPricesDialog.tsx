@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation, BookMarked } from 'lucide-react'
+import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation, BookMarked, Star } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import {
 import { useNearbyStations, STATION_FUEL_OPTIONS } from '@/hooks/use-nearby-stations'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { useGlobalStationHistory } from '@/hooks/use-fuel-entries'
+import { useFavoriteStations } from '@/hooks/use-favorite-stations'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
 
 interface Commune {
@@ -72,6 +73,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
   const geo = useGeolocation()
   const { stations, loading, error, fetch: fetchStations, clear } = useNearbyStations()
   const { data: stationHistory = [] } = useGlobalStationHistory()
+  const { toggle: toggleFav, isFavorite } = useFavoriteStations()
 
   // Reset on open/close
   useEffect(() => {
@@ -156,6 +158,10 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
   }
 
   const sorted = [...stations].sort((a, b) => {
+    // Favorites always float to top
+    const favA = isFavorite(a.id) ? 0 : 1
+    const favB = isFavorite(b.id) ? 0 : 1
+    if (favA !== favB) return favA - favB
     if (sortMode === 'price') {
       const pa = a.prices[fuelKey] ?? Infinity
       const pb = b.prices[fuelKey] ?? Infinity
@@ -296,10 +302,17 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                 return (
                   <div
                     key={s.id}
-                    className="flex items-start justify-between rounded-md border px-3 py-2"
+                    className={`flex items-start justify-between rounded-md border px-3 py-2 ${isFavorite(s.id) ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => toggleFav({ id: s.id, name: displayName, lat: s.latitude, lon: s.longitude })}
+                          className="shrink-0 text-muted-foreground hover:text-yellow-500 transition-colors"
+                          title={isFavorite(s.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                        >
+                          <Star className={`h-3.5 w-3.5 ${isFavorite(s.id) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                        </button>
                         <p className="truncate text-sm font-medium">
                           {knownName ? (
                             <span className="flex items-center gap-1">

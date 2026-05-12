@@ -24,6 +24,8 @@ def setup_database():
     from app.models.vehicle import Vehicle  # noqa: F401
     from app.models.fuel_entry import FuelEntry  # noqa: F401
     from app.models.maintenance import Maintenance  # noqa: F401
+    from app.models.flexfuel_conversion import FlexfuelConversion  # noqa: F401
+    from app.models.e10_reference_price import E10ReferencePrice  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
     yield
@@ -136,3 +138,51 @@ def sample_maintenance_data(created_vehicle):
         "next_maintenance_date": "2026-06-15",
         "next_maintenance_odometer": 25000,
     }
+
+
+@pytest.fixture()
+def flexfuel_vehicle_data():
+    """Vehicle payload for a FlexFuel-capable car."""
+    return {
+        "brand": "Opel",
+        "model": "Corsa",
+        "year": 2018,
+        "license_plate": "FF-001-FF",
+        "fuel_type": "e85",
+        "initial_odometer": 50000,
+        "tank_capacity": 50.0,
+    }
+
+
+@pytest.fixture()
+def created_flexfuel_vehicle(client, flexfuel_vehicle_data):
+    resp = client.post("/api/v1/vehicles/", json=flexfuel_vehicle_data)
+    assert resp.status_code == 201
+    return resp.json()
+
+
+@pytest.fixture()
+def sample_conversion_data(created_flexfuel_vehicle):
+    return {
+        "vehicle_id": created_flexfuel_vehicle["id"],
+        "conversion_date": "2024-01-15",
+        "kit_cost": 770.0,
+        "overconsumption_pct": 19.7,
+        "kit_brand": "Biogastech",
+        "installer": "Garage Dupont",
+        "target_ethanol_pct": 77.0,
+        "ethanol_tolerance_pct": 5.0,
+    }
+
+
+@pytest.fixture()
+def created_conversion(client, sample_conversion_data, created_flexfuel_vehicle):
+    vid = created_flexfuel_vehicle["id"]
+    resp = client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json=sample_conversion_data)
+    assert resp.status_code == 201
+    return resp.json()
+
+
+@pytest.fixture()
+def sample_e10_price_data():
+    return {"reference_date": "2024-06-01", "price_per_liter": 1.85, "notes": "Station Total"}

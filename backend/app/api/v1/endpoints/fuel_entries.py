@@ -34,12 +34,13 @@ class FuelEntryOrderBy(str, Enum):
 @router.post("/", response_model=FuelEntryResponse, status_code=status.HTTP_201_CREATED)
 def create_fuel_entry(
     fuel_entry: FuelEntryCreate,
+    allow_odometer_decrease: bool = Query(False, description="Autoriser un kilométrage décroissant (remise à zéro compteur)"),
     db: Session = Depends(get_db)
 ):
     """Create a new fuel entry"""
     fuel_service = FuelService(db)
     try:
-        return fuel_service.create_fuel_entry(fuel_entry)
+        return fuel_service.create_fuel_entry(fuel_entry, allow_odometer_decrease=allow_odometer_decrease)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception as e:

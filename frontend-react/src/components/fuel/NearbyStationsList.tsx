@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { MapPin, Loader2, ChevronDown, ChevronUp, BookMarked } from 'lucide-react'
+import { MapPin, Loader2, ChevronDown, ChevronUp, BookMarked, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useNearbyStations } from '@/hooks/use-nearby-stations'
+import { useFavoriteStations } from '@/hooks/use-favorite-stations'
 import type { FuelType } from '@/types'
 import { useState } from 'react'
 
@@ -43,6 +44,7 @@ export function NearbyStationsList({
 }: NearbyStationsListProps) {
   const [open, setOpen] = useState(true)
   const { stations, loading, error, fetch, clear } = useNearbyStations()
+  const { toggle: toggleFav, isFavorite } = useFavoriteStations()
   const hasAutoSelected = useRef(false)
 
   useEffect(() => {
@@ -120,7 +122,12 @@ export function NearbyStationsList({
           {!loading && stations.length > 0 && (
             <div className="mt-1 max-h-48 space-y-1 overflow-y-auto">
               {[...stations]
-                .sort((a, b) => a.distanceM - b.distanceM)
+                .sort((a, b) => {
+                  const favA = isFavorite(a.id) ? 0 : 1
+                  const favB = isFavorite(b.id) ? 0 : 1
+                  if (favA !== favB) return favA - favB
+                  return a.distanceM - b.distanceM
+                })
                 .map((s) => {
                 const knownName = historyEntries
                   ?.find(
@@ -133,40 +140,52 @@ export function NearbyStationsList({
                   ?.station_name ?? null
                 const displayName = knownName ?? s.name
                 return (
-                <button
+                <div
                   key={s.id}
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left hover:bg-muted"
-                  onClick={() => {
-                    onSelect(displayName, [displayName, s.address].filter(Boolean).join(', '), s.price)
-                  }}
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 ${isFavorite(s.id) ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
                 >
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {knownName ? (
-                        <span className="flex items-center gap-1">
-                          <BookMarked className="h-3 w-3 shrink-0 text-primary" />
-                          {knownName}
-                        </span>
-                      ) : s.name}
-                    </p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {s.address}
-                    </p>
-                  </div>
-                  <div className="ml-2 shrink-0 text-right">
-                    {s.price != null ? (
-                      <p className="text-sm font-semibold text-primary">
-                        {s.price.toFixed(3)} €/L
+                  <button
+                    type="button"
+                    className="shrink-0 text-muted-foreground hover:text-yellow-500 transition-colors mr-1.5"
+                    onClick={(e) => { e.stopPropagation(); toggleFav({ id: s.id, name: displayName, lat: s.latitude, lon: s.longitude }) }}
+                    title={isFavorite(s.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  >
+                    <Star className={`h-3.5 w-3.5 ${isFavorite(s.id) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex flex-1 items-center justify-between text-left hover:bg-muted rounded-md px-1"
+                    onClick={() => {
+                      onSelect(displayName, [displayName, s.address].filter(Boolean).join(', '), s.price)
+                    }}
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {knownName ? (
+                          <span className="flex items-center gap-1">
+                            <BookMarked className="h-3 w-3 shrink-0 text-primary" />
+                            {knownName}
+                          </span>
+                        ) : s.name}
                       </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">prix N/D</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistance(s.distanceM)}
-                    </p>
-                  </div>
-                </button>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {s.address}
+                      </p>
+                    </div>
+                    <div className="ml-2 shrink-0 text-right">
+                      {s.price != null ? (
+                        <p className="text-sm font-semibold text-primary">
+                          {s.price.toFixed(3)} €/L
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">prix N/D</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistance(s.distanceM)}
+                      </p>
+                    </div>
+                  </button>
+                </div>
                 )
               })}
             </div>

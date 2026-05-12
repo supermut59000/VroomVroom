@@ -105,7 +105,7 @@ class MaintenanceService:
             return None
 
         # Update fields
-        update_data = maintenance_update.dict(exclude_unset=True)
+        update_data = maintenance_update.model_dump(exclude_unset=True)
 
         for field, value in update_data.items():
             setattr(db_maintenance, field, value)

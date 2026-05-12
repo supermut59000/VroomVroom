@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, Date, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, Float, Date, String, Text, DateTime, ForeignKey, Boolean
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 
@@ -19,6 +19,7 @@ class FlexfuelConversion(Base):
     notes = Column(Text, nullable=True)
     target_ethanol_pct = Column(Float, nullable=False, default=77.0)
     ethanol_tolerance_pct = Column(Float, nullable=False, default=5.0)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

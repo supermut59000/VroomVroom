@@ -1,6 +1,8 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-04-27
+Last updated: 2026-05-12
+
+**Reference docs:** [docs/architecture.md](docs/architecture.md) — full endpoint/schema/service reference | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
 ---
 

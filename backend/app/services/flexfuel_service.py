@@ -47,7 +47,7 @@ class FlexfuelService:
     def get_conversion(self, vehicle_id: int) -> Optional[FlexfuelConversion]:
         return (
             self.db.query(FlexfuelConversion)
-            .filter(FlexfuelConversion.vehicle_id == vehicle_id)
+            .filter(FlexfuelConversion.vehicle_id == vehicle_id, FlexfuelConversion.is_active == True)
             .first()
         )
 
@@ -55,7 +55,7 @@ class FlexfuelService:
         conversion = self.get_conversion(vehicle_id)
         if not conversion:
             return None
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(conversion, field, value)
         self.db.commit()
@@ -66,7 +66,7 @@ class FlexfuelService:
         conversion = self.get_conversion(vehicle_id)
         if not conversion:
             return False
-        self.db.delete(conversion)
+        conversion.is_active = False
         self.db.commit()
         return True
 
@@ -86,15 +86,18 @@ class FlexfuelService:
     def get_e10_prices(self) -> List[E10ReferencePrice]:
         return (
             self.db.query(E10ReferencePrice)
+            .filter(E10ReferencePrice.is_active == True)
             .order_by(desc(E10ReferencePrice.reference_date))
             .all()
         )
 
     def update_e10_price(self, price_id: int, data: E10ReferencePriceUpdate) -> Optional[E10ReferencePrice]:
-        price = self.db.query(E10ReferencePrice).filter(E10ReferencePrice.id == price_id).first()
+        price = self.db.query(E10ReferencePrice).filter(
+            E10ReferencePrice.id == price_id, E10ReferencePrice.is_active == True
+        ).first()
         if not price:
             return None
-        update_data = data.dict(exclude_unset=True)
+        update_data = data.model_dump(exclude_unset=True)
         for field, value in update_data.items():
             setattr(price, field, value)
         self.db.commit()
@@ -102,10 +105,12 @@ class FlexfuelService:
         return price
 
     def delete_e10_price(self, price_id: int) -> bool:
-        price = self.db.query(E10ReferencePrice).filter(E10ReferencePrice.id == price_id).first()
+        price = self.db.query(E10ReferencePrice).filter(
+            E10ReferencePrice.id == price_id, E10ReferencePrice.is_active == True
+        ).first()
         if not price:
             return False
-        self.db.delete(price)
+        price.is_active = False
         self.db.commit()
         return True
 
@@ -113,7 +118,7 @@ class FlexfuelService:
         """Get the most recent E10 reference price on or before target_date."""
         price = (
             self.db.query(E10ReferencePrice)
-            .filter(E10ReferencePrice.reference_date <= target_date)
+            .filter(E10ReferencePrice.reference_date <= target_date, E10ReferencePrice.is_active == True)
             .order_by(desc(E10ReferencePrice.reference_date))
             .first()
         )

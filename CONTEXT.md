@@ -1,7 +1,9 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-04-14
+Last updated: 2026-05-12
+
+**Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
 ---
 

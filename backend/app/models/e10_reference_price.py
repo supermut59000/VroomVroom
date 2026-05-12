@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, Date, Text, DateTime, UniqueConstraint
+from sqlalchemy import Column, Integer, Float, Date, Text, DateTime, UniqueConstraint, Boolean
 from sqlalchemy.sql import func
 
 from app.core.database import Base
@@ -12,6 +12,7 @@ class E10ReferencePrice(Base):
     reference_date = Column(Date, nullable=False, unique=True)
     price_per_liter = Column(Float, nullable=False)
     notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
