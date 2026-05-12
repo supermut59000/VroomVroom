@@ -242,7 +242,7 @@ export function RouteStationDialog({ open, onClose }: RouteStationDialogProps) {
   const { data: vehicles = [] } = useVehicles()
   const { data: vehicleStats } = useVehicleStats(selectedVehicleId)
 
-  const avgConsumption = vehicleStats?.avg_consumption ?? 7 // L/100km fallback
+  const avgConsumption = vehicleStats?.average_consumption ?? 7 // L/100km fallback
 
   // Reset state when dialog closes
   useEffect(() => {
