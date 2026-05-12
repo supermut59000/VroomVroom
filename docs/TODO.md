@@ -14,25 +14,33 @@ Prioritized feature and improvement checklist. Edit, reorder, add, or delete fre
 
 ---
 
-## Trip Planner (Route dialog — rework)
+## Trip Planner — `P1` `XL`
 
-A unified **route planner dialog** (currently `RouteStationDialog.tsx`) combining two features:
+**Concept:** User enters a trip (origin + destination, or pastes a Google Maps share URL) and the app optimizes it with fuel and toll info.
 
-### [#A1] Cheapest station on route — `P1` `L`
+**Input**
+- Origin + destination text fields with city autocomplete (geo.api.gouv.fr) + GPS button for origin
+- Optional: paste a Google Maps share URL (`maps.app.goo.gl/...` or `google.com/maps/dir/...`) and parse origin/destination from it automatically
+- Vehicle selector (to use its consumption + last known fuel price)
 
-- Origin + destination city inputs (autocomplete via geo.api.gouv.fr) + GPS button for origin
-- Fuel type selector, max detour selector (5 / 10 / 20 / 30 / 50 km)
-- Fetch stations from gouvernement price API around the route corridor
-- Filter by perpendicular distance to A→B segment, reject stations outside the A→B extent (t < 0 or t > 1)
-- Sort by price; show detour distance, "Moins cher" badge, known-name override from history
-- **Status:** partially implemented — core filtering works, UX needs polish (loading states, error handling, mobile layout)
+**Step 1 — Route geometry**
+- Fetch the actual road route from OSRM public API (`router.project-osrm.org/route/v1/driving`)
+- Get full route polyline (geometry), total distance, estimated duration
+- Display route on a small embedded map (Leaflet, no API key needed)
 
-### [#A2] Highway toll optimizer (autoroute-eco style) — `P1` `XL`
+**Step 2 — Cheapest station on route**
+- Fetch stations from the gouvernement fuel price API along the route corridor
+- Filter stations by perpendicular distance to the actual OSRM polyline segments (not a straight line — use real road geometry)
+- Show top 3–5 cheapest stations: price, detour distance, estimated savings vs. just stopping anywhere
+- Highlight the recommended one (best price within acceptable detour)
 
-- Same origin + destination inputs as #A1 (shared state in the same dialog, two tabs or two sections)
-- Compute route via a routing API (OSRM public instance or similar, no API key needed)
-- Identify toll sections along the route using OpenStreetMap toll data or a toll dataset
-- For each toll section: show name, cost, and whether bypassing it via free roads saves money given the vehicle's consumption and current fuel price
-- Display: total toll cost, total detour cost if bypassed, net savings recommendation
-- Vehicle-aware: use the selected vehicle's average consumption and current fuel price per liter
-- **No paid API** — use OSRM + OSM toll way tags or a static French toll dataset
+**Step 3 — Toll optimizer**
+- Parse toll sections from the OSRM route using OSM way tags (`toll=yes`) or a static French toll dataset
+- For each toll section: show name, estimated cost, and a bypass route via OSRM with `avoid=toll`
+- Compute whether bypassing is worth it: bypass_distance_extra × consumption × fuel_price vs. toll_cost
+- Display: total toll cost on current route, recommended bypasses with net savings, revised total cost
+
+**UX**
+- Single dialog, three collapsible sections: Route summary / Stations / Tolls
+- Everything computed client-side except the OSRM and fuel price API calls (no new backend needed)
+- Current `RouteStationDialog.tsx` to be reworked into this — the straight-line corridor approach gets replaced by real OSRM geometry
