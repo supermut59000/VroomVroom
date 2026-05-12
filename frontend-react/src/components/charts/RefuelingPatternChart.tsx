@@ -6,11 +6,7 @@ import {
   YAxis,
   Tooltip,
   CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
   ResponsiveContainer,
-  Legend,
 } from 'recharts'
 import type { FuelEntry } from '@/types'
 
@@ -20,15 +16,6 @@ interface Props {
 
 const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
-const FUEL_COLORS: Record<string, string> = {
-  e85: 'var(--color-chart-fuel, hsl(217 91% 60%))',
-  essence: '#f97316',
-  diesel: '#64748b',
-  e10: '#22c55e',
-  electrique: '#a855f7',
-  hybride: '#06b6d4',
-  gpl: '#eab308',
-}
 
 export function RefuelingPatternChart({ entries }: Props) {
   // Only full-tank entries for distance calculation
@@ -77,17 +64,7 @@ export function RefuelingPatternChart({ entries }: Props) {
     return DAY_LABELS.map((label, i) => ({ label, count: counts[i] }))
   }, [allSorted])
 
-  // 3. Fuel type pie
-  const fuelTypePie = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const e of allSorted) {
-      const t = e.fuel_type ?? 'inconnu'
-      map[t] = (map[t] ?? 0) + 1
-    }
-    return Object.entries(map).map(([name, value]) => ({ name, value }))
-  }, [allSorted])
-
-  // 4. Stat cards
+  // 3. Stat cards
   const stats = useMemo(() => {
     const totalCost = allSorted.reduce((s, e) => s + e.total_cost, 0)
     const avgCostPerFill = allSorted.length > 0 ? totalCost / allSorted.length : 0
@@ -162,23 +139,6 @@ export function RefuelingPatternChart({ entries }: Props) {
         </ResponsiveContainer>
       </div>
 
-      {/* Fuel type pie */}
-      {fuelTypePie.length > 1 && (
-        <div>
-          <p className="mb-2 text-xs text-muted-foreground">Répartition par carburant</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={fuelTypePie} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                {fuelTypePie.map((entry) => (
-                  <Cell key={entry.name} fill={FUEL_COLORS[entry.name] ?? '#94a3b8'} />
-                ))}
-              </Pie>
-              <Legend />
-              <Tooltip formatter={(v: number) => `${v} plein${v > 1 ? 's' : ''}`} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      )}
     </div>
   )
 }
