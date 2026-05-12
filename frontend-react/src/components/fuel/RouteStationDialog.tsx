@@ -339,7 +339,7 @@ export function RouteStationDialog({ open, onClose }: RouteStationDialogProps) {
         fetchOsrmRoute(origin, dest, true),
       ])
 
-      if (!normalRoute) throw new Error('Impossible de calculer l'itinéraire')
+      if (!normalRoute) throw new Error("Impossible de calculer l'itinéraire")
       setRoute(normalRoute)
 
       const distDiff = tollFreeRoute
