@@ -147,10 +147,13 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
 
     for (let i = 1; i < sorted.length; i++) {
       const distance = sorted[i].odometer_reading - sorted[i - 1].odometer_reading
-      if (distance <= 0) continue
       const d = new Date(sorted[i].fueling_date)
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      monthlyDistance.set(key, (monthlyDistance.get(key) || 0) + distance)
+      // Same-odometer entries (e.g. Essence booster paired with E85 fill): cost still counts,
+      // but distance = 0 so we don't inflate the denominator.
+      if (distance > 0) {
+        monthlyDistance.set(key, (monthlyDistance.get(key) || 0) + distance)
+      }
       monthlyFuelCost.set(key, (monthlyFuelCost.get(key) || 0) + sorted[i].liters * sorted[i].price_per_liter)
     }
 
