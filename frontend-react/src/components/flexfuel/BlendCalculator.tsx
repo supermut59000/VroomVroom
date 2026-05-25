@@ -14,7 +14,7 @@ import type { FlexfuelConversion, Vehicle, FuelEntry } from '@/types'
 // Fixed ethanol content by fuel type (fraction 0–1) — used for history only.
 const ETHANOL_FRACTION: Record<string, number> = {
   e85: 0.85,
-  essence: 0.05,
+  essence: 0.10,
   diesel: 0.0,
   gpl: 0.0,
   electrique: 0.0,

@@ -14,7 +14,7 @@ import type { FlexfuelConversion, Vehicle, FuelEntry } from '@/types'
 
 const ETHANOL_FRACTION: Record<string, number> = {
   e85: 0.85,
-  essence: 0.05,
+  essence: 0.10,
   diesel: 0.0,
   gpl: 0.0,
   electrique: 0.0,
@@ -38,57 +38,68 @@ export function EthanolHistoryChart({ conversion, vehicle, entries }: EthanolHis
       .filter((e) => e.fueling_date >= conversionDate)
       .sort((a, b) => {
         const d = a.fueling_date.localeCompare(b.fueling_date)
-        return d !== 0 ? d : a.id - b.id
+        if (d !== 0) return d
+        const odo = a.odometer_reading - b.odometer_reading
+        if (odo !== 0) return odo
+        return a.id - b.id
       })
 
     if (sorted.length === 0) return []
 
-    // Compute avgL100km (fill-to-fill method)
-    let prevFullOdo: number | null = null
+    // Fill-to-fill ethanol tracking.
+    // Entries sharing the same (date, odometer) are ONE stop: a booster + a top-up
+    // are pumped at the same pump, so their composition must be merged before
+    // computing the resulting tank %.
+    // Between two "Plein" stops, the sum of all liters added equals the fuel burned
+    // — no need to estimate via avgL100km. Old fuel still in tank when the new fill
+    // starts = capacity - sum_added (or 0 if added ≥ capacity, meaning the previous
+    // tank was fully displaced).
+    let ethFraction: number | null = null
     let accLiters = 0
-    const consumptionValues: number[] = []
-    for (const e of sorted) {
-      accLiters += e.liters
-      if (e.is_full_tank) {
-        if (prevFullOdo !== null) {
-          const dist = e.odometer_reading - prevFullOdo
-          if (dist > 0) consumptionValues.push((accLiters * 100) / dist)
-        }
-        prevFullOdo = e.odometer_reading
-        accLiters = 0
-      }
-    }
-    if (consumptionValues.length === 0) return []
-    const avgL100km = consumptionValues.reduce((a, b) => a + b, 0) / consumptionValues.length
-
-    // Walk fills, track ethanol %, record a point at each full fill
-    let litersInTank = 0
-    let ethanolLiters = 0
-    let prevOdo = sorted[0].odometer_reading
+    let accEthLiters = 0
     const points: { date: string; ethanolPct: number }[] = []
 
-    for (const e of sorted) {
-      const distance = Math.max(0, e.odometer_reading - prevOdo)
-      const consumed = (distance * avgL100km) / 100
-      const remaining = Math.min(Math.max(0, litersInTank - consumed), tankCapacity)
-      const ethFractionBefore = litersInTank > 0 ? ethanolLiters / litersInTank : 0
-      const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
+    let i = 0
+    while (i < sorted.length) {
+      const stopDate = sorted[i].fueling_date
+      const stopOdo = sorted[i].odometer_reading
+      let stopIsFull = false
 
-      if (e.is_full_tank) {
-        const actualRemaining = Math.min(remaining, Math.max(0, tankCapacity - e.liters))
-        litersInTank = tankCapacity
-        ethanolLiters = Math.min(ethFractionBefore * actualRemaining + e.liters * fillEthFraction, tankCapacity)
-      } else {
-        litersInTank = Math.min(remaining + e.liters, tankCapacity)
-        ethanolLiters = Math.min(ethFractionBefore * remaining + e.liters * fillEthFraction, litersInTank)
+      while (
+        i < sorted.length &&
+        sorted[i].fueling_date === stopDate &&
+        sorted[i].odometer_reading === stopOdo
+      ) {
+        const e = sorted[i]
+        const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
+        accLiters += e.liters
+        accEthLiters += e.liters * fillEthFraction
+        if (e.is_full_tank) stopIsFull = true
+        i++
       }
-      prevOdo = e.odometer_reading
 
-      if (e.is_full_tank) {
+      if (stopIsFull) {
+        if (ethFraction === null) {
+          // First full stop since conversion: assume residual pre-conversion fuel
+          // is negligible — tank composition = added composition.
+          ethFraction = accLiters > 0 ? accEthLiters / accLiters : 0
+        } else if (accLiters >= tankCapacity) {
+          // Added ≥ a full tank's worth between fulls: old fuel fully displaced.
+          ethFraction = accEthLiters / accLiters
+        } else {
+          // Some old fuel remains; mix old + new.
+          const remainingOldFuel = tankCapacity - accLiters
+          const totalEth = ethFraction * remainingOldFuel + accEthLiters
+          ethFraction = Math.min(totalEth / tankCapacity, 1)
+        }
+
         points.push({
-          date: new Date(e.fueling_date).toLocaleDateString('fr-FR'),
-          ethanolPct: Math.round((ethanolLiters / litersInTank) * 1000) / 10,
+          date: new Date(stopDate).toLocaleDateString('fr-FR'),
+          ethanolPct: Math.round(ethFraction * 1000) / 10,
         })
+
+        accLiters = 0
+        accEthLiters = 0
       }
     }
 
