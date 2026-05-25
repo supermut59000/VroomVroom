@@ -20,12 +20,28 @@ const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 export function RefuelingPatternChart({ entries }: Props) {
   // Only full-tank entries for distance calculation
   const fullEntries = useMemo(
-    () => [...entries].filter((e) => e.is_full_tank).sort((a, b) => a.odometer_reading - b.odometer_reading),
+    () =>
+      [...entries]
+        .filter((e) => e.is_full_tank)
+        .sort((a, b) => {
+          const odo = a.odometer_reading - b.odometer_reading
+          if (odo !== 0) return odo
+          const d = a.fueling_date.localeCompare(b.fueling_date)
+          if (d !== 0) return d
+          return a.id - b.id
+        }),
     [entries],
   )
 
   const allSorted = useMemo(
-    () => [...entries].sort((a, b) => a.odometer_reading - b.odometer_reading),
+    () =>
+      [...entries].sort((a, b) => {
+        const odo = a.odometer_reading - b.odometer_reading
+        if (odo !== 0) return odo
+        const d = a.fueling_date.localeCompare(b.fueling_date)
+        if (d !== 0) return d
+        return a.id - b.id
+      }),
     [entries],
   )
 

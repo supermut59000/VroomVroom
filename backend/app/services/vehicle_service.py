@@ -227,7 +227,14 @@ class VehicleService:
         entries = (
             self.db.query(FuelEntry)
             .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
-            .order_by(FuelEntry.fueling_date, FuelEntry.odometer_reading)
+            # Same (date, odometer) = one FlexFuel stop. Partial (booster) before full
+            # (top-up) so accumulation feeds the full's consumption calc, not the next one.
+            .order_by(
+                FuelEntry.fueling_date,
+                FuelEntry.odometer_reading,
+                FuelEntry.is_full_tank.asc(),
+                FuelEntry.id,
+            )
             .all()
         )
 

@@ -55,7 +55,10 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
     }
     return filtered.sort((a, b) => {
       const dateDiff = a.fueling_date.localeCompare(b.fueling_date)
-      return dateDiff !== 0 ? dateDiff : a.id - b.id
+      if (dateDiff !== 0) return dateDiff
+      const odoDiff = a.odometer_reading - b.odometer_reading
+      if (odoDiff !== 0) return odoDiff
+      return a.id - b.id
     })
   }, [allEntries, startDate, endDate])
 

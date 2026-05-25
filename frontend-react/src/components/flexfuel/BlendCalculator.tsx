@@ -62,49 +62,83 @@ function computeAvgConsumption(entries: FuelEntry[], conversionDate: string): nu
 function computeTankState(
   entries: FuelEntry[],
   conversionDate: string,
-  avgL100km: number,
   tankCapacity: number,
 ): TankState {
   const sorted = [...entries]
     .filter((e) => e.fueling_date >= conversionDate)
     .sort((a, b) => {
       const d = a.fueling_date.localeCompare(b.fueling_date)
-      return d !== 0 ? d : a.id - b.id
+      if (d !== 0) return d
+      const odo = a.odometer_reading - b.odometer_reading
+      if (odo !== 0) return odo
+      return a.id - b.id
     })
 
   if (sorted.length === 0) {
     return { litersInTank: 0, ethanolLiters: 0, lastOdo: 0 }
   }
 
-  let litersInTank = 0
-  let ethanolLiters = 0
-  let prevOdo = sorted[0].odometer_reading
+  // Exact fill-to-fill method (mirrors EthanolHistoryChart).
+  // Entries sharing (date, odometer) are one stop. Between two "Plein" stops,
+  // the sum of liters added equals fuel burned — no avgL100km estimation.
+  let ethFraction: number | null = null
+  let lastFullOdo: number | null = null
+  let accLiters = 0
+  let accEthLiters = 0
+  let lastSeenOdo = sorted[0].odometer_reading
 
-  for (const e of sorted) {
-    const distance = Math.max(0, e.odometer_reading - prevOdo)
-    const consumed = (distance * avgL100km) / 100
-    const remaining = Math.min(Math.max(0, litersInTank - consumed), tankCapacity)
-    const ethFractionBefore = litersInTank > 0 ? ethanolLiters / litersInTank : 0
-    const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
+  let i = 0
+  while (i < sorted.length) {
+    const stopDate = sorted[i].fueling_date
+    const stopOdo = sorted[i].odometer_reading
+    let stopIsFull = false
 
-    if (e.is_full_tank) {
-      const actualRemaining = Math.min(remaining, Math.max(0, tankCapacity - e.liters))
-      litersInTank = tankCapacity
-      ethanolLiters = Math.min(
-        ethFractionBefore * actualRemaining + e.liters * fillEthFraction,
-        tankCapacity,
-      )
-    } else {
-      litersInTank = Math.min(remaining + e.liters, tankCapacity)
-      ethanolLiters = Math.min(
-        ethFractionBefore * remaining + e.liters * fillEthFraction,
-        litersInTank,
-      )
+    while (
+      i < sorted.length &&
+      sorted[i].fueling_date === stopDate &&
+      sorted[i].odometer_reading === stopOdo
+    ) {
+      const e = sorted[i]
+      const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
+      accLiters += e.liters
+      accEthLiters += e.liters * fillEthFraction
+      if (e.is_full_tank) stopIsFull = true
+      i++
     }
-    prevOdo = e.odometer_reading
+    lastSeenOdo = stopOdo
+
+    if (stopIsFull) {
+      if (ethFraction === null) {
+        ethFraction = accLiters > 0 ? accEthLiters / accLiters : 0
+      } else if (accLiters >= tankCapacity) {
+        ethFraction = accEthLiters / accLiters
+      } else {
+        const remainingOldFuel = tankCapacity - accLiters
+        const totalEth = ethFraction * remainingOldFuel + accEthLiters
+        ethFraction = Math.min(totalEth / tankCapacity, 1)
+      }
+      lastFullOdo = stopOdo
+      accLiters = 0
+      accEthLiters = 0
+    }
   }
 
-  return { litersInTank, ethanolLiters, lastOdo: prevOdo }
+  // No full fill yet since conversion: fall back to whatever has been pumped.
+  if (ethFraction === null) {
+    if (accLiters > 0) {
+      return { litersInTank: accLiters, ethanolLiters: accEthLiters, lastOdo: lastSeenOdo }
+    }
+    return { litersInTank: 0, ethanolLiters: 0, lastOdo: 0 }
+  }
+
+  // Return state at last full. Trailing partials (post-last-full) are absorbed
+  // by the next full fill; in the rare case the user just added a lone partial,
+  // they should record an E85 fill to refresh the state.
+  return {
+    litersInTank: tankCapacity,
+    ethanolLiters: ethFraction * tankCapacity,
+    lastOdo: lastFullOdo ?? lastSeenOdo,
+  }
 }
 
 // ─── Reference thresholds ──────────────────────────────────────────────────
@@ -363,11 +397,8 @@ export function BlendCalculator({
   )
 
   const tankState = useMemo(
-    () =>
-      avgConsumption
-        ? computeTankState(entries, conversionDate, avgConsumption, tankCapacity)
-        : null,
-    [entries, conversionDate, avgConsumption, tankCapacity],
+    () => computeTankState(entries, conversionDate, tankCapacity),
+    [entries, conversionDate, tankCapacity],
   )
 
   const lastOdo = tankState?.lastOdo ?? 0
