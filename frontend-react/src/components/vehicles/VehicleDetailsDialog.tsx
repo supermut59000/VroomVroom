@@ -228,7 +228,9 @@ export function VehicleDetailsDialog({
                 const seasons = ['spring', 'summer', 'autumn', 'winter'] as const
                 const current = stats[currentSeason]
                 const baseRange = current?.range_km ?? stats.range_km
-                const isFlexFuel = !!(current?.e10_consumption)
+                // Flex if EITHER bucket has data this season (a season may be
+                // 100% E85 → e10_consumption is null but it's still FlexFuel)
+                const isFlexFuel = !!(current?.e85_consumption != null || current?.e10_consumption != null)
 
                 return (
                   <>
@@ -255,22 +257,36 @@ export function VehicleDetailsDialog({
                           </div>
                         )}
 
-                        {/* FlexFuel E10 / E85 split — computed by backend */}
+                        {/* FlexFuel split — measured average per dominant fuel of the segment
+                            (same formula as ConsumptionChart: distance-weighted L/100 of
+                            E85-dominant vs Essence-dominant fills) */}
                         {isFlexFuel && current && (
                           <div className="ml-6 grid grid-cols-2 gap-2 text-sm">
                             <div className="rounded-md border p-2 text-center">
-                              <div className="text-xs text-muted-foreground">Sur E10</div>
-                              <div className="font-semibold">~{Math.round(current.range_km_e10!)} km</div>
-                              <div className="text-xs text-muted-foreground">{current.e10_consumption?.toFixed(1)} L/100</div>
+                              <div className="text-xs text-muted-foreground">Pleins Essence</div>
+                              {current.e10_consumption != null ? (
+                                <>
+                                  <div className="font-semibold">~{Math.round(current.range_km_e10!)} km</div>
+                                  <div className="text-xs text-muted-foreground">{current.e10_consumption.toFixed(1)} L/100</div>
+                                </>
+                              ) : (
+                                <div className="text-xs text-muted-foreground py-1">—</div>
+                              )}
                             </div>
                             <div className="rounded-md border p-2 text-center">
-                              <div className="text-xs text-muted-foreground">Sur E85</div>
-                              <div className="font-semibold">~{Math.round(current.range_km_e85!)} km</div>
-                              <div className="text-xs text-muted-foreground">{current.e85_consumption?.toFixed(1)} L/100</div>
+                              <div className="text-xs text-muted-foreground">Pleins E85</div>
+                              {current.e85_consumption != null ? (
+                                <>
+                                  <div className="font-semibold">~{Math.round(current.range_km_e85!)} km</div>
+                                  <div className="text-xs text-muted-foreground">{current.e85_consumption.toFixed(1)} L/100</div>
+                                </>
+                              ) : (
+                                <div className="text-xs text-muted-foreground py-1">—</div>
+                              )}
                             </div>
                             {current.e85_fraction != null && (
                               <div className="col-span-2 text-xs text-muted-foreground text-center">
-                                Mix réel cette saison : {Math.round(current.e85_fraction * 100)}% E85 / {Math.round((1 - current.e85_fraction) * 100)}% E10
+                                Mix réel cette saison : {Math.round(current.e85_fraction * 100)}% E85 / {Math.round((1 - current.e85_fraction) * 100)}% Essence
                               </div>
                             )}
                           </div>

@@ -310,7 +310,6 @@ class VehicleService:
             return None
 
         result: dict[str, SeasonStats] = {}
-        opc = overconsumption_pct / 100 if overconsumption_pct is not None else None
 
         for season, data_points in season_buckets.items():
             if not data_points:
@@ -325,27 +324,25 @@ class VehicleService:
             avg_measured = (total_liters * 100) / total_km
             avg_e85_frac = total_e85_liters / total_liters
 
-            e10_consumption: Optional[float] = None
-            e85_consumption: Optional[float] = None
+            # Min/max raw measured — same metric as the line chart's points
+            min_conso = round(min(m for _, _, _, m in data_points), 2)
+            max_conso = round(max(m for _, _, _, m in data_points), 2)
 
-            if opc is not None:
-                # Per-segment normalisation
-                e10_per_seg = [m / (1 + opc * (e / l)) for _, l, e, m in data_points]
-                e85_per_seg = [v * (1 + opc) for v in e10_per_seg]
+            # Split by DOMINANT fuel of each segment — same logic as
+            # ConsumptionChart.tsx (e85_fraction > 0.5 → E85 bucket) so the
+            # numbers match exactly between the chart and the autonomy section.
+            # No normalisation; values are the actual measured L/100km on
+            # those fills.
+            e85_segs = [(d, l) for d, l, e, _ in data_points if (e / l) > 0.5]
+            ess_segs = [(d, l) for d, l, e, _ in data_points if (e / l) <= 0.5]
 
-                # Distance-weighted averages
-                e10_consumption = round(sum(
-                    (d / total_km) * v for (d, _, _, _), v in zip(data_points, e10_per_seg)
-                ), 2)
-                e85_consumption = round(e10_consumption * (1 + opc), 2)
+            def _weighted_avg(segs):
+                td = sum(d for d, _ in segs)
+                tl = sum(l for _, l in segs)
+                return round((tl * 100) / td, 2) if td > 0 else None
 
-                # Range band on E85-normalised values: removes the bias from
-                # transition segments where Essence was still in the tank
-                min_conso = round(min(e85_per_seg), 2)
-                max_conso = round(max(e85_per_seg), 2)
-            else:
-                min_conso = round(min(m for _, _, _, m in data_points), 2)
-                max_conso = round(max(m for _, _, _, m in data_points), 2)
+            e85_consumption = _weighted_avg(e85_segs)
+            e10_consumption = _weighted_avg(ess_segs)
 
             result[season] = SeasonStats(
                 avg_consumption=round(avg_measured, 2),
