@@ -224,79 +224,161 @@ export function VehicleDetailsDialog({
                 const m = new Date().getMonth() + 1
                 const currentSeason = m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'
                 const SEASON_LABELS = { spring: 'Printemps', summer: 'Été', autumn: 'Automne', winter: 'Hiver' } as const
-                const SEASON_SHORT  = { spring: 'Prin.',     summer: 'Été', autumn: 'Auto.',   winter: 'Hiver' } as const
                 const seasons = ['spring', 'summer', 'autumn', 'winter'] as const
                 const current = stats[currentSeason]
                 const baseRange = current?.range_km ?? stats.range_km
                 const isFlexFuel = !!(current?.e10_consumption)
 
+                // For per-season comparison bars, scale relative to the longest range across all seasons.
+                const maxSeasonRange = Math.max(
+                  ...seasons.map(s => stats[s]?.range_km ?? 0),
+                  1,
+                )
+                const bestSeason = seasons.reduce<{ s: typeof seasons[number] | null; v: number }>(
+                  (acc, s) => {
+                    const v = stats[s]?.range_km ?? 0
+                    return v > acc.v ? { s, v } : acc
+                  },
+                  { s: null, v: 0 },
+                )
+
+                // For the current-season min/max band: marker position = avg within [min,max]
+                let avgMarkerPct = 50
+                if (
+                  current?.avg_consumption != null &&
+                  current?.min_consumption != null &&
+                  current?.max_consumption != null &&
+                  current.max_consumption > current.min_consumption
+                ) {
+                  // High consumption = low km = left side; low consumption = right side.
+                  // Pct from min (best, right) to max (worst, left):
+                  const pct =
+                    ((current.max_consumption - current.avg_consumption) /
+                      (current.max_consumption - current.min_consumption)) * 100
+                  avgMarkerPct = Math.max(2, Math.min(98, pct))
+                }
+
                 return (
                   <>
                     <Separator />
                     <section>
-                      <h4 className="mb-2 text-sm font-semibold text-muted-foreground">
+                      <h4 className="mb-3 text-sm font-semibold text-muted-foreground">
                         Autonomie estimée
                       </h4>
-                      <div className="space-y-3">
-                        {/* Current season headline */}
-                        <div className="flex items-center gap-2 text-sm">
-                          <Navigation className="h-4 w-4 shrink-0 text-muted-foreground" />
-                          <span className="text-muted-foreground">{SEASON_LABELS[currentSeason]} (saison actuelle) :</span>
-                          <span className="font-semibold">~{Math.round(baseRange!)} km</span>
+
+                      {/* Current season hero card */}
+                      <div className="rounded-lg border bg-muted/30 p-4">
+                        <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+                          <Navigation className="h-3.5 w-3.5" />
+                          {SEASON_LABELS[currentSeason]} · saison actuelle
+                        </div>
+                        <div className="mt-1 flex items-baseline gap-2">
+                          <span className="text-3xl font-bold">~{Math.round(baseRange!)}</span>
+                          <span className="text-sm text-muted-foreground">km</span>
+                          {current?.avg_consumption != null && (
+                            <span className="ml-auto text-xs text-muted-foreground">
+                              moy. {current.avg_consumption.toFixed(1)} L/100
+                            </span>
+                          )}
                         </div>
 
-                        {/* Range band: worst → best conditions */}
+                        {/* Min/Max range band with avg marker */}
                         {current?.range_km_worst != null && current?.range_km_best != null && (
-                          <div className="ml-6 text-xs text-muted-foreground">
-                            De <span className="font-medium text-foreground">~{Math.round(current.range_km_worst)} km</span>
-                            {' '}(ville) à{' '}
-                            <span className="font-medium text-foreground">~{Math.round(current.range_km_best)} km</span>
-                            {' '}(route) · moy. {current.avg_consumption?.toFixed(1)} L/100
+                          <div className="mt-4">
+                            <div className="relative h-2 rounded-full bg-gradient-to-r from-orange-400/40 via-yellow-400/40 to-emerald-400/40">
+                              <div
+                                className="absolute top-1/2 h-3 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground"
+                                style={{ left: `${avgMarkerPct}%` }}
+                              />
+                            </div>
+                            <div className="mt-1 flex justify-between text-[11px] text-muted-foreground">
+                              <span>~{Math.round(current.range_km_worst)} km<br /><span className="opacity-70">conduite gourmande</span></span>
+                              <span className="text-right">~{Math.round(current.range_km_best)} km<br /><span className="opacity-70">conduite économe</span></span>
+                            </div>
                           </div>
                         )}
+                      </div>
 
-                        {/* FlexFuel E10 / E85 split — computed by backend */}
-                        {isFlexFuel && current && (
-                          <div className="ml-6 grid grid-cols-2 gap-2 text-sm">
+                      {/* FlexFuel E10 / E85 split + mix bar */}
+                      {isFlexFuel && current && (
+                        <div className="mt-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
                             <div className="rounded-md border p-2 text-center">
                               <div className="text-xs text-muted-foreground">Sur E10</div>
-                              <div className="font-semibold">~{Math.round(current.range_km_e10!)} km</div>
+                              <div className="text-lg font-semibold">~{Math.round(current.range_km_e10!)} km</div>
                               <div className="text-xs text-muted-foreground">{current.e10_consumption?.toFixed(1)} L/100</div>
                             </div>
                             <div className="rounded-md border p-2 text-center">
                               <div className="text-xs text-muted-foreground">Sur E85</div>
-                              <div className="font-semibold">~{Math.round(current.range_km_e85!)} km</div>
+                              <div className="text-lg font-semibold">~{Math.round(current.range_km_e85!)} km</div>
                               <div className="text-xs text-muted-foreground">{current.e85_consumption?.toFixed(1)} L/100</div>
                             </div>
-                            {current.e85_fraction != null && (
-                              <div className="col-span-2 text-xs text-muted-foreground text-center">
-                                Mix réel cette saison : {Math.round(current.e85_fraction * 100)}% E85 / {Math.round((1 - current.e85_fraction) * 100)}% E10
-                              </div>
-                            )}
                           </div>
-                        )}
+                          {current.e85_fraction != null && (
+                            <div>
+                              <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+                                <span>Mix réel cette saison</span>
+                                <span>
+                                  <span className="text-emerald-600 font-medium">{Math.round(current.e85_fraction * 100)}% E85</span>
+                                  {' · '}
+                                  <span className="text-orange-600 font-medium">{Math.round((1 - current.e85_fraction) * 100)}% Essence</span>
+                                </span>
+                              </div>
+                              <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+                                <div
+                                  className="bg-emerald-500"
+                                  style={{ width: `${current.e85_fraction * 100}%` }}
+                                />
+                                <div
+                                  className="bg-orange-500"
+                                  style={{ width: `${(1 - current.e85_fraction) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                        {/* 4-season grid */}
-                        <div className="grid grid-cols-4 gap-1.5 pt-1 text-xs">
+                      {/* 4-season comparison */}
+                      <div className="mt-3">
+                        <div className="mb-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+                          <span>Comparaison saisonnière</span>
+                          {bestSeason.s && (
+                            <span>
+                              Meilleure : <span className="text-foreground font-medium">{SEASON_LABELS[bestSeason.s]}</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                           {seasons.map(s => {
                             const ss = stats[s]
                             const isCurrent = s === currentSeason
+                            const widthPct = ss?.range_km != null ? (ss.range_km / maxSeasonRange) * 100 : 0
                             return (
                               <div
                                 key={s}
-                                className={`rounded-md border p-2 text-center ${isCurrent ? 'border-primary bg-primary/5 font-semibold' : 'text-muted-foreground'}`}
+                                className={`rounded-md border p-2 ${isCurrent ? 'border-primary bg-primary/5' : ''}`}
                               >
-                                <div className="text-[11px]">{SEASON_SHORT[s]}</div>
-                                <div className="mt-0.5">{ss?.range_km != null ? `~${Math.round(ss.range_km)} km` : '—'}</div>
-                                <div className="mt-0.5 opacity-70">{ss?.avg_consumption != null ? `${ss.avg_consumption.toFixed(1)} L/100` : ''}</div>
-                                {ss?.range_km_worst != null && ss?.range_km_best != null && (
-                                  <div className="mt-0.5 opacity-50 text-[10px]">
-                                    {Math.round(ss.range_km_worst)}–{Math.round(ss.range_km_best)}
-                                  </div>
-                                )}
-                                {isFlexFuel && ss?.fill_count != null && (
-                                  <div className="mt-0.5 opacity-50">{ss.fill_count} plein{ss.fill_count !== 1 ? 's' : ''}</div>
-                                )}
+                                <div className="flex items-baseline justify-between">
+                                  <span className={`text-xs ${isCurrent ? 'font-semibold' : 'text-muted-foreground'}`}>
+                                    {SEASON_LABELS[s]}
+                                  </span>
+                                  {ss?.fill_count != null && ss.fill_count > 0 && (
+                                    <span className="text-[10px] text-muted-foreground">{ss.fill_count} pl.</span>
+                                  )}
+                                </div>
+                                <div className="mt-0.5 text-sm font-semibold">
+                                  {ss?.range_km != null ? `~${Math.round(ss.range_km)} km` : '—'}
+                                </div>
+                                <div className="text-[11px] text-muted-foreground">
+                                  {ss?.avg_consumption != null ? `${ss.avg_consumption.toFixed(1)} L/100` : ' '}
+                                </div>
+                                <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-muted">
+                                  <div
+                                    className={`h-full ${isCurrent ? 'bg-primary' : 'bg-muted-foreground/40'}`}
+                                    style={{ width: `${widthPct}%` }}
+                                  />
+                                </div>
                               </div>
                             )
                           })}
