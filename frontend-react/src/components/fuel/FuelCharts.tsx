@@ -142,7 +142,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <ErrorBoundary>
             <ConsumptionChart
               dataPoints={filteredConsumptionData}
-              overconsumptionPct={flexfuelConversion?.overconsumption_pct ?? null}
+              splitByFuelType={!!flexfuelConversion}
               avgConsumption={vehicleStats?.average_consumption ?? null}
             />
           </ErrorBoundary>
