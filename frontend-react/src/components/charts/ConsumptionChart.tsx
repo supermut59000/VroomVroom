@@ -92,10 +92,13 @@ export function ConsumptionChart({
   const showSplit = splitByFuelType && hasE85 && hasEssence
 
   const subtitle = showSplit
-    ? `Moyenne E85 ${avg.e85.toFixed(2)} L/100 · Moyenne Essence ${avg.essence.toFixed(2)} L/100`
+    ? `Essence ${avg.essence.toFixed(2)} L/100 · E85 ${avg.e85.toFixed(2)} L/100`
     : avgConsumption != null && avgConsumption > 0
     ? `Moyenne : ${avgConsumption.toFixed(2)} L/100km`
     : null
+
+  const lastPoint = chartData[chartData.length - 1]
+  const lastIsE85 = lastPoint && (lastPoint.e85_fraction ?? 0) > 0.5
 
   return (
     <Card>
@@ -103,6 +106,16 @@ export function ConsumptionChart({
         <CardTitle className="text-base">Consommation (L/100km)</CardTitle>
         {subtitle && (
           <p className="text-sm font-normal text-muted-foreground">{subtitle}</p>
+        )}
+        {lastPoint && (
+          <p className="text-xs font-normal text-muted-foreground">
+            Dernier plein :{' '}
+            <span className="font-semibold text-foreground">
+              {lastPoint.measured.toFixed(2)} L/100
+            </span>
+            {' '}({lastPoint.date}
+            {showSplit ? ` · ${lastIsE85 ? 'E85' : 'Essence'}` : ''})
+          </p>
         )}
       </CardHeader>
       <CardContent>
@@ -136,7 +149,7 @@ export function ConsumptionChart({
                 stroke="hsl(142, 71%, 45%)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
+                activeDot={{ r: 8, strokeWidth: 2 }}
                 connectNulls
               />
             )}
@@ -148,7 +161,7 @@ export function ConsumptionChart({
                 stroke="hsl(25, 95%, 53%)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
+                activeDot={{ r: 8, strokeWidth: 2 }}
                 connectNulls
               />
             )}
@@ -171,7 +184,7 @@ export function ConsumptionChart({
                 stroke="hsl(173, 58%, 39%)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
+                activeDot={{ r: 8, strokeWidth: 2 }}
               />
             )}
             {!showSplit && avgConsumption != null && avgConsumption > 0 && (
