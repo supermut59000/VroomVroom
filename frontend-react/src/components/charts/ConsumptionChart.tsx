@@ -151,48 +151,53 @@ export function ConsumptionChart({
             />
             {isFlexfuel && <Legend />}
 
-            {isFlexfuel ? (
-              <>
-                <Line
-                  type="monotone"
-                  dataKey="e10Norm"
-                  name="E10 (norm.)"
-                  stroke="hsl(217, 91%, 60%)"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                />
-                <Line
-                  type="monotone"
-                  dataKey="e85Norm"
-                  name="E85 (norm.)"
-                  stroke="hsl(142, 71%, 45%)"
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                />
-                <ReferenceLine y={avg.e10} stroke="hsl(217, 91%, 60%)" strokeDasharray="5 5" />
-                <ReferenceLine y={avg.e85} stroke="hsl(142, 71%, 45%)" strokeDasharray="5 5" />
-              </>
-            ) : (
-              <>
-                <Line
-                  type="monotone"
-                  dataKey="measured"
-                  name="Consommation"
-                  stroke="hsl(173, 58%, 39%)"
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-                <ReferenceLine
-                  y={referenceMeasured}
-                  stroke="hsl(0, 72%, 51%)"
-                  strokeDasharray="5 5"
-                />
-              </>
+            {isFlexfuel && (
+              <Line
+                type="monotone"
+                dataKey="e10Norm"
+                name="E10 (norm.)"
+                stroke="hsl(217, 91%, 60%)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+                connectNulls
+              />
+            )}
+            {isFlexfuel && (
+              <Line
+                type="monotone"
+                dataKey="e85Norm"
+                name="E85 (norm.)"
+                stroke="hsl(142, 71%, 45%)"
+                strokeWidth={2}
+                dot={{ r: 3 }}
+                activeDot={{ r: 5 }}
+                connectNulls
+              />
+            )}
+            {isFlexfuel && (
+              <ReferenceLine y={avg.e10} stroke="hsl(217, 91%, 60%)" strokeDasharray="5 5" />
+            )}
+            {isFlexfuel && (
+              <ReferenceLine y={avg.e85} stroke="hsl(142, 71%, 45%)" strokeDasharray="5 5" />
+            )}
+            {!isFlexfuel && (
+              <Line
+                type="monotone"
+                dataKey="measured"
+                name="Consommation"
+                stroke="hsl(173, 58%, 39%)"
+                strokeWidth={2}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            )}
+            {!isFlexfuel && (
+              <ReferenceLine
+                y={referenceMeasured}
+                stroke="hsl(0, 72%, 51%)"
+                strokeDasharray="5 5"
+              />
             )}
           </LineChart>
         </ResponsiveContainer>

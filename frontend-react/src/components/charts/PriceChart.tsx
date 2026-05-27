@@ -129,48 +129,47 @@ export function PriceChart({ entries, splitByFuelType = false }: PriceChartProps
             />
             {showSplit && <Legend formatter={(v: string) => FUEL_LABEL[v] ?? v} />}
 
-            {showSplit ? (
-              <>
-                {fuelTypes.map((ft) => (
-                  <Line
-                    key={ft}
-                    type="monotone"
-                    dataKey={ft}
-                    name={ft}
-                    stroke={FUEL_COLOR[ft] ?? 'hsl(0, 0%, 50%)'}
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                    activeDot={{ r: 6 }}
-                    connectNulls
-                  />
-                ))}
-                {fuelTypes.map((ft) => (
-                  <ReferenceLine
-                    key={`avg-${ft}`}
-                    y={averages[ft]}
-                    stroke={FUEL_COLOR[ft] ?? 'hsl(0, 0%, 50%)'}
-                    strokeDasharray="5 5"
-                  />
-                ))}
-              </>
-            ) : (
-              <>
+            {showSplit &&
+              fuelTypes.map((ft) => (
                 <Line
+                  key={ft}
                   type="monotone"
-                  dataKey={fuelTypes[0]}
-                  name={fuelTypes[0]}
-                  stroke="hsl(25, 95%, 53%)"
+                  dataKey={ft}
+                  name={ft}
+                  stroke={FUEL_COLOR[ft] ?? 'hsl(0, 0%, 50%)'}
                   strokeWidth={2}
                   dot={{ r: 4 }}
                   activeDot={{ r: 6 }}
                   connectNulls
                 />
+              ))}
+            {showSplit &&
+              fuelTypes.map((ft) => (
                 <ReferenceLine
-                  y={averages[fuelTypes[0]] ?? 0}
-                  stroke="hsl(0, 72%, 51%)"
+                  key={`avg-${ft}`}
+                  y={averages[ft]}
+                  stroke={FUEL_COLOR[ft] ?? 'hsl(0, 0%, 50%)'}
                   strokeDasharray="5 5"
                 />
-              </>
+              ))}
+            {!showSplit && (
+              <Line
+                type="monotone"
+                dataKey={fuelTypes[0]}
+                name={fuelTypes[0]}
+                stroke="hsl(25, 95%, 53%)"
+                strokeWidth={2}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+                connectNulls
+              />
+            )}
+            {!showSplit && (
+              <ReferenceLine
+                y={averages[fuelTypes[0]] ?? 0}
+                stroke="hsl(0, 72%, 51%)"
+                strokeDasharray="5 5"
+              />
             )}
           </LineChart>
         </ResponsiveContainer>
