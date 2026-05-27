@@ -241,6 +241,18 @@ class VehicleService:
             FuelEntry.id,
         ).all()
 
+        if from_date is not None and entries:
+            # The anchor for fill-to-fill MUST be a full tank, otherwise the first
+            # computed segment uses an artificially short distance (partial → next
+            # Plein) but counts liters that actually covered the trip from the
+            # previous — now excluded — Plein. Drop everything until the first
+            # full tank on/after from_date.
+            first_full_idx = next(
+                (i for i, e in enumerate(entries) if getattr(e, "is_full_tank", True)),
+                None,
+            )
+            entries = entries[first_full_idx:] if first_full_idx is not None else []
+
         def month_to_season(month: int) -> str:
             if month in (3, 4, 5):
                 return "spring"
