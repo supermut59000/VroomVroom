@@ -1,7 +1,7 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-05-12
+Last updated: 2026-05-27
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
@@ -203,44 +203,54 @@ Computed in `flexfuel_service.py`. Excludes the current month from the average s
 **Ethanol content by fuel type**: E85 = 85%, E10 = 10%, SP95 = 5%, diesel/GPL/electric = 0%.
 For 'essence' fills in history: uses the dilutant fraction the user selects at calculation time (E10 or SP95).
 
-**Tank state computation** (fill-by-fill, from the full fill history):
+**Tank state computation — exact fill-to-fill method** (rewritten 2026-05-27, mirrors EthanolHistoryChart):
+
+The previous method used `avgL100km` to *estimate* fuel burned between fills and forced `litersInTank = tankCapacity` on every Plein. When actual trip consumption diverged from the global average, the missing liters became 0%-ethanol "ghost fuel" that biased the tank % downward by ~5pp on every full fill. Replaced with the exact method below.
+
 ```
-state = { litersInTank: 0, ethanolLiters: 0, prevOdo: firstFill.odo }
+Sort entries by (fueling_date, odometer_reading, is_full_tank ASC, id)
+  ← is_full_tank ASC puts Partiel before Plein at the same stop, so a booster
+    paired with a top-up at the same pump gets accumulated INTO the Plein's
+    composition rather than leaking into the next segment.
 
-for each fill sorted by (fueling_date ASC, id ASC):
-  distance       = max(0, fill.odo - prevOdo)
-  consumed       = distance × avgL100km / 100
-  remaining      = min(max(0, litersInTank - consumed), tankCapacity)
-  ethFrac        = litersInTank > 0 ? ethanolLiters / litersInTank : 0
+Group consecutive entries sharing (date, odometer) into one logical "stop".
+  ← E85 8.64 L Plein + Essence 5.72 L Partiel at the same pump = one stop with
+    accLiters = 14.36 L and accEthLiters = 0.572 + 7.344 = 7.92 L
 
-  if fill.is_full_tank:
-    # Physical constraint: at most (tankCapacity - fill.liters) was left before fill.
-    # Take min(model estimate, physical bound) to prevent drift from inflating ethanol%
-    # above the 85% physical max, while still preserving a prior partial fill logged at
-    # the same odometer (e.g. 5 L E10 just before 40 L E85).
-    actualRemaining  = min(remaining, max(0, tankCapacity - fill.liters))
-    litersInTank     = tankCapacity
-    ethanolLiters    = min(ethFrac × actualRemaining + fill.liters × ethanolFrac(fill.fuel_type), tankCapacity)
-  else:
-    litersInTank     = min(remaining + fill.liters, tankCapacity)
-    ethanolLiters    = min(ethFrac × remaining + fill.liters × ethanolFrac(fill.fuel_type), litersInTank)
+ethFraction = null            ← running tank ethanol fraction (0..1)
+accLiters, accEthLiters = 0   ← accumulator between two Plein stops
 
-  prevOdo = fill.odo
+for each stop in physical order:
+  if stop is Plein (any entry in the group has is_full_tank=true):
+    if ethFraction is null:                    # very first Plein since conversion
+      ethFraction = accEthLiters / accLiters   # tank composition = added composition
+    elif accLiters >= tankCapacity:             # added ≥ a full tank → old fuel displaced
+      ethFraction = accEthLiters / accLiters
+    else:                                       # mix remaining old fuel + new fill
+      remainingOldFuel = tankCapacity - accLiters
+      totalEth = ethFraction × remainingOldFuel + accEthLiters
+      ethFraction = min(totalEth / tankCapacity, 1)
+
+    accLiters, accEthLiters = 0                 # reset accumulators
+
+  # Partiel-only stops: just accumulate, they'll fold into the next Plein
+
+return { litersInTank: tankCapacity, ethanolLiters: ethFraction × tankCapacity, lastOdo: lastPleinOdo }
 ```
 
-**Ethanol fractions used** (fixed constants — E85 at pump in France varies 60–85% by season, 85% is a conservative upper bound):
+**Key properties:**
+- No `avgL100km` dependency: between two Plein stops, the sum of liters added IS the fuel burned. Exact, not estimated.
+- Order of partial vs full at the same odometer doesn't matter — they're merged into one stop's accumulator before the Plein triggers the calculation.
+- Trailing Partiels after the last Plein get absorbed by the next Plein. Rare edge case: if history ends on a lone Partiel, the returned state reflects the last Plein (the Partiel is ignored until the next full fill is logged).
+
+**Ethanol fractions used** (fixed constants):
 ```
-e85       → 0.85
-essence   → 0.05  (SP95 assumed for historical fills)
-e10       → 0.10  (dilutant selected at recommendation time, not stored on fill)
+e85       → 0.85   (E85 at French pumps varies 60–85% seasonally; 85% is the conservative upper bound)
+essence   → 0.10   (SP95-E10 is the default French unleaded since 2009 — UPDATED 2026-05-27 from 0.05)
+e10       → 0.10   (dilutant selected at recommendation time)
+sp95      → 0.05   (only used as dilutant selector option, not as fuel_type in history)
 diesel / gpl / electrique / hybride → 0.00
 ```
-
-**Why `min(remaining, tankCapacity - fill.liters)` on full fills:**
-- Model overestimates remaining (e.g. 5 L) but only 1 L was physically there → without fix: `5×80% + 44×85% = 41.4 L / 45 L = 92%` (impossible). With fix: `1×80% + 44×85% = 38.4 L / 45 L = 85.3%` ✓
-- E10 partial + E85 full at same odometer: model says 5 L remaining (the E10 we just logged, consumed=0). `actualRemaining = min(5, 45−40) = 5 L` → E10 contribution preserved ✓
-- User over-logs E85 (45 L in 45 L tank): `actualRemaining = min(5, 0) = 0` → E10 contribution lost, but this is a data entry issue (5+45 > 45 L is physically impossible)
-`avgL100km` is computed client-side from the same fill history using fill-to-fill method (accumulate partials until next full tank, divide total liters by distance).
 
 **Two reference km thresholds** shown at top of dialog (no input needed):
 ```
@@ -282,16 +292,16 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 **Purpose**: line chart showing estimated ethanol % in the tank after each full fill, over time. Allows tracking whether the blending strategy is keeping ethanol within the target band.
 
-**Data**: one point per `is_full_tank=true` fill, computed using the exact same tank state algorithm as BlendCalculator (same `ETHANOL_FRACTION` constants, same `avgL100km`, same `actualRemaining` formula).
+**Data**: one point per logical "stop" that contains at least one `is_full_tank=true` entry. Uses the exact fill-to-fill method (see BlendCalculator section above) — same algorithm, same `ETHANOL_FRACTION` constants. No `avgL100km` dependency.
 
 **Reference lines**:
-- Teal dashed: `target_ethanol_pct` (77% default)
+- Teal dashed: `target_ethanol_pct` (70% default)
 - Orange dashed: `target + tolerance` and `target - tolerance` (±5% default)
 
-**Gotcha — `tank_capacity` must be the real physical capacity** (réservoir + réserve), not the manufacturer's "usable" spec:
-- A Corsa E is listed as 45 L but can physically hold ~50 L (the light comes on with ~5 L left)
-- If `tank_capacity = 45` but user fills 45 L of E85 from reserve (5 L left), `tankCapacity - fill.liters = 0` → `actualRemaining = 0` → E10 partial fill contribution is lost → chart shows ~85% instead of the real ~78%
-- Fix: set `tank_capacity` to the observed fill-to-click-off value from near-empty (e.g. 50 L)
+**Gotcha — `tank_capacity` should match real physical capacity** (réservoir + réserve):
+- A Corsa E is listed as 45 L but can physically hold ~50 L (the warning light comes on with ~5 L left)
+- With the new method, if the user fills more than `tank_capacity` between two Plein stops (e.g. 50 L pumped but capacity is set to 45), the algorithm assumes old fuel is fully displaced (`accLiters >= tankCapacity` branch). The previous Plein's ethanol contribution is lost, biasing the result toward the just-added composition.
+- Fix: set `tank_capacity` to the observed fill-to-click-off value from near-empty (e.g. 50 L for a Corsa E).
 
 ### PWA / Offline
 - Service worker: network-first for API, cache-first for assets and map tiles
@@ -354,6 +364,38 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 - **No rate limiting**: acceptable for single-user homelab
 - **Offline queue stored in localStorage**: acceptable since only user is the owner
 - **CSP/HSTS headers**: handle at reverse proxy level (Nginx/Traefik), not in app
+
+---
+
+## Session log — 2026-05-27
+
+### Consumption pipeline — deterministic sort + exact fill-to-fill rewrite
+
+Three connected bugs found while investigating why `MonthlyCostChart` (€/100km mode) showed ~5 €/100km for FlexFuel stops when real cost was ~7 €/100km, and why `EthanolHistoryChart` drifted from ~85% down to ~67% even on pure-E85 fills.
+
+**Bug 1 — MonthlyCostChart €/100km dropped Essence booster costs** (`frontend-react/src/components/charts/MonthlyCostChart.tsx`):
+- Loop used `if (distance <= 0) continue` which skipped BOTH the distance contribution AND the cost when two entries shared the same odometer.
+- Fix: split the guard. Distance gate still applies (`if (distance > 0) add to monthlyDistance`), but cost is always added to `monthlyFuelCost`. Same-odo booster (5L Essence @ 2€/L) now correctly counts in the numerator.
+
+**Bug 2 — EthanolHistoryChart "ghost fuel" drift** (`frontend-react/src/components/charts/EthanolHistoryChart.tsx`):
+- Algorithm used global `avgL100km` to estimate fuel burned between fills, then forced `litersInTank = tankCapacity` on every Plein. The gap between actual and estimated consumption was filled with implicit 0%-ethanol "ghost fuel", systematically biasing every full fill's % downward by ~5pp.
+- Fix: rewrote with exact fill-to-fill method. Between two Plein stops, sum of liters added = fuel burned. Group entries sharing (date, odometer) as one logical stop. Sort tiebreaker is now `(date, odometer, id)`.
+- Also: changed `essence` ethanol fraction from 0.05 to 0.10 (French SP95-E10 is the standard unleaded since 2009).
+
+**Bug 3 — Backend non-deterministic sort for FlexFuel stops** (`backend/app/services/fuel_service.py`, `vehicle_service.py`):
+- `get_fuel_statistics_by_vehicle`, `get_consumption_history`, `_compute_seasonal_consumption` all used the fill-to-fill pattern (accumulate Partiels until next Plein triggers consumption calc), but ordered only by odometer (or `(date, odometer)`). When E85 (Plein) and Essence (Partiel) shared the same odometer, the insertion order determined whether the booster joined the current segment or leaked into the next, inflating the next segment's L/100km non-deterministically.
+- Fix: all three methods now order by `(fueling_date, odometer_reading, is_full_tank ASC, id)`. The `is_full_tank ASC` puts Partiel (false) before Plein (true) at the same stop, so the booster is always accumulated INTO the Plein's calc.
+
+**Tier 2 — Ported exact fill-to-fill method to BlendCalculator** (`frontend-react/src/components/flexfuel/BlendCalculator.tsx`):
+- `computeTankState` rewritten to mirror EthanolHistoryChart. Removed `avgL100km` parameter — the function no longer estimates between-fill consumption. Returns state at the last Plein. The BlendCalculator's *forward-looking* logic (km until odoA/odoB, blend recommendations) still uses `avgL100km` for projections, but the historical tank state is now exact.
+
+**Tier 3 — Sort polish on remaining charts**:
+- `RefuelingPatternChart.tsx`: `(odometer, date, id)` tiebreakers added.
+- `FuelCharts.tsx` `filteredEntries`: added `odometer` to the `(date, id)` sort.
+
+**Concrete impact on user's data**: ethanol % chart values shifted up by ~5pp across the board (ghost fuel removed). FlexFuel stop on 25/05/2026 went from 67% (wrong) to 72.9% (correct, matching real physics of 50 L tank with 14.36 L of mixed fuel added at known composition).
+
+**Commits**: `e450942` (MonthlyCostChart), `1219500` (EthanolHistoryChart + essence 10%), `8b37df4` (backend sort + BlendCalculator port + sort polish).
 
 ---
 

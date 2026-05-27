@@ -1,6 +1,6 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-05-12
+Last updated: 2026-05-27
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — full endpoint/schema/service reference | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
@@ -203,6 +203,41 @@ VroomVroom/
 ├── docker-compose.prod.yml         # Prod (remote DB only)
 └── CLAUDE.md                       # Full reference for AI
 ```
+
+---
+
+## What Was Done (Session of 2026-05-27)
+
+### Consumption pipeline rewrite — exact fill-to-fill, deterministic sort
+
+User flagged that `MonthlyCostChart` (€/100km mode) was reporting ~5 €/100km after FlexFuel conversion (expected ~7), and that `EthanolHistoryChart` had drifted from ~85% down to ~67% even on pure-E85 fills. Investigation surfaced three connected bugs in the consumption pipeline.
+
+**Bug 1 — MonthlyCostChart dropped Essence booster costs** (`charts/MonthlyCostChart.tsx`):
+- The €/100km loop did `if (distance <= 0) continue`, skipping both distance and cost when two entries shared the same odometer (typical FlexFuel stop: E85 Plein + Essence booster at same pump).
+- Fix: split the guard — distance gate stays (`if (distance > 0)`), cost is always added. Same-odo booster cost now counts.
+- Commit: `e450942`.
+
+**Bug 2 — EthanolHistoryChart "ghost fuel" drift** (`charts/EthanolHistoryChart.tsx`):
+- Old algorithm used global `avgL100km` to estimate fuel burned between fills, then forced `litersInTank = tankCapacity` on every Plein. When estimated consumption < actual, the gap was implicit 0%-ethanol "ghost fuel" — biasing every full fill ~5pp downward.
+- Fix: rewrote with exact fill-to-fill. Between two Plein stops, sum of liters added = fuel burned (measured, not estimated). Group entries sharing (date, odometer) as one logical stop. Sort tiebreaker `(date, odometer, id)`.
+- Also: `essence` ethanol fraction 0.05 → 0.10 (French SP95-E10 is the default unleaded since 2009).
+- User's chart values shifted up by ~5pp across the board after deploy, landing near the 70% target band.
+- Commit: `1219500`.
+
+**Bug 3 — Backend non-deterministic sort for FlexFuel stops** (`backend/app/services/{fuel,vehicle}_service.py`):
+- `get_fuel_statistics_by_vehicle`, `get_consumption_history`, `_compute_seasonal_consumption` all use a fill-to-fill pattern (accumulate Partiels until next Plein triggers consumption calc) but ordered only by odometer (or `(date, odometer)`). When Partiel and Plein shared the same odometer, insertion order decided whether the booster joined the current segment or leaked into the next.
+- Fix: all three now sort by `(fueling_date, odometer_reading, is_full_tank ASC, id)`. The `is_full_tank ASC` puts Partiel (false) before Plein (true) at the same stop.
+
+**Tier 2 — Ported exact method to BlendCalculator** (`flexfuel/BlendCalculator.tsx`):
+- `computeTankState` rewritten to mirror the new chart algorithm. Removed `avgL100km` parameter from its signature — exact method doesn't need estimation. Returns state at the last Plein. The forward-looking blend recommendations still use `avgL100km` for projections (km until odoA/odoB), but the historical state is now exact.
+
+**Tier 3 — Sort polish on remaining charts**:
+- `RefuelingPatternChart.tsx`: added `(odometer, date, id)` tiebreakers.
+- `FuelCharts.tsx` `filteredEntries`: added `odometer` to the `(date, id)` sort.
+
+**Commit**: `8b37df4` (covers Tiers 1-3).
+
+**Note on previous BlendCalculator fixes (2026-04-13 session below)**: the "`actualRemaining = min(remaining, tankCapacity - fill.liters)`" patch is superseded — the new exact method doesn't need that physical-bound clamp because it never inflates `litersInTank` past the genuinely-known fill amount.
 
 ---
 

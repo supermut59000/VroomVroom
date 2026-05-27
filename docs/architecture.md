@@ -345,11 +345,17 @@ Validators: `liters > 0`, `price_per_liter > 0`, `odometer_reading >= 0`.
 
 ### Consumption (fill-to-fill method)
 ```
+Sort entries by (fueling_date, odometer_reading, is_full_tank ASC, id)
+  ← is_full_tank ASC puts Partiel before Plein at the same odometer, so a
+    FlexFuel booster paired with a top-up at the same pump accumulates INTO
+    the Plein's consumption calc rather than leaking into the next segment.
+
 For each full-tank entry (except first):
-  accumulated_liters = sum of liters from previous full-tank (including partials)
+  accumulated_liters = sum of liters since previous full-tank (including partials)
   distance = current_odometer - previous_full_tank_odometer
   consumption = (accumulated_liters * 100) / distance
 ```
+Applies to `FuelService.get_fuel_statistics_by_vehicle`, `FuelService.get_consumption_history`, and `VehicleService._compute_seasonal_consumption`.
 
 ### Vehicle Range
 ```
@@ -375,11 +381,23 @@ savings_per_fill = e10_equivalent_cost - actual_e85_cost
 
 ### Blend Calculator (ethanol % in tank)
 ```
-ethanol_fraction_in_tank = ethanol_liters / remaining_liters
-Dilutant needed: x = (target * (remaining + T) - ethanol_liters - 0.85 * T) / (dilutant_fraction - 0.85)
-E85 to add: y = tank_capacity - remaining - x
-Minimum pump constraint (France): x >= 5L (rounds to 5 if x_ideal < 5)
+Tank state from history (exact fill-to-fill, no avgL100km estimation):
+  Group entries sharing (date, odometer) as one logical "stop".
+  Accumulate (liters, ethanol_liters) between two Plein stops.
+  At each Plein:
+    if accLiters >= tankCapacity:  ethFraction = accEthLiters / accLiters
+    else:                          remainingOldFuel = tankCapacity - accLiters
+                                   ethFraction = (ethFraction × remainingOldFuel + accEthLiters) / tankCapacity
+
+Ethanol fractions: E85 = 0.85, essence (SP95-E10) = 0.10, E10 = 0.10, SP95 = 0.05, others = 0.
+
+Forward-looking blend recommendation (uses avgL100km only for km projections):
+  ethanol_fraction_in_tank = ethanol_liters / remaining_liters
+  Dilutant needed: x = (target * (remaining + T) - ethanol_liters - 0.85 * T) / (dilutant_fraction - 0.85)
+  E85 to add: y = tank_capacity - remaining - x
+  Minimum pump constraint (France): x >= 5L (rounds to 5 if x_ideal < 5)
 ```
+Both `BlendCalculator.computeTankState` and `EthanolHistoryChart` share the exact fill-to-fill algorithm above.
 
 ### Insurance KM
 ```
