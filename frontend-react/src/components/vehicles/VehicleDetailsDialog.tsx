@@ -257,35 +257,41 @@ export function VehicleDetailsDialog({
                           </div>
                         )}
 
-                        {/* FlexFuel split — measured average per dominant fuel of the segment
-                            (same formula as ConsumptionChart: distance-weighted L/100 of
-                            E85-dominant vs Essence-dominant fills) */}
+                        {/* Projection "if pure X" — applies the surconsommation %
+                            to every season segment to estimate what one full tank
+                            of pure Essence or pure E85 would give. NOT the same as
+                            the chart's raw measured numbers — this is a hypothetical. */}
                         {isFlexFuel && current && (
-                          <div className="ml-6 grid grid-cols-2 gap-2 text-sm">
-                            <div className="rounded-md border p-2 text-center">
-                              <div className="text-xs text-muted-foreground">Pleins Essence</div>
-                              {current.e10_consumption != null ? (
-                                <>
-                                  <div className="font-semibold">~{Math.round(current.range_km_e10!)} km</div>
-                                  <div className="text-xs text-muted-foreground">{current.e10_consumption.toFixed(1)} L/100</div>
-                                </>
-                              ) : (
-                                <div className="text-xs text-muted-foreground py-1">—</div>
-                              )}
+                          <div className="ml-6 space-y-1">
+                            <div className="text-xs text-muted-foreground">
+                              Projection si un plein 100% pur :
                             </div>
-                            <div className="rounded-md border p-2 text-center">
-                              <div className="text-xs text-muted-foreground">Pleins E85</div>
-                              {current.e85_consumption != null ? (
-                                <>
-                                  <div className="font-semibold">~{Math.round(current.range_km_e85!)} km</div>
-                                  <div className="text-xs text-muted-foreground">{current.e85_consumption.toFixed(1)} L/100</div>
-                                </>
-                              ) : (
-                                <div className="text-xs text-muted-foreground py-1">—</div>
-                              )}
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="rounded-md border p-2 text-center">
+                                <div className="text-xs text-muted-foreground">Si 100% Essence</div>
+                                {current.e10_consumption != null ? (
+                                  <>
+                                    <div className="font-semibold">~{Math.round(current.range_km_e10!)} km</div>
+                                    <div className="text-xs text-muted-foreground">{current.e10_consumption.toFixed(1)} L/100</div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground py-1">—</div>
+                                )}
+                              </div>
+                              <div className="rounded-md border p-2 text-center">
+                                <div className="text-xs text-muted-foreground">Si 100% E85</div>
+                                {current.e85_consumption != null ? (
+                                  <>
+                                    <div className="font-semibold">~{Math.round(current.range_km_e85!)} km</div>
+                                    <div className="text-xs text-muted-foreground">{current.e85_consumption.toFixed(1)} L/100</div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground py-1">—</div>
+                                )}
+                              </div>
                             </div>
                             {current.e85_fraction != null && (
-                              <div className="col-span-2 text-xs text-muted-foreground text-center">
+                              <div className="text-xs text-muted-foreground text-center pt-1">
                                 Mix réel cette saison : {Math.round(current.e85_fraction * 100)}% E85 / {Math.round((1 - current.e85_fraction) * 100)}% Essence
                               </div>
                             )}
