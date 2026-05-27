@@ -200,6 +200,7 @@ export interface ConsumptionDataPoint {
   liters: number
   distance: number | null
   is_full_tank: boolean
+  e85_fraction: number | null
 }
 
 export interface ConsumptionHistory {

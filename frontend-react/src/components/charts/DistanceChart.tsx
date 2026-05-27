@@ -41,22 +41,41 @@ export function DistanceChart({ entries }: DistanceChartProps) {
       }
     }
 
-    // Distance per month = max odometer this month - max odometer previous month
+    // Distance per month = max odometer this month - max odometer previous month.
+    // If consecutive fill months are non-adjacent (gap), spread the km uniformly
+    // across the gap so a single big bar doesn't appear on the resuming month.
     const months = Array.from(monthMap.entries()).sort(([a], [b]) => a.localeCompare(b))
     const result: { month: string; monthKey: string; km: number }[] = []
+
+    const monthsBetween = (fromKey: string, toKey: string): string[] => {
+      const [fy, fm] = fromKey.split('-').map(Number)
+      const [ty, tm] = toKey.split('-').map(Number)
+      const out: string[] = []
+      let y = fy
+      let m = fm
+      while (y < ty || (y === ty && m <= tm)) {
+        out.push(`${y}-${String(m).padStart(2, '0')}`)
+        m++
+        if (m > 12) { m = 1; y++ }
+      }
+      return out
+    }
 
     for (let i = 1; i < months.length; i++) {
       const [prevMonth, prevData] = months[i - 1]
       const [curMonth, curData] = months[i]
-      void prevMonth
-      const km = curData.max - prevData.max
-      if (km > 0) {
-        const [year, m] = curMonth.split('-')
+      const totalKm = curData.max - prevData.max
+      if (totalKm <= 0) continue
+
+      const span = monthsBetween(prevMonth, curMonth).slice(1) // exclude prevMonth
+      const per = totalKm / span.length
+      for (const key of span) {
+        const [year, m] = key.split('-')
         const label = new Date(Number(year), Number(m) - 1).toLocaleDateString('fr-FR', {
           month: 'short',
           year: '2-digit',
         })
-        result.push({ month: label, monthKey: curMonth, km })
+        result.push({ month: label, monthKey: key, km: Math.round(per) })
       }
     }
 

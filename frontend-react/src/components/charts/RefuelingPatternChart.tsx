@@ -80,17 +80,29 @@ export function RefuelingPatternChart({ entries }: Props) {
     return DAY_LABELS.map((label, i) => ({ label, count: counts[i] }))
   }, [allSorted])
 
-  // 3. Stat cards
+  // 3. Stat cards — only full-tank entries count as a "plein".
+  // Same-stop partial boosters (Essence + E85 at same pump) are folded into the
+  // closing full tank's total cost and liters, so a paired booster + top-up
+  // shows up as one plein at its true combined cost/liters.
   const stats = useMemo(() => {
-    const totalCost = allSorted.reduce((s, e) => s + e.total_cost, 0)
-    const avgCostPerFill = allSorted.length > 0 ? totalCost / allSorted.length : 0
-    const avgLitersPerFill = allSorted.length > 0
-      ? allSorted.reduce((s, e) => s + e.liters, 0) / allSorted.length
-      : 0
+    type Stop = { cost: number; liters: number }
+    const stops: Stop[] = []
+    let acc: Stop = { cost: 0, liters: 0 }
+    for (const e of allSorted) {
+      acc.cost += e.total_cost
+      acc.liters += e.liters
+      if (e.is_full_tank) {
+        stops.push(acc)
+        acc = { cost: 0, liters: 0 }
+      }
+    }
+
+    const totalCost = stops.reduce((s, x) => s + x.cost, 0)
+    const totalLiters = stops.reduce((s, x) => s + x.liters, 0)
     return {
-      totalFills: allSorted.length,
-      avgCostPerFill,
-      avgLitersPerFill,
+      totalFills: stops.length,
+      avgCostPerFill: stops.length > 0 ? totalCost / stops.length : 0,
+      avgLitersPerFill: stops.length > 0 ? totalLiters / stops.length : 0,
       avgKmBetweenFills: distBuckets.avgKm,
     }
   }, [allSorted, distBuckets.avgKm])

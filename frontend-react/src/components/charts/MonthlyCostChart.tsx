@@ -12,6 +12,7 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { FuelEntry, Maintenance } from '@/types'
+import type { TooltipProps } from 'recharts'
 
 interface MonthlyCostChartProps {
   entries: FuelEntry[]
@@ -135,8 +136,16 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
   }, [entries, spreadMaintenanceCosts])
 
   // Monthly cost per 100km — maintenance spread across months
-  const per100kmData = useMemo((): ChartPoint[] => {
-    if (entries.length < 2) return []
+  // Also exposes per-month totals so the header average can be properly weighted
+  // (sum of costs / sum of distance × 100, not an average of monthly ratios).
+  const per100km = useMemo((): {
+    data: ChartPoint[]
+    monthlyFuelCost: Map<string, number>
+    monthlyDistance: Map<string, number>
+  } => {
+    if (entries.length < 2) {
+      return { data: [], monthlyFuelCost: new Map(), monthlyDistance: new Map() }
+    }
 
     const sorted = [...entries].sort(
       (a, b) => a.fueling_date.localeCompare(b.fueling_date) || a.odometer_reading - b.odometer_reading,
@@ -157,7 +166,7 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
       monthlyFuelCost.set(key, (monthlyFuelCost.get(key) || 0) + sorted[i].liters * sorted[i].price_per_liter)
     }
 
-    return Array.from(monthlyDistance.keys())
+    const data = Array.from(monthlyDistance.keys())
       .sort()
       .filter((month) => month <= currentMonthKey)
       .map((month) => {
@@ -172,7 +181,11 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
           Maintenance: Math.round((maintCost / dist) * 100 * 100) / 100,
         }
       })
+
+    return { data, monthlyFuelCost, monthlyDistance }
   }, [entries, spreadMaintenanceCosts])
+
+  const per100kmData = per100km.data
 
   // Projection for €/mois:
   // - CarburantProj = avg fuel of last 3 real months
@@ -242,8 +255,26 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
   // Exclude current month from average — partial month would drag the figure down
   const completedData = realData.filter((d: ChartPoint) => d.monthKey < currentMonthKey)
   const avgBase = completedData.length > 0 ? completedData : realData
-  const avgTotal =
-    avgBase.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0) + (d.Maintenance ?? 0), 0) / avgBase.length
+
+  let avgTotal: number
+  if (mode === 'euros') {
+    // Simple monthly average of total spent
+    avgTotal =
+      avgBase.reduce((s: number, d: ChartPoint) => s + (d.Carburant ?? 0) + (d.Maintenance ?? 0), 0) /
+      avgBase.length
+  } else {
+    // Weighted: Σ(fuel + maintenance) / Σ distance × 100 across completed months only
+    let totalCost = 0
+    let totalDist = 0
+    for (const d of avgBase) {
+      const dist = per100km.monthlyDistance.get(d.monthKey) ?? 0
+      if (dist <= 0) continue
+      totalCost += (per100km.monthlyFuelCost.get(d.monthKey) ?? 0)
+      totalCost += (spreadMaintenanceCosts.get(d.monthKey) ?? 0)
+      totalDist += dist
+    }
+    avgTotal = totalDist > 0 ? (totalCost / totalDist) * 100 : 0
+  }
 
   const lastRealMonth =
     realData.length > 0 ? realData[realData.length - 1].month : null
@@ -282,16 +313,31 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit={unit} />
-            <Tooltip
-              formatter={(value: number, name: string) => {
-                const label = name === 'CarburantProj'
-                  ? 'Carburant (prév.)'
-                  : name === 'MaintenanceProj'
-                  ? 'Maintenance (prév.)'
+            <Tooltip content={(props: TooltipProps<number, string>) => {
+              if (!props.active || !props.payload || props.payload.length === 0) return null
+              const items = props.payload.filter((p) => p.value != null && p.value !== 0)
+              if (items.length === 0) return null
+              const total = items.reduce((s, p) => s + (p.value as number), 0)
+              const labelOf = (name: string) =>
+                name === 'CarburantProj' ? 'Carburant (prév.)'
+                  : name === 'MaintenanceProj' ? 'Maintenance (prév.)'
                   : name
-                return [`${value.toFixed(2)}${unit}`, label]
-              }}
-            />
+              return (
+                <div className="rounded-md border bg-popover px-3 py-2 text-xs shadow-md">
+                  <p className="mb-1 font-medium">{props.label}</p>
+                  {items.map((p, i) => (
+                    <p key={i} style={{ color: p.color }}>
+                      {labelOf(p.name as string)} : {(p.value as number).toFixed(2)}{unit}
+                    </p>
+                  ))}
+                  {items.length > 1 && (
+                    <p className="mt-1 border-t pt-1 font-semibold">
+                      Total : {total.toFixed(2)}{unit}
+                    </p>
+                  )}
+                </div>
+              )
+            }} />
             <Legend
               formatter={(value: string) =>
                 value === 'CarburantProj'

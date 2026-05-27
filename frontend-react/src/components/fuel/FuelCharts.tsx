@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useAllFuelEntries, useConsumptionHistory } from '@/hooks/use-fuel-entries'
 import { useMaintenances } from '@/hooks/use-maintenances'
-import { useVehicle } from '@/hooks/use-vehicles'
+import { useVehicle, useVehicleStats } from '@/hooks/use-vehicles'
 import { useFlexfuelConversion, useFlexfuelRentability } from '@/hooks/use-flexfuel'
 import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
 import { PriceChart } from '@/components/charts/PriceChart'
@@ -36,6 +36,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
   const { data: allEntries } = useAllFuelEntries(vehicleId)
   const { data: consumptionHistory } = useConsumptionHistory(vehicleId)
   const { data: maintenances } = useMaintenances(vehicleId)
+  const { data: vehicleStats } = useVehicleStats(vehicleId)
   const { data: flexfuelConversion } = useFlexfuelConversion(vehicleId)
   const { data: rentability } = useFlexfuelRentability(
     flexfuelConversion ? vehicleId : null,
@@ -138,8 +139,16 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
         <Separator />
 
         <div className="space-y-6">
-          <ErrorBoundary><ConsumptionChart dataPoints={filteredConsumptionData} /></ErrorBoundary>
-<ErrorBoundary><PriceChart entries={filteredEntries} /></ErrorBoundary>
+          <ErrorBoundary>
+            <ConsumptionChart
+              dataPoints={filteredConsumptionData}
+              overconsumptionPct={flexfuelConversion?.overconsumption_pct ?? null}
+              avgConsumption={vehicleStats?.average_consumption ?? null}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <PriceChart entries={filteredEntries} splitByFuelType={!!flexfuelConversion} />
+          </ErrorBoundary>
           <ErrorBoundary><MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} /></ErrorBoundary>
           <ErrorBoundary><DistanceChart entries={filteredEntries} /></ErrorBoundary>
           {vehicle && allEntries && (

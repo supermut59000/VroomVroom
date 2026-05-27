@@ -138,11 +138,11 @@ When making schema changes:
 - In FuelAddDialog/FuelEditDialog: after GPS capture, shows clickable list → auto-fills form
 
 ### Charts (in graphs popup)
-- **ConsumptionChart**: L/100km per fill-up over time (line). Backend computes with partial-fill accumulation.
-- **PriceChart**: €/L per fill-up over time (line) with average reference line.
-- **MonthlyCostChart**: stacked bars fuel + maintenance per month. Toggle: €/mois ↔ €/100km. Both modes show 3-month projection as faded bars (avg of last 3 months).
-- **DistanceChart**: km per month (bar) + projected annual km badge.
-- **InsuranceKmChart**: absolute odometer progression vs insurance km limit (line). Reference line at `insurance_km_limit + years_elapsed × annual_increase`. Dotted projection forward at current monthly rate. Badge uses backend `insurance_km_remaining` (authoritative). Only renders if `vehicle.insurance_km_limit` is set. Uses **allEntries** (never filtered) for correct base odometer.
+- **ConsumptionChart**: L/100km per fill-up over time (line). Backend computes with partial-fill accumulation. For FlexFuel vehicles, renders **two lines** — `e10Norm` and `e85Norm` — computed client-side from the segment's `e85_fraction` (backend) and the conversion's `overconsumption_pct`: `e10 = measured / (1 + opc × e85_fraction)`, `e85 = e10 × (1 + opc)`. Each line has its own distance-weighted average reference line. Non-FlexFuel uses the backend's distance-weighted `average_consumption` for the reference.
+- **PriceChart**: €/L per fill-up over time (line). For FlexFuel vehicles (`splitByFuelType=true` when a conversion exists and ≥ 2 distinct fuel types in history), renders **one line per fuel_type** with a colored dot + its own liters-weighted average reference line. Single-line mode otherwise.
+- **MonthlyCostChart**: stacked bars fuel + maintenance per month. Toggle: €/mois ↔ €/100km. Both modes show 3-month projection as faded bars (avg of last 3 months). Custom tooltip shows each component + a **Total** line. €/100km moyenne is correctly weighted: `Σ cost_completed_months / Σ distance_completed_months × 100` (NOT an average of monthly ratios — past bug).
+- **DistanceChart**: km per month (bar) + projected annual km badge. **Gap months are filled**: when two adjacent fill months are non-contiguous (no fills between), the total km between them is spread uniformly across the missing months. No more fake single-month spike on a resuming month.
+- **OdometerChart** (`charts/OdometerChart.tsx`): absolute odometer progression line + dotted projection. Reference line + badges shown when `vehicle.insurance_km_limit` is set (and `insurance_unlimited` is false). Without a limit, still useful as a progression chart with 12-month projection. Uses **allEntries** (never date-filtered). Replaces the old `InsuranceKmChart` (now deleted).
 - **StationsMap**: clusters GPS fill points within 100m radius, Leaflet map.
 - **FlexfuelRentabilityChart**: cumulative savings line vs kit cost reference line. If break-even not reached: dotted projection line extending at `monthly_average_savings` rate until kit cost is hit. Badge shows projected break-even month. Monthly savings bar chart.
 - **BlendCalculator** (`frontend-react/src/components/flexfuel/BlendCalculator.tsx`): in-graphs popup, only for FlexFuel vehicles. See dedicated section below.
@@ -154,7 +154,7 @@ insurance_km_remaining = current_limit − last_odometer_reading
 ```
 The limit is a **cumulative total odometer threshold**, not a per-year quota reset each year.
 
-`InsuranceKmChart.tsx` projection: uses max odometer per month (same grouping as DistanceChart), then computes consecutive diffs for the **last 3 months** (not completed months — uses all available including current). Projects forward at that avg rate until limit hit, capped at 36 months. Uses `allEntries` (never date-filtered) so the base odometer is always correct.
+`OdometerChart.tsx` projection: uses max odometer per month (same grouping as DistanceChart), then computes consecutive diffs for the **last 3 completed months** (excludes the current partial month). Projects forward at that avg rate until limit hit, capped at 36 months (or 12 if no limit set). Uses `allEntries` (never date-filtered) so the base odometer is always correct.
 
 #### DistanceChart km/month method
 Groups entries by month → takes **max odometer per month** → differences between consecutive months. This accounts for multiple fills in a month without double-counting. Avg and projected annual use **completed months only** (< current month key).

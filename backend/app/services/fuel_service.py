@@ -331,10 +331,14 @@ class FuelService:
 
         data_points = []
 
-        # Track accumulated liters from partial fills
+        # Track accumulated liters from partial fills (total + E85 portion)
         accumulated_liters = 0.0
+        accumulated_e85_liters = 0.0
         # Track the odometer reading of the last full tank (or first entry)
         last_full_tank_odometer = None
+
+        def _e85_l(e) -> float:
+            return float(e.liters) if getattr(e, "fuel_type", None) == FuelType.E85 else 0.0
 
         for i, entry in enumerate(entries):
             is_full = getattr(entry, 'is_full_tank', True)  # Default to True for old entries
@@ -347,19 +351,24 @@ class FuelService:
                     "odometer_reading": entry.odometer_reading,
                     "liters": entry.liters,
                     "distance": None,
-                    "is_full_tank": is_full
+                    "is_full_tank": is_full,
+                    "e85_fraction": None,
                 })
                 if is_full:
                     last_full_tank_odometer = entry.odometer_reading
                     accumulated_liters = 0.0
+                    accumulated_e85_liters = 0.0
                 else:
                     # First entry is partial, start accumulating
                     last_full_tank_odometer = entry.odometer_reading
                     accumulated_liters = entry.liters
+                    accumulated_e85_liters = _e85_l(entry)
             else:
                 if is_full:
                     # Full tank - calculate consumption using accumulated liters + current liters
                     total_liters = accumulated_liters + entry.liters
+                    total_e85_liters = accumulated_e85_liters + _e85_l(entry)
+                    e85_fraction = (total_e85_liters / total_liters) if total_liters > 0 else None
 
                     if last_full_tank_odometer is not None:
                         distance = entry.odometer_reading - last_full_tank_odometer
@@ -379,15 +388,18 @@ class FuelService:
                         "odometer_reading": entry.odometer_reading,
                         "liters": round(total_liters, 2),
                         "distance": distance,
-                        "is_full_tank": True
+                        "is_full_tank": True,
+                        "e85_fraction": round(e85_fraction, 4) if e85_fraction is not None else None,
                     })
 
                     # Reset for next calculation
                     last_full_tank_odometer = entry.odometer_reading
                     accumulated_liters = 0.0
+                    accumulated_e85_liters = 0.0
                 else:
                     # Partial fill - accumulate liters, no consumption calculation
                     accumulated_liters += entry.liters
+                    accumulated_e85_liters += _e85_l(entry)
 
                     # Calculate distance from last entry for display
                     previous_entry = entries[i - 1]
@@ -399,7 +411,8 @@ class FuelService:
                         "odometer_reading": entry.odometer_reading,
                         "liters": entry.liters,
                         "distance": distance if distance > 0 else None,
-                        "is_full_tank": False
+                        "is_full_tank": False,
+                        "e85_fraction": None,
                     })
 
         return {

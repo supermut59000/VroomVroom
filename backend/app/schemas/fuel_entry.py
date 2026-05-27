@@ -172,6 +172,10 @@ class ConsumptionDataPoint(BaseModel):
         default=True,
         description="Whether this was a full tank fill-up"
     )
+    e85_fraction: Optional[float] = Field(
+        None,
+        description="Fraction of E85 in liters added during this fill-to-fill segment (0..1). Set on full-tank entries only."
+    )
 
     class Config:
         from_attributes = True
