@@ -201,6 +201,7 @@ class VehicleService:
         vehicle_id: int,
         overconsumption_pct: Optional[float],
         tank_capacity: Optional[float],
+        from_date: Optional[date] = None,
     ) -> dict:
         """
         Compute per-season consumption stats using the fill-to-fill method.
@@ -224,19 +225,21 @@ class VehicleService:
         """
         CUSHION_L = 5.0
 
-        entries = (
-            self.db.query(FuelEntry)
-            .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
+        query = self.db.query(FuelEntry).filter(
+            FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True
+        )
+        if from_date is not None:
+            # FlexFuel: ignore pre-conversion fills so the season's E85/E10 mix
+            # isn't biased by all-Essence segments from before the conversion.
+            query = query.filter(FuelEntry.fueling_date >= from_date)
+        entries = query.order_by(
             # Same (date, odometer) = one FlexFuel stop. Partial (booster) before full
             # (top-up) so accumulation feeds the full's consumption calc, not the next one.
-            .order_by(
-                FuelEntry.fueling_date,
-                FuelEntry.odometer_reading,
-                FuelEntry.is_full_tank.asc(),
-                FuelEntry.id,
-            )
-            .all()
-        )
+            FuelEntry.fueling_date,
+            FuelEntry.odometer_reading,
+            FuelEntry.is_full_tank.asc(),
+            FuelEntry.id,
+        ).all()
 
         def month_to_season(month: int) -> str:
             if month in (3, 4, 5):
@@ -419,8 +422,15 @@ class VehicleService:
         if avg_conso and avg_conso > 0 and tank:
             overall_range = round(max(0.0, tank - CUSHION_L) * 100 / avg_conso, 0)
 
-        # Per-season stats with E10/E85 normalisation
-        seasonal = self._compute_seasonal_consumption(vehicle_id, overconsumption_pct, tank)
+        # Per-season stats with E10/E85 normalisation.
+        # For FlexFuel, anchor the season buckets to the conversion date so a
+        # pre-conversion all-Essence segment doesn't drag the E85 % down.
+        seasonal = self._compute_seasonal_consumption(
+            vehicle_id,
+            overconsumption_pct,
+            tank,
+            from_date=flexfuel.conversion_date if flexfuel else None,
+        )
 
         return VehicleStats(
             vehicle_id=vehicle_id,

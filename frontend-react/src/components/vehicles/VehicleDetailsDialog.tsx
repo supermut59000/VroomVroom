@@ -289,11 +289,6 @@ export function VehicleDetailsDialog({
                                 <div className="text-[11px]">{SEASON_SHORT[s]}</div>
                                 <div className="mt-0.5">{ss?.range_km != null ? `~${Math.round(ss.range_km)} km` : '—'}</div>
                                 <div className="mt-0.5 opacity-70">{ss?.avg_consumption != null ? `${ss.avg_consumption.toFixed(1)} L/100` : ''}</div>
-                                {ss?.range_km_worst != null && ss?.range_km_best != null && (
-                                  <div className="mt-0.5 opacity-50 text-[10px]">
-                                    {Math.round(ss.range_km_worst)}–{Math.round(ss.range_km_best)}
-                                  </div>
-                                )}
                                 {isFlexFuel && ss?.fill_count != null && (
                                   <div className="mt-0.5 opacity-50">{ss.fill_count} plein{ss.fill_count !== 1 ? 's' : ''}</div>
                                 )}
