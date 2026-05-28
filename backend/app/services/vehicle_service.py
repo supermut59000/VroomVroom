@@ -262,7 +262,10 @@ class VehicleService:
                 return "autumn"
             return "winter"
 
-        # Each bucket entry: (distance_km, liters, e85_liters, measured_l100)
+        # Each bucket entry: (distance_km, liters, e85_burned_liters, measured_l100)
+        # e85_burned_liters reflects what was burned during the segment (i.e. the
+        # composition added at the PREVIOUS Plein), not what was poured at the
+        # closing Plein. This is the user's "what fuel did I actually use?".
         season_buckets: dict[str, list[tuple[float, float, float, float]]] = {
             "spring": [], "summer": [], "autumn": [], "winter": []
         }
@@ -270,6 +273,9 @@ class VehicleService:
         accumulated_liters = 0.0
         accumulated_e85_liters = 0.0
         last_full_tank_odometer: Optional[float] = None
+        # Fraction of E85 in fuel added at the previous Plein — that's what
+        # was in the tank during the current segment, i.e. what got burned.
+        prev_added_e85_frac: Optional[float] = None
 
         for i, entry in enumerate(entries):
             is_full = getattr(entry, "is_full_tank", True)
@@ -280,6 +286,9 @@ class VehicleService:
                 if is_full:
                     accumulated_liters = 0.0
                     accumulated_e85_liters = 0.0
+                    # The first Plein establishes a tank composition for the
+                    # first usable segment.
+                    prev_added_e85_frac = 1.0 if is_e85 else 0.0
                 else:
                     accumulated_liters = entry.liters
                     accumulated_e85_liters = entry.liters if is_e85 else 0.0
@@ -287,18 +296,28 @@ class VehicleService:
 
             if is_full:
                 seg_liters = accumulated_liters + entry.liters
-                seg_e85 = accumulated_e85_liters + (entry.liters if is_e85 else 0.0)
+                added_e85 = accumulated_e85_liters + (entry.liters if is_e85 else 0.0)
+                added_e85_frac = added_e85 / seg_liters if seg_liters > 0 else None
 
-                if last_full_tank_odometer is not None and seg_liters > 0:
+                if (
+                    last_full_tank_odometer is not None
+                    and seg_liters > 0
+                    and prev_added_e85_frac is not None
+                ):
                     distance = float(entry.odometer_reading) - last_full_tank_odometer
                     if distance > 0:
                         measured = (seg_liters * 100) / distance
                         season = month_to_season(entry.fueling_date.month)
-                        season_buckets[season].append((distance, seg_liters, seg_e85, measured))
+                        # Liters of E85 burned = seg_liters × previous-Plein fraction
+                        e85_burned = seg_liters * prev_added_e85_frac
+                        season_buckets[season].append(
+                            (distance, seg_liters, e85_burned, measured)
+                        )
 
                 last_full_tank_odometer = float(entry.odometer_reading)
                 accumulated_liters = 0.0
                 accumulated_e85_liters = 0.0
+                prev_added_e85_frac = added_e85_frac
             else:
                 accumulated_liters += entry.liters
                 if is_e85:
