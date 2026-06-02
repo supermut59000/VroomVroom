@@ -138,7 +138,7 @@ When making schema changes:
 - In FuelAddDialog/FuelEditDialog: after GPS capture, shows clickable list → auto-fills form
 
 ### Charts (in graphs popup)
-- **ConsumptionChart**: L/100km per fill-up over time (line). Backend computes with partial-fill accumulation. For FlexFuel vehicles, renders **two lines** — `e10Norm` and `e85Norm` — computed client-side from the segment's `e85_fraction` (backend) and the conversion's `overconsumption_pct`: `e10 = measured / (1 + opc × e85_fraction)`, `e85 = e10 × (1 + opc)`. Each line has its own distance-weighted average reference line. Non-FlexFuel uses the backend's distance-weighted `average_consumption` for the reference.
+- **ConsumptionChart**: L/100km per fill-up over time (line). Backend computes with partial-fill accumulation. Always plots **raw measured** values (no normalisation — user explicitly rejected the normalised view). For FlexFuel vehicles, the line is split into two by the segment's `e85_fraction > 0.5`: green = E85 segments, orange = Essence segments. Each line gets its own distance-weighted average reference line. Non-FlexFuel uses the backend's `average_consumption`. Subtitle format matches PriceChart: `Essence X L/100 · E85 Y L/100`. Always-visible "Dernier plein : X L/100 (date · fuel)" line below the subtitle removes the need to tap the rightmost dot; `activeDot` bumped to r=8 with 2px stroke for fat-finger taps. **Important attribution rule (db17cb5)**: `e85_fraction` on a data point is the fraction of E85 in fuel added at the **previous** Plein (lagged by one segment), because that's the fuel that was actually burned during the trip. The first E85 Plein closes a segment of Essence consumption, not E85.
 - **PriceChart**: €/L per fill-up over time (line). For FlexFuel vehicles (`splitByFuelType=true` when a conversion exists and ≥ 2 distinct fuel types in history), renders **one line per fuel_type** with a colored dot + its own liters-weighted average reference line. Single-line mode otherwise.
 - **MonthlyCostChart**: stacked bars fuel + maintenance per month. Toggle: €/mois ↔ €/100km. Both modes show 3-month projection as faded bars (avg of last 3 months). Custom tooltip shows each component + a **Total** line. €/100km moyenne is correctly weighted: `Σ cost_completed_months / Σ distance_completed_months × 100` (NOT an average of monthly ratios — past bug).
 - **DistanceChart**: km per month (bar) + projected annual km badge. **Gap months are filled**: when two adjacent fill months are non-contiguous (no fills between), the total km between them is spread uniformly across the missing months. No more fake single-month spike on a resuming month.
@@ -364,6 +364,61 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 - **No rate limiting**: acceptable for single-user homelab
 - **Offline queue stored in localStorage**: acceptable since only user is the owner
 - **CSP/HSTS headers**: handle at reverse proxy level (Nginx/Traefik), not in app
+
+---
+
+## Session log — 2026-05-28
+
+### Chart audit — clarity & consistency pass
+
+Full sweep of every graph displayed in the app. Eight charts updated, one deleted, several long-standing logic bugs fixed.
+
+**ConsumptionChart** (`charts/ConsumptionChart.tsx`):
+- Was a single raw line for everyone. First attempt at FlexFuel split (commit `382a695`, reverted via the user not liking normalisation) → simply hid the two normalised lines and went raw measured, split by dominant fuel of the segment.
+- **Attribution rule corrected** (`db17cb5`): a segment's measured consumption reflects the fuel burned (the one in the tank at the start, i.e. the *previous* Plein's added fuel), not the fuel just poured at the closing Plein. Backend now lags `e85_fraction` by one segment in both `get_consumption_history` and `_compute_seasonal_consumption`. The first E85 Plein closes a segment of Essence consumption — only the next one onwards counts as E85.
+- Compact subtitle: `Essence X L/100 · E85 Y L/100` (matches PriceChart).
+- Always-visible "Dernier plein : X L/100 (date · fuel)" line so user doesn't need to tap the rightmost dot. `activeDot` r=8 with 2px stroke for fat-finger taps.
+
+**PriceChart** (`charts/PriceChart.tsx`):
+- For FlexFuel vehicles (when a conversion exists), splits by `fuel_type` — one line per type with a liters-weighted average reference line. Prevents the meaningless saw-tooth a single line gave when mixing 0.79 €/L E85 with 1.85 €/L Essence.
+
+**MonthlyCostChart** (`charts/MonthlyCostChart.tsx`):
+- €/100km "Moyenne" was an average of monthly ratios — short-distance months gave 50–80 €/100km, inflating the figure. Fixed to `Σ cost_completed_months / Σ distance_completed_months × 100`.
+- Custom tooltip shows each stacked component plus a **Total** line.
+
+**DistanceChart** (`charts/DistanceChart.tsx`):
+- A skipped fill month attributed its km entirely to the next month, producing a fake spike. Now spreads `total_km / gap_months` uniformly across missing months.
+
+**RefuelingPatternChart** (`charts/RefuelingPatternChart.tsx`):
+- "Pleins totaux", "Coût moy./plein", "Litres moy./plein" counted every entry (including partial boosters). Now built from stops closed by a full tank, with same-day boosters folded into the closing full's totals: a 5 L Essence + 40 L E85 booster pair = one plein at 45 L / combined cost.
+
+**StationsMap, EthanolHistoryChart, FlexfuelRentabilityChart**: no logic changes; reviewed and confirmed correct.
+
+**OdometerChart vs InsuranceKmChart**:
+- `InsuranceKmChart.tsx` deleted — orphan, not imported anywhere. `OdometerChart` had absorbed its job (handles insurance limit + projection when `insurance_km_limit` is set, 12-month projection otherwise).
+
+### Autonomie estimée — vehicle details
+
+Long debug session resolving the "Mix réel cette saison" % and what the E10/E85 cards should mean.
+
+**Backend `_compute_seasonal_consumption`** (`vehicle_service.py`):
+- New `from_date` parameter. Caller passes `flexfuel.conversion_date` when a conversion exists. The seasonal buckets then ignore pre-conversion fills so the all-Essence pre-conversion data doesn't dilute the post-conversion E85 share.
+- Fix: when `from_date` filters out the previous Plein, the first remaining entry could be a partial fill. Anchoring there would produce a fake first segment (51 L over only 198 km → bogus 26 L/100km, surfacing as a 171 km "ville" min range). Now drops entries until the first **full tank** on/after `from_date`.
+- E10/E85 "if pure" projection: per-segment normalisation `e10 = measured / (1 + opc × e85_burned_fraction)`, distance-weighted, then `e85 = e10 × (1 + opc)`. Uses the *previous* Plein's E85 fraction (what was burned), same attribution rule as the chart.
+- Min/max raw measured (not normalised) — matches the chart's data points.
+- `e85_fraction` returned in `SeasonStats` is `e85_burned / total_liters` over the season.
+
+**Frontend (`VehicleDetailsDialog.tsx`)**:
+- "Sur E10" / "Sur E85" cards renamed "Si 100% Essence" / "Si 100% E85" with a "Projection si un plein 100% pur :" caption above. Makes the hypothetical-projection nature explicit (different from the chart's "raw measured per fuel" metric).
+- 4-season grid: removed the per-card min–max range numbers (X–Y km). 2x2 layout on mobile.
+- One-shot redesign with hero card + gradient range bar + mix progress bar was reverted on user feedback — kept the original compact text-based UI.
+
+**Three reading layers** in the autonomy section, each clearly labelled:
+1. Headline range (`~568 km / 7.9 L/100`): what your tank actually gave this season with the real fuel mix.
+2. Projection cards (`Si 100% Essence`/`E85`): hypothetical, applies surconsommation to estimate one tank of pure X.
+3. ConsumptionChart "Moyenne Essence/E85": raw measured per dominant-fuel fill, all time since data exists.
+
+**Commits**: `730e14a` (chart audit pass), `52680b6` (Fragment fix — Recharts doesn't see Line children inside `<>...</>`), `382a695` (ConsumptionChart back to raw split), `3b41340` + `922be85` (Autonomie redesign + revert), `6e81417` (conversion_date filter), `802d36a` (anchor at first Plein), `731d6b6` (raw split for autonomy) + `ce1ba5f` (back to normalised projection labelled "Si 100%"), `f001700` (Dernier plein line + fat-finger dots), `db17cb5` (attribute segment to previous Plein's fuel).
 
 ---
 
