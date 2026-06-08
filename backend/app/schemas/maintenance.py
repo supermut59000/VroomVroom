@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 # Base schema with common fields
@@ -16,37 +16,12 @@ class MaintenanceBase(BaseModel):
         max_length=500,
         description="Description of the maintenance work",
     )
-    cost: float = Field(
-        ..., ge=0, le=100000, description="Cost of maintenance", example=85.50
-    )
-    odometer_reading: int = Field(
-        ...,
-        ge=0,
-        le=9999999,
-        description="Odometer reading in kilometers",
-        example=125000,
-    )
-    service_provider: Optional[str] = Field(
-        None,
-        max_length=100,
-        description="Name of the service provider",
-        example="Garage Renault",
-    )
-    location: Optional[str] = Field(
-        None,
-        max_length=100,
-        description="City or location of service",
-        example="Paris, France",
-    )
-    maintenance_date: date = Field(
-        default_factory=date.today, description="Date of maintenance"
-    )
-    notes: Optional[str] = Field(
-        None,
-        max_length=500,
-        description="Additional notes about this maintenance",
-        example="Prochain contr�le dans 6 mois",
-    )
+    cost: float = Field(..., ge=0, le=100000, description="Cost of maintenance")
+    odometer_reading: int = Field(..., ge=0, le=9999999, description="Odometer reading in kilometers")
+    service_provider: Optional[str] = Field(None, max_length=100, description="Name of the service provider")
+    location: Optional[str] = Field(None, max_length=100, description="City or location of service")
+    maintenance_date: date = Field(default_factory=date.today, description="Date of maintenance")
+    notes: Optional[str] = Field(None, max_length=500, description="Additional notes about this maintenance")
     next_maintenance_date: Optional[date] = Field(
         None,
         description="Recommended date for next maintenance",
@@ -120,8 +95,7 @@ class MaintenanceResponse(MaintenanceBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MaintenanceListResponse(BaseModel):
@@ -132,8 +106,7 @@ class MaintenanceListResponse(BaseModel):
     per_page: int
     pages: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MaintenanceStatisticsResponse(BaseModel):
@@ -144,5 +117,4 @@ class MaintenanceStatisticsResponse(BaseModel):
     last_maintenance_date: Optional[date] = None
     next_maintenance_date: Optional[date] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

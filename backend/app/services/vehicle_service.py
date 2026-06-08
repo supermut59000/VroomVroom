@@ -393,20 +393,20 @@ class VehicleService:
         fuel_service = FuelService(self.db)
         fuel_stats = fuel_service.get_fuel_statistics_by_vehicle(vehicle_id)
 
-        # Get last odometer and days since last entry from fuel entries
-        fuel_entries = (
+        # Fetch only the single most-recent entry (avoids loading all rows again
+        # since FuelService.get_fuel_statistics_by_vehicle already loaded them)
+        last_entry = (
             self.db.query(FuelEntry)
             .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
-            .order_by(FuelEntry.odometer_reading.desc())
-            .all()
+            .order_by(FuelEntry.odometer_reading.desc(), FuelEntry.fueling_date.desc())
+            .first()
         )
 
         last_odometer = None
         days_since_last_entry = None
         total_distance = 0.0
 
-        if fuel_entries:
-            last_entry = fuel_entries[0]  # Already sorted desc
+        if last_entry:
             last_odometer = float(last_entry.odometer_reading)
 
             if last_entry.fueling_date:
@@ -437,7 +437,7 @@ class VehicleService:
         # Look up FlexFuel conversion for this vehicle (overconsumption_pct)
         flexfuel = (
             self.db.query(FlexfuelConversion)
-            .filter(FlexfuelConversion.vehicle_id == vehicle_id)
+            .filter(FlexfuelConversion.vehicle_id == vehicle_id, FlexfuelConversion.is_active == True)
             .first()
         )
         overconsumption_pct = flexfuel.overconsumption_pct if flexfuel else None

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '@/lib/api'
 import type { FuelEntryCreate, FuelEntry } from '@/types'
 
@@ -18,6 +18,9 @@ export function useOffline() {
       return []
     }
   })
+  // Prevents concurrent sync runs (e.g. re-render during an in-flight sync,
+  // or two tabs coming online at the same time and racing over localStorage).
+  const isSyncing = useRef(false)
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -40,8 +43,9 @@ export function useOffline() {
   }, [])
 
   const syncQueue = useCallback(async () => {
-    if (queue.length === 0) return { synced: 0, failed: 0 }
+    if (queue.length === 0 || isSyncing.current) return { synced: 0, failed: 0 }
 
+    isSyncing.current = true
     let synced = 0
     const failed: QueueItem[] = []
 
@@ -54,6 +58,7 @@ export function useOffline() {
       }
     }
 
+    isSyncing.current = false
     setQueue(failed)
     return { synced, failed: failed.length }
   }, [queue])

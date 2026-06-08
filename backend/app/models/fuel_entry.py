@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Date, DateTime, Text, Enum as SQLEnum, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, Date, DateTime, Text, Enum as SQLEnum, Boolean, ForeignKey, Index
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from datetime import date, datetime
@@ -8,6 +8,11 @@ from app.core.enums import FuelType
 
 class FuelEntry(Base):
     __tablename__ = "fuel_entries"
+    __table_args__ = (
+        # Most queries filter on (vehicle_id, is_active) together — a composite
+        # index lets MariaDB skip the full per-vehicle scan for soft-deleted rows.
+        Index("ix_fuel_entries_vehicle_active", "vehicle_id", "is_active"),
+    )
 
     # Primary key
     id = Column(Integer, primary_key=True, index=True)

@@ -30,6 +30,29 @@ class FlexfuelService:
     def create_conversion(self, data: FlexfuelConversionCreate) -> FlexfuelConversion:
         self._assert_vehicle_exists(data.vehicle_id)
 
+        # Reactivate a soft-deleted record rather than inserting a new one
+        # (vehicle_id has a UNIQUE constraint, so only one row per vehicle ever exists)
+        existing = (
+            self.db.query(FlexfuelConversion)
+            .filter(FlexfuelConversion.vehicle_id == data.vehicle_id)
+            .first()
+        )
+        if existing:
+            if existing.is_active:
+                raise ValueError(f"Une conversion FlexFuel existe déjà pour le véhicule {data.vehicle_id}")
+            existing.is_active = True
+            existing.conversion_date = data.conversion_date
+            existing.kit_cost = data.kit_cost
+            existing.overconsumption_pct = data.overconsumption_pct
+            existing.kit_brand = data.kit_brand
+            existing.installer = data.installer
+            existing.notes = data.notes
+            existing.target_ethanol_pct = data.target_ethanol_pct
+            existing.ethanol_tolerance_pct = data.ethanol_tolerance_pct
+            self.db.commit()
+            self.db.refresh(existing)
+            return existing
+
         conversion = FlexfuelConversion(
             vehicle_id=data.vehicle_id,
             conversion_date=data.conversion_date,
@@ -38,6 +61,8 @@ class FlexfuelService:
             kit_brand=data.kit_brand,
             installer=data.installer,
             notes=data.notes,
+            target_ethanol_pct=data.target_ethanol_pct,
+            ethanol_tolerance_pct=data.ethanol_tolerance_pct,
         )
         self.db.add(conversion)
         self.db.commit()
@@ -136,6 +161,7 @@ class FlexfuelService:
             self.db.query(FuelEntry)
             .filter(
                 FuelEntry.vehicle_id == vehicle_id,
+                FuelEntry.is_active == True,
                 FuelEntry.fuel_type == FuelType.E85,
                 FuelEntry.fueling_date >= conversion.conversion_date,
             )

@@ -1,6 +1,9 @@
+import logging
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import get_db
 from app.schemas.vehicle import (
@@ -150,8 +153,8 @@ def get_vehicles_stats_batch(
     for v in vehicles:
         try:
             result[v.id] = vehicle_service.get_vehicle_stats(v.id)
-        except ValueError:
-            pass
+        except Exception:
+            logger.exception("Failed to compute stats for vehicle %d in batch", v.id)
     return result
 
 

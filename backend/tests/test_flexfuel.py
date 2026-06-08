@@ -59,6 +59,26 @@ class TestFlexfuelConversionCRUD:
         resp = client.delete(f"/api/v1/flexfuel/vehicles/{vid}/conversion")
         assert resp.status_code == 404
 
+    def test_create_conversion_invalid_kit_cost(self, client, sample_conversion_data, created_flexfuel_vehicle):
+        vid = created_flexfuel_vehicle["id"]
+        sample_conversion_data["kit_cost"] = -100.0
+        resp = client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json=sample_conversion_data)
+        assert resp.status_code == 422
+
+    def test_create_conversion_overconsumption_over_100(self, client, sample_conversion_data, created_flexfuel_vehicle):
+        vid = created_flexfuel_vehicle["id"]
+        sample_conversion_data["overconsumption_pct"] = 150.0
+        resp = client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json=sample_conversion_data)
+        assert resp.status_code == 422
+
+    def test_deleted_conversion_can_be_recreated(self, client, sample_conversion_data, created_flexfuel_vehicle):
+        """After a soft-delete, creating a new conversion for the same vehicle must succeed."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json=sample_conversion_data)
+        client.delete(f"/api/v1/flexfuel/vehicles/{vid}/conversion")
+        resp = client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json=sample_conversion_data)
+        assert resp.status_code == 201
+
 
 class TestE10ReferencePriceCRUD:
     def test_create_e10_price(self, client, sample_e10_price_data):
@@ -96,6 +116,26 @@ class TestE10ReferencePriceCRUD:
     def test_delete_e10_price_not_found(self, client):
         resp = client.delete("/api/v1/flexfuel/e10-prices/99999")
         assert resp.status_code == 404
+
+    def test_list_e10_prices_sorted_desc_by_date(self, client):
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2024-05-01", "price_per_liter": 1.80})
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2024-07-01", "price_per_liter": 1.88})
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2024-06-01", "price_per_liter": 1.85})
+
+        prices = client.get("/api/v1/flexfuel/e10-prices").json()
+        dates = [p["reference_date"] for p in prices]
+        assert dates == sorted(dates, reverse=True)
+
+    def test_update_e10_price_not_found(self, client):
+        resp = client.put("/api/v1/flexfuel/e10-prices/99999", json={"price_per_liter": 1.92})
+        assert resp.status_code == 404
+
+    def test_create_e10_price_zero_invalid(self, client):
+        resp = client.post(
+            "/api/v1/flexfuel/e10-prices",
+            json={"reference_date": "2024-06-01", "price_per_liter": 0},
+        )
+        assert resp.status_code == 422
 
 
 class TestFlexfuelRentability:
@@ -187,3 +227,74 @@ class TestFlexfuelRentability:
         if today_obj.strftime("%Y-%m") != "2024-02":
             # Only the past fill's month should be counted → avg is based on 1 month
             assert data["monthly_average_savings"] is not None
+
+    def test_soft_deleted_e85_fill_excluded_from_rentability(
+        self, client, created_conversion, created_flexfuel_vehicle
+    ):
+        """Regression: soft-deleted E85 entries must NOT be included.
+        Bug: calculate_rentability was missing is_active == True filter."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2024-01-01", "price_per_liter": 1.85})
+
+        entry_id = client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "e85", "liters": 40.0,
+            "price_per_liter": 0.85, "odometer_reading": 50500,
+            "fueling_date": "2024-02-01", "is_full_tank": True,
+        }).json()["id"]
+
+        before = client.get(f"/api/v1/flexfuel/vehicles/{vid}/rentability").json()
+        assert before["total_e85_fills"] == 1
+        assert before["total_savings"] > 0
+
+        client.delete(f"/api/v1/fuel-entries/{entry_id}")
+
+        after = client.get(f"/api/v1/flexfuel/vehicles/{vid}/rentability").json()
+        assert after["total_e85_fills"] == 0
+        assert after["total_savings"] == 0.0
+
+    def test_savings_formula_accuracy(self, client, created_conversion, created_flexfuel_vehicle):
+        """Verify: equivalent_e10 = e85_liters / (1 + opc/100); savings = equiv * e10_price - actual."""
+        vid = created_flexfuel_vehicle["id"]
+        e10_price, opc = 1.90, 19.7
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2024-01-01", "price_per_liter": e10_price})
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "e85", "liters": 45.0,
+            "price_per_liter": 0.82, "odometer_reading": 50500,
+            "fueling_date": "2024-02-01", "is_full_tank": True,
+        })
+
+        dp = client.get(f"/api/v1/flexfuel/vehicles/{vid}/rentability").json()["data_points"][0]
+        expected_equiv = 45.0 / (1 + opc / 100)
+        expected_savings = expected_equiv * e10_price - 45.0 * 0.82
+
+        assert abs(dp["equivalent_e10_liters"] - expected_equiv) < 0.01
+        assert abs(dp["savings"] - expected_savings) < 0.01
+
+    def test_fill_before_conversion_date_excluded(self, client, created_conversion, created_flexfuel_vehicle):
+        """E85 fills dated before conversion_date (2024-01-15) must not be counted."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2023-06-01", "price_per_liter": 1.75})
+        # Fill on 2024-01-01 — before conversion_date 2024-01-15
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "e85", "liters": 30.0,
+            "price_per_liter": 0.79, "odometer_reading": 50200,
+            "fueling_date": "2024-01-01", "is_full_tank": True,
+        })
+        data = client.get(f"/api/v1/flexfuel/vehicles/{vid}/rentability").json()
+        assert data["total_e85_fills"] == 0
+
+    def test_uses_most_recent_e10_price_before_fill_date(self, client, created_conversion, created_flexfuel_vehicle):
+        """The most recent E10 price on or before the fill date is used — not a future price."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2024-01-01", "price_per_liter": 1.80})
+        # Later price, after the fill date — must NOT be used
+        client.post("/api/v1/flexfuel/e10-prices", json={"reference_date": "2024-09-01", "price_per_liter": 1.99})
+
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "e85", "liters": 40.0,
+            "price_per_liter": 0.85, "odometer_reading": 50500,
+            "fueling_date": "2024-02-01", "is_full_tank": True,
+        })
+
+        dp = client.get(f"/api/v1/flexfuel/vehicles/{vid}/rentability").json()["data_points"][0]
+        assert dp["e10_reference_price"] == 1.80

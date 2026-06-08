@@ -57,7 +57,7 @@ def get_maintenances(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
     order_by: MaintenanceOrderBy = Query(MaintenanceOrderBy.maintenance_date, description="Order by field"),
-    order: str = Query("desc", regex="^(asc|desc)$", description="Order direction"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Order direction"),
     db: Session = Depends(get_db)
 ):
     """Get maintenance entries with optional filters and pagination"""

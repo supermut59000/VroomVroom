@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Any, Dict, List, Literal, Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.enums import FuelType
 
@@ -105,8 +105,7 @@ class VehicleResponse(VehicleBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True  # Pydantic v2
+    model_config = ConfigDict(from_attributes=True)  # Pydantic v2
 
 
 # Schéma pour les listes (version allégée)
@@ -120,8 +119,7 @@ class VehicleList(BaseModel):
     is_active: bool
     insurance_unlimited: bool = False
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Schéma pour les statistiques de véhicule
@@ -157,8 +155,7 @@ class VehicleTimelineEvent(BaseModel):
     odometer_reading: int
     data: Dict[str, Any]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VehicleTimeline(BaseModel):

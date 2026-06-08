@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.enums import FuelType
 
@@ -13,46 +13,19 @@ class FuelEntryBase(BaseModel):
         description="Unique identifier for the vehicle",
     )
     fuel_type: FuelType = Field(..., description="Type of fuel used")
-    liters: float = Field(
-        ..., gt=0, le=200, description="Amount of fuel in liters", example=45.5
-    )
-    price_per_liter: float = Field(
-        ..., gt=0, le=10, description="Price per liter in currency units", example=1.65
-    )
-    odometer_reading: int = Field(
-        ...,
-        ge=0,
-        le=9999999,
-        description="Odometer reading in kilometers",
-        example=125000,
-    )
-    station_name: Optional[str] = Field(
-        None,
-        max_length=100,
-        description="Name of the gas station",
-        example="Total Energies",
-    )
-    location: Optional[str] = Field(
-        None,
-        max_length=100,
-        description="City or location of fueling",
-        example="Paris, France",
-    )
+    liters: float = Field(..., gt=0, le=200, description="Amount of fuel in liters")
+    price_per_liter: float = Field(..., gt=0, le=10, description="Price per liter in currency units")
+    odometer_reading: int = Field(..., ge=0, le=9999999, description="Odometer reading in kilometers")
+    station_name: Optional[str] = Field(None, max_length=100, description="Name of the gas station")
+    location: Optional[str] = Field(None, max_length=100, description="City or location of fueling")
     latitude: Optional[float] = Field(None, ge=-90.0, le=90.0, description="GPS latitude of fueling station")
     longitude: Optional[float] = Field(None, ge=-180.0, le=180.0, description="GPS longitude of fueling station")
-    fueling_date: date = Field(
-        default_factory=date.today, description="Date of fueling"
-    )
+    fueling_date: date = Field(default_factory=date.today, description="Date of fueling")
     is_full_tank: bool = Field(
         default=True,
         description="Whether this was a full tank fill-up (affects consumption calculation)",
     )
-    notes: Optional[str] = Field(
-        None,
-        max_length=500,
-        description="Additional notes about this fueling",
-        example="Full tank, highway driving",
-    )
+    notes: Optional[str] = Field(None, max_length=500, description="Additional notes about this fueling")
 
     @field_validator('liters')
     @classmethod
@@ -123,8 +96,7 @@ class FuelEntryResponse(FuelEntryBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FuelEntryListResponse(BaseModel):
@@ -135,8 +107,7 @@ class FuelEntryListResponse(BaseModel):
     per_page: int
     pages: int
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FuelStatisticsResponse(BaseModel):
@@ -151,8 +122,7 @@ class FuelStatisticsResponse(BaseModel):
         description="Average consumption in L/100km (calculated from full tank entries only)"
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConsumptionDataPoint(BaseModel):
@@ -177,8 +147,7 @@ class ConsumptionDataPoint(BaseModel):
         description="Fraction of E85 in liters added during this fill-to-fill segment (0..1). Set on full-tank entries only."
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConsumptionHistoryResponse(BaseModel):
@@ -186,5 +155,4 @@ class ConsumptionHistoryResponse(BaseModel):
     vehicle_id: int
     data_points: List[ConsumptionDataPoint]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

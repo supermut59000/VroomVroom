@@ -42,8 +42,9 @@ def create_fuel_entry(
     try:
         return fuel_service.create_fuel_entry(fuel_entry, allow_odometer_decrease=allow_odometer_decrease)
     except ValueError as e:
+        logger.warning("Validation error creating fuel entry for vehicle %d: %s", fuel_entry.vehicle_id, e)
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error creating fuel entry")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
 
@@ -57,7 +58,7 @@ def get_fuel_entries(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=500, description="Items per page"),
     order_by: FuelEntryOrderBy = Query(FuelEntryOrderBy.fueling_date, description="Order by field"),
-    order: str = Query("desc", regex="^(asc|desc)$", description="Order direction"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Order direction"),
     db: Session = Depends(get_db)
 ):
     """Get fuel entries with optional filters and pagination"""
@@ -121,13 +122,17 @@ def get_fuel_entry(
 @router.put("/{entry_id}", response_model=FuelEntryResponse)
 def update_fuel_entry(
     entry_id: int = Path(..., description="Fuel entry ID"),
-    fuel_entry_update: FuelEntryUpdate = None,
+    fuel_entry_update: FuelEntryUpdate = ...,
     db: Session = Depends(get_db)
 ):
     """Update a fuel entry"""
     fuel_service = FuelService(db)
 
-    db_fuel_entry = fuel_service.update_fuel_entry(entry_id, fuel_entry_update)
+    try:
+        db_fuel_entry = fuel_service.update_fuel_entry(entry_id, fuel_entry_update)
+    except Exception:
+        logger.exception("Unexpected error updating fuel entry %d", entry_id)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
     if not db_fuel_entry:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fuel entry not found")
     return db_fuel_entry
