@@ -13,6 +13,12 @@ class TestVehicleCRUD:
         assert data["is_active"] is True
         assert "id" in data
 
+    def test_create_vehicle_with_yearly_fixed_costs(self, client, sample_vehicle_data):
+        sample_vehicle_data["yearly_fixed_costs"] = 780.0
+        resp = client.post("/api/v1/vehicles/", json=sample_vehicle_data)
+        assert resp.status_code == 201
+        assert resp.json()["yearly_fixed_costs"] == 780.0
+
     def test_create_vehicle_uppercase_plate(self, client, sample_vehicle_data):
         sample_vehicle_data["license_plate"] = "ab-456-ef"
         resp = client.post("/api/v1/vehicles/", json=sample_vehicle_data)

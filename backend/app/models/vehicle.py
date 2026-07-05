@@ -26,6 +26,7 @@ class Vehicle(Base):
     # Informations d'acquisition
     acquisition_date = Column(Date, nullable=True)
     purchase_price = Column(Float, nullable=True)
+    yearly_fixed_costs = Column(Float, nullable=True)  # assurance, CT... (€/an)
 
     # Insurance mileage tracking
     insurance_km_limit = Column(Float, nullable=True)  # Initial km limit

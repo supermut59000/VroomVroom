@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -30,10 +30,15 @@ import {
   useStationSuggestions,
   useAllFuelEntries,
 } from '@/hooks/use-fuel-entries'
-import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
+import {
+  useFlexfuelConversion,
+  useCreateE10ReferencePrice,
+  useE10ReferencePrices,
+} from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { useOffline } from '@/hooks/use-offline'
 import { NearbyStationsList } from './NearbyStationsList'
+import type { StationPrices } from '@/hooks/use-nearby-stations'
 
 const schema = z.object({
   fueling_date: z.string().min(1, 'Date requise'),
@@ -65,6 +70,11 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const { isOnline, addToQueue } = useOffline()
 
   const isFlexfuel = !!flexfuelConversion
+  const createE10Price = useCreateE10ReferencePrice()
+  const { data: e10Prices } = useE10ReferencePrices(isFlexfuel)
+  // E10 price of the station picked in NearbyStationsList — auto-recorded as a
+  // global E10 reference on E85 fills so the rentability calc stays fed.
+  const stationE10PriceRef = useRef<number | null>(null)
 
   const form = useForm<FormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,6 +152,28 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
     try {
       await createFuelEntry.mutateAsync(payload)
       toast.success('Plein ajouté avec succès')
+
+      // Best-effort E10 reference auto-capture (one per date, E85 fills only)
+      const e10Price = stationE10PriceRef.current
+      if (
+        isFlexfuel &&
+        data.fuel_type === 'e85' &&
+        e10Price != null &&
+        !e10Prices?.some((p) => p.reference_date === data.fueling_date)
+      ) {
+        try {
+          await createE10Price.mutateAsync({
+            reference_date: data.fueling_date,
+            price_per_liter: e10Price,
+            notes: `Auto — ${data.station_name || 'station proche'}`,
+          })
+          toast.info(`Prix E10 de référence enregistré : ${e10Price.toFixed(3)} €/L`)
+        } catch {
+          // reference price is a bonus, never block the fill
+        }
+      }
+
+      stationE10PriceRef.current = null
       form.reset()
       geo.reset()
       onClose()
@@ -151,10 +183,11 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   }
 
   const handleStationSelect = useCallback(
-    (stationName: string, location: string, price: number | null) => {
+    (stationName: string, location: string, price: number | null, prices?: StationPrices) => {
       form.setValue('station_name', stationName)
       form.setValue('location', location)
       if (price != null) form.setValue('price_per_liter', price)
+      stationE10PriceRef.current = prices?.e10 ?? null
     },
     [form],
   )

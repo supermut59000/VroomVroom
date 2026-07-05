@@ -16,6 +16,7 @@ export interface Vehicle {
   tank_capacity: number | null
   acquisition_date: string | null
   purchase_price: number | null
+  yearly_fixed_costs: number | null
   insurance_km_limit: number | null
   insurance_km_annual_increase: number | null
   insurance_km_start_date: string | null
@@ -47,6 +48,7 @@ export interface VehicleCreate {
   tank_capacity?: number | null
   acquisition_date?: string | null
   purchase_price?: number | null
+  yearly_fixed_costs?: number | null
   insurance_km_limit?: number | null
   insurance_km_annual_increase?: number | null
   insurance_km_start_date?: string | null
@@ -65,6 +67,7 @@ export interface VehicleUpdate {
   tank_capacity?: number | null
   acquisition_date?: string | null
   purchase_price?: number | null
+  yearly_fixed_costs?: number | null
   insurance_km_limit?: number | null
   insurance_km_annual_increase?: number | null
   insurance_km_start_date?: string | null

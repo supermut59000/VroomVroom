@@ -76,10 +76,11 @@ export function useDeleteFlexfuelConversion(vehicleId: number) {
 
 // ---- E10 Reference Prices (global) ----
 
-export function useE10ReferencePrices() {
+export function useE10ReferencePrices(enabled: boolean = true) {
   return useQuery({
     queryKey: ['e10ReferencePrices'],
     queryFn: () => api.get<E10ReferencePrice[]>('/flexfuel/e10-prices'),
+    enabled,
   })
 }
 

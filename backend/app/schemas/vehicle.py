@@ -47,6 +47,7 @@ class VehicleBase(BaseModel):
     tank_capacity: Optional[float] = Field(None, gt=0, description="Capacité du réservoir en litres")
     acquisition_date: Optional[date] = Field(None, description="Date d'acquisition")
     purchase_price: Optional[float] = Field(None, ge=0, description="Prix d'achat")
+    yearly_fixed_costs: Optional[float] = Field(None, ge=0, description="Frais fixes annuels (assurance, CT...)")
     insurance_km_limit: Optional[float] = Field(None, ge=0, description="Limite kilométrique initiale d'assurance")
     insurance_km_annual_increase: Optional[float] = Field(None, ge=0, description="Augmentation annuelle de la limite (km)")
     insurance_km_start_date: Optional[date] = Field(None, description="Date de début du suivi kilométrique")
@@ -81,6 +82,7 @@ class VehicleUpdate(BaseModel):
     tank_capacity: Optional[float] = Field(None, gt=0)
     acquisition_date: Optional[date] = None
     purchase_price: Optional[float] = Field(None, ge=0)
+    yearly_fixed_costs: Optional[float] = Field(None, ge=0)
     insurance_km_limit: Optional[float] = Field(None, ge=0)
     insurance_km_annual_increase: Optional[float] = Field(None, ge=0)
     insurance_km_start_date: Optional[date] = None

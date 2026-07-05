@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { MapPin, Loader2, ChevronDown, ChevronUp, BookMarked, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useNearbyStations } from '@/hooks/use-nearby-stations'
+import type { StationPrices } from '@/hooks/use-nearby-stations'
 import { useFavoriteStations } from '@/hooks/use-favorite-stations'
 import type { FuelType } from '@/types'
 import { useState } from 'react'
@@ -18,7 +19,12 @@ interface NearbyStationsListProps {
   fuelType: FuelType
   /** Past fuel entries with GPS + station_name — used to override the raw API adresse */
   historyEntries?: HistoryEntry[]
-  onSelect: (stationName: string, location: string, pricePerLiter: number | null) => void
+  onSelect: (
+    stationName: string,
+    location: string,
+    pricePerLiter: number | null,
+    prices?: StationPrices,
+  ) => void
   /** Auto-select the nearest station with a valid price */
   autoSelect?: boolean
 }
@@ -77,7 +83,7 @@ export function NearbyStationsList({
         )
         ?.station_name ?? null
       const displayName = knownName ?? best.name
-      onSelect(displayName, [displayName, best.address].filter(Boolean).join(', '), best.price)
+      onSelect(displayName, [displayName, best.address].filter(Boolean).join(', '), best.price, best.prices)
     }
   }, [autoSelect, loading, error, stations, historyEntries, onSelect])
 
@@ -156,7 +162,7 @@ export function NearbyStationsList({
                     type="button"
                     className="flex flex-1 items-center justify-between text-left hover:bg-muted rounded-md px-1"
                     onClick={() => {
-                      onSelect(displayName, [displayName, s.address].filter(Boolean).join(', '), s.price)
+                      onSelect(displayName, [displayName, s.address].filter(Boolean).join(', '), s.price, s.prices)
                     }}
                   >
                     <div className="min-w-0">

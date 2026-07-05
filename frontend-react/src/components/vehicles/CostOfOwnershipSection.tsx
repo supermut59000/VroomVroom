@@ -14,6 +14,7 @@ const COLORS = {
   purchase: 'var(--color-chart-purchase, hsl(220 8.9% 46.1%))',
   fuel: 'var(--color-chart-fuel, hsl(217 91% 60%))',
   maintenance: 'var(--color-chart-maintenance, hsl(25 95% 53%))',
+  fixed: 'var(--color-chart-fixed, hsl(270 60% 55%))',
 }
 
 export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProps) {
@@ -28,9 +29,6 @@ export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProp
     const purchasePrice = vehicle.purchase_price ?? 0
     const fuelCost = fuelStats?.total_cost ?? 0
     const maintenanceCost = maintenanceStats?.total_cost ?? 0
-    const totalCost = purchasePrice + fuelCost + maintenanceCost
-
-    if (totalCost === 0) return null
 
     // Months owned
     const acquisitionDate = vehicle.acquisition_date
@@ -43,20 +41,30 @@ export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProp
         (now.getMonth() - acquisitionDate.getMonth()),
     )
 
+    // Fixed costs (insurance, CT...) prorated over the ownership period
+    const yearlyFixed = vehicle.yearly_fixed_costs ?? 0
+    const fixedCost = (yearlyFixed / 12) * monthsOwned
+
+    const totalCost = purchasePrice + fuelCost + maintenanceCost + fixedCost
+
+    if (totalCost === 0) return null
+
     const totalDistance = stats.total_distance || 0
-    const costPerMonth = (fuelCost + maintenanceCost) / monthsOwned
+    const costPerMonth = (fuelCost + maintenanceCost + fixedCost) / monthsOwned
     const allInCostPerKm = totalDistance > 0 ? totalCost / totalDistance : null
     const projectedYearly = costPerMonth * 12
 
     const fuelPct = totalCost > 0 ? (fuelCost / totalCost) * 100 : 0
     const maintenancePct = totalCost > 0 ? (maintenanceCost / totalCost) * 100 : 0
     const purchasePct = totalCost > 0 ? (purchasePrice / totalCost) * 100 : 0
+    const fixedPct = totalCost > 0 ? (fixedCost / totalCost) * 100 : 0
 
     return {
       totalCost,
       purchasePrice,
       fuelCost,
       maintenanceCost,
+      fixedCost,
       monthsOwned,
       costPerMonth,
       allInCostPerKm,
@@ -64,6 +72,7 @@ export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProp
       fuelPct,
       maintenancePct,
       purchasePct,
+      fixedPct,
       totalDistance,
     }
   }, [vehicle, stats, fuelStats, maintenanceStats])
@@ -74,6 +83,7 @@ export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProp
     { name: 'Achat', value: metrics.purchasePrice, color: COLORS.purchase },
     { name: 'Carburant', value: metrics.fuelCost, color: COLORS.fuel },
     { name: 'Maintenance', value: metrics.maintenanceCost, color: COLORS.maintenance },
+    { name: 'Frais fixes', value: metrics.fixedCost, color: COLORS.fixed },
   ].filter((d) => d.value > 0)
 
   return (
@@ -156,6 +166,14 @@ export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProp
             <span className="text-muted-foreground">Maintenance</span>
             <span>
               {metrics.maintenanceCost.toFixed(0)} &euro; ({metrics.maintenancePct.toFixed(0)}%)
+            </span>
+          </div>
+        )}
+        {metrics.fixedCost > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Frais fixes</span>
+            <span>
+              {metrics.fixedCost.toFixed(0)} &euro; ({metrics.fixedPct.toFixed(0)}%)
             </span>
           </div>
         )}

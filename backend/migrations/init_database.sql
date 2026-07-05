@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS `vehicles` (
     -- Acquisition information
     `acquisition_date` DATE NULL,
     `purchase_price` FLOAT NULL,
+    `yearly_fixed_costs` FLOAT NULL COMMENT 'Yearly fixed costs: insurance, CT... (EUR/year)',
 
     -- Insurance mileage tracking
     `insurance_km_limit` FLOAT NULL COMMENT 'Initial kilometer limit from insurance',

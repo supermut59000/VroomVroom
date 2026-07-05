@@ -37,6 +37,7 @@ const schema = z.object({
   tank_capacity: z.coerce.number().positive().optional().or(z.literal('')),
   acquisition_date: z.string().optional().or(z.literal('')),
   purchase_price: z.coerce.number().min(0).optional().or(z.literal('')),
+  yearly_fixed_costs: z.coerce.number().min(0).optional().or(z.literal('')),
   insurance_unlimited: z.boolean().default(false),
   insurance_km_limit: z.coerce.number().min(0).optional().or(z.literal('')),
   insurance_km_annual_increase: z.coerce.number().min(0).optional().or(z.literal('')),
@@ -74,6 +75,7 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
         tank_capacity: vehicle.tank_capacity ?? '',
         acquisition_date: vehicle.acquisition_date ?? '',
         purchase_price: vehicle.purchase_price ?? '',
+        yearly_fixed_costs: vehicle.yearly_fixed_costs ?? '',
         insurance_unlimited: vehicle.insurance_unlimited ?? false,
         insurance_km_limit: vehicle.insurance_km_limit ?? '',
         insurance_km_annual_increase: vehicle.insurance_km_annual_increase ?? '',
@@ -99,6 +101,7 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
           tank_capacity: data.tank_capacity ? Number(data.tank_capacity) : null,
           acquisition_date: data.acquisition_date || null,
           purchase_price: data.purchase_price ? Number(data.purchase_price) : null,
+          yearly_fixed_costs: data.yearly_fixed_costs ? Number(data.yearly_fixed_costs) : null,
           insurance_unlimited: data.insurance_unlimited,
           insurance_km_limit: data.insurance_unlimited ? null : (data.insurance_km_limit ? Number(data.insurance_km_limit) : null),
           insurance_km_annual_increase: data.insurance_unlimited ? null : (data.insurance_km_annual_increase ? Number(data.insurance_km_annual_increase) : null),
@@ -189,9 +192,21 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-purchase_price">Prix d'achat (&euro;)</Label>
-              <Input id="edit-purchase_price" type="number" step="0.01" {...form.register('purchase_price')} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-purchase_price">Prix d'achat (&euro;)</Label>
+                <Input id="edit-purchase_price" type="number" step="0.01" {...form.register('purchase_price')} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-yearly_fixed_costs">Frais fixes (&euro;/an)</Label>
+                <Input
+                  id="edit-yearly_fixed_costs"
+                  type="number"
+                  step="0.01"
+                  placeholder="assurance, CT..."
+                  {...form.register('yearly_fixed_costs')}
+                />
+              </div>
             </div>
 
             <div className="space-y-3">
