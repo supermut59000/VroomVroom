@@ -1,7 +1,7 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-05-27
+Last updated: 2026-07-05
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
@@ -367,6 +367,45 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-07-05
+
+### Math audit — weighted averages, stale-fix ports, break-even honesty
+
+Full math sweep of backend services + chart/calculator frontend. Seven bugs fixed, two features added. 82 backend tests pass (was 49/50).
+
+**Backend fixes:**
+- `get_fuel_statistics_by_vehicle` (`fuel_service.py`): `average_consumption` was a **simple mean** of segment values — the exact bias fixed in seasonal stats on 2026-05-04 but never ported to the headline number. Now distance-weighted (`Σ seg_liters × 100 / Σ seg_km`). Also anchors at the **first full tank** (a leading Partiel can't anchor a segment — its pseudo-segment polluted the average). Same anchor fix in `get_consumption_history` (display-only points until first Plein) and `_compute_seasonal_consumption` (the first-full drop now applies even without `from_date`).
+- `cost_per_km` (`vehicle_service.py`): was `total_fuel_cost / (last_odo − initial_odometer)` — km driven before the first logged fill diluted the ratio. Now divides by fill-to-fill distance (first→last entry). `total_distance` (display) unchanged.
+- Insurance limit: `years_elapsed` clamped at 0 (future start date was *shrinking* the limit).
+- `monthly_average_savings` (`flexfuel_service.py`): averaged only months **containing fills** — a skipped month inflated the rate and pulled break-even too close. Now `completed_savings / calendar_months_since_conversion`.
+- `next_maintenance_date` stat: `min()` over all entries returned stale superseded dates; now latest-entry-per-type first (matches frontend reminder logic).
+- Maintenance create: rejects odometer below vehicle `initial_odometer`; endpoint now maps `ValueError` → 422 (was swallowed as 500).
+
+**Frontend fixes:**
+- `BlendCalculator.computeAvgConsumption`: the 8b37df4 sort fix (`is_full_tank ASC` tiebreaker) was never ported here — same-stop boosters could leak between segments. Also now distance-weighted + first-full anchored, matching backend.
+- `simulateFutureFills`: `odo = fromOdo + (i+1) × intervalKm` used the *current row's* interval × row number — wrong km column when per-row −50/+50 overrides differ. Now a cumulative sum.
+- `MonthlyCostChart` €/100km: first fill's cost was never counted (loop from i=1) — €/mois and €/100km disagreed on total spend. First fill's cost now lands in its month.
+- `RefuelingPatternChart`: avg km between fills divided by all pairs including skipped (km ≤ 0) ones; now divides by valid segments.
+- `use-maintenance-reminders`: one entry with both date and km triggers produced two badges; now one per type (overdue wins over upcoming, date-based preferred otherwise).
+
+**Stale tests fixed** (both predated deliberate decisions):
+- `test_invalid_maintenance_type` → free text is a feature (`maintenance_type_to_varchar.sql`); replaced with accept-custom-type + odometer-guard tests.
+- `test_docs_no_auth_required` → Swagger is gated behind `DEBUG=True` since the security pass; test now asserts 200/404 based on `settings.DEBUG`.
+- New regression tests: distance-weighted average (6.29 ≠ simple-mean 7.0), leading-partial anchor exclusion, `yearly_fixed_costs` roundtrip.
+
+**Feature — E10 reference auto-capture** (`FuelAddDialog.tsx`, `NearbyStationsList.tsx`):
+- `onSelect` now passes the station's full `StationPrices`; the dialog stores `prices.e10` in a ref. On saving an **E85 fill** for a FlexFuel vehicle, if no E10 reference exists for that date, one is POSTed automatically (`notes: "Auto — <station>"`) + info toast. Best-effort: failure never blocks the fill. Kills the manual E10 price logging chore.
+
+**Feature — `yearly_fixed_costs`** (assurance, CT... €/an):
+- New nullable Float on `vehicles` (alembic `d4e5f6a7b8c9`, + `init_database.sql`), Pydantic schemas, TS types, field in VehicleAdd/EditDialog (next to prix d'achat).
+- `CostOfOwnershipSection`: fixed costs prorated over months owned, included in Coût total / Coût par mois / Coût par km / Projection annuelle, new donut slice "Frais fixes" (`--color-chart-fixed`, light+dark).
+
+**Deploy note**: run `docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head` before deploying (new `yearly_fixed_costs` column).
+
+**Known approximation (accepted)**: rentability counts only `fuel_type=E85` entries, each divided by the full overconsumption factor — Essence boosters burned in the blend are treated as burned at E10 rate, slightly overstating savings. Segment-level accounting would fix it; not worth the complexity for now.
+
+---
+
 ## Session log — 2026-05-28
 
 ### Chart audit — clarity & consistency pass
@@ -724,6 +763,5 @@ The `e85_fraction` reported in `SeasonStats` is the **average** fraction across 
 - **Photo receipts** — snap a photo of pump receipt / maintenance invoice, attach to entry
 - **Push notifications** — PWA push when maintenance is due or insurance km limit approaching
 - **Multi-vehicle comparison** — side-by-side stats
-- **CI/CD** — GitHub Actions: lint, test, build, deploy on push to master
-- **Test coverage for FlexFuel** — no tests yet for flexfuel service/endpoints
-- **Fix `test_invalid_maintenance_type`** — maintenance_type accepts any string, should be enum-validated
+- **CI/CD on Forgejo Actions** — pytest + tsc/build on push, deploy on green (user will wire this up)
+- **Rentability segment-level accounting** — count Essence boosters at blend overconsumption (see 2026-07-05 known approximation)

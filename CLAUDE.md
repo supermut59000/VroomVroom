@@ -16,7 +16,7 @@ VroomVroom is a **vehicle management web application** for tracking vehicles, fu
 - Backend: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic 2.x, MariaDB/MySQL, Alembic (migrations)
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, TanStack React Query, Recharts
 - Infrastructure: Docker Compose, Uvicorn ASGI server
-- Tests: pytest + httpx (SQLite in-memory, 45 tests)
+- Tests: pytest + httpx (SQLite in-memory, 82 tests)
 
 ## Quick Start
 
@@ -51,8 +51,12 @@ pip install -r requirements.txt
 python run.py  # Starts on port 8000
 
 # Frontend (separate terminal)
-cd frontend
-python3 -m http.server 3000
+cd frontend-react
+npm install
+npm run dev  # Vite dev server
+
+# Type-check before committing (strict, unused imports are errors)
+npx tsc --noEmit
 ```
 
 ## Database Migrations (Alembic)
@@ -108,26 +112,22 @@ app/
     └── logger.py        # Logging configuration
 ```
 
-### Frontend Structure (`frontend/`)
+### Frontend Structure (`frontend-react/` — the active frontend; `frontend/` is the retired vanilla JS version)
 
 ```
-frontend/
-├── index.html           # Single-page application entry
-├── js/
-│   ├── Dashboard.js     # Main orchestrator
-│   ├── config.js        # API URL configuration
-│   ├── Vehicles/
-│   │   ├── VehicleCard.js     # Grid display
-│   │   ├── VehicleAdd.js      # Create popup
-│   │   ├── VehicleDetails.js  # View popup
-│   │   └── VehicleModif.js    # Edit popup
-│   └── Fuel/
-│       ├── FuelAdd.js         # Create fuel entry
-│       ├── FuelView.js        # List/manage entries
-│       └── FuelChart.js       # Consumption chart
-└── css/
-    ├── style.css
-    └── StylePopUp.css
+frontend-react/src/
+├── App.tsx                  # ThemeProvider + ErrorBoundary + Dashboard
+├── components/
+│   ├── layout/Header.tsx    # Dark mode toggle, station prices button
+│   ├── vehicles/            # VehicleCard, Add/Edit/Details dialogs, CostOfOwnershipSection
+│   ├── fuel/                # FuelAdd/Edit/View dialogs, NearbyStationsList, StationPricesDialog
+│   ├── maintenance/         # Maintenance dialogs
+│   ├── flexfuel/            # BlendCalculator, conversion + E10 price dialogs
+│   └── charts/              # Consumption, Price, MonthlyCost, Distance, Odometer,
+│                            # EthanolHistory, FlexfuelRentability, RefuelingPattern, StationsMap
+├── hooks/                   # React Query hooks (use-vehicles, use-fuel-entries, ...)
+├── lib/                     # api.ts (fetch + timeout + X-API-Key), csv.ts, i18n.ts, constants.ts
+└── types/index.ts           # All shared TypeScript types
 ```
 
 ## Database Schema
@@ -303,13 +303,16 @@ const COLORS = { fuel: 'var(--color-chart-fuel)' }
 **Location:** [backend/app/services/fuel_service.py:get_consumption_history()](backend/app/services/fuel_service.py)
 
 ```python
-# Formula: (liters × 100) / distance_traveled_km
+# Fill-to-fill method: segments anchor at FULL tanks only.
+# Partial fills accumulate liters until the next full tank.
 #
-# For each fuel entry (except the first):
-# - distance = current_odometer - previous_odometer
-# - consumption = (current_liters × 100) / distance
+# For each segment (full tank → next full tank):
+# - distance = full_odometer - previous_full_odometer
+# - consumption = (accumulated_liters + full_liters) × 100 / distance
 #
-# First entry has no consumption (no previous reference point)
+# Entries before the first full tank are display-only (no consumption).
+# Sort order everywhere: (fueling_date, odometer, is_full_tank ASC, id)
+# so a same-stop partial booster folds into the closing full's segment.
 ```
 
 ### Vehicle Statistics
@@ -317,10 +320,11 @@ const COLORS = { fuel: 'var(--color-chart-fuel)' }
 **Location:** [backend/app/services/vehicle_service.py:get_vehicle_stats()](backend/app/services/vehicle_service.py)
 
 ```python
-# Total distance = last_odometer - (initial_odometer OR first_entry_odometer)
-# Average consumption = (total_fuel_liters / total_distance_km) × 100
-# Cost per km = total_fuel_cost / total_distance_km
-# Average price = sum(all prices) / number_of_entries
+# Total distance (display) = last_odometer - initial_odometer
+# Average consumption = DISTANCE-WEIGHTED: Σ segment_liters × 100 / Σ segment_km
+#   (not a mean of per-segment values — long segments weigh more)
+# Cost per km = total_fuel_cost / fill-to-fill distance (first→last entry)
+# Average price = total_cost / total_liters (liters-weighted)
 ```
 
 ## Configuration Files
@@ -367,8 +371,9 @@ python-dotenv==1.0.0
 3. **Service Layer** → Implement business logic in `services/`
 4. **API Endpoints** → Add routes in `api/v1/endpoints/`
 5. **Register Router** → Add to `api/v1/api.py`
-6. **Frontend Module** → Create class in `js/`
-7. **Update Dashboard** → Integrate in `Dashboard.js`
+6. **TypeScript types** → Add to `frontend-react/src/types/index.ts`
+7. **React Query hook** → Add to `frontend-react/src/hooks/`
+8. **Component** → Create in `frontend-react/src/components/<domain>/` (shadcn/ui, French labels)
 
 ### Code Style
 
@@ -378,51 +383,44 @@ python-dotenv==1.0.0
 - Pydantic schemas for all API contracts
 - Raise HTTPException for errors (404, 400, 422)
 
-**Frontend:**
-- ES6 classes for modules
-- Arrow functions for event handlers
-- Async/await for API calls
-- No jQuery or frameworks - pure JavaScript
+**Frontend (React — `frontend-react/`):**
+- TypeScript strict mode (`npx tsc --noEmit` before committing — unused imports are build errors)
+- React Query hooks in `src/hooks/`, no useEffect data fetching
+- shadcn/ui components, Recharts for charts, Zod + react-hook-form for forms
+- French UI strings
 
-### Testing (Not Yet Implemented)
+### Testing
 
-When adding tests:
 ```bash
-# Install test dependencies
-pip install pytest pytest-asyncio httpx
+# No system pytest / no venv — run inside Docker with live source mounted:
+docker compose run --rm -v ./backend:/app backend sh -c \
+  "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"
 
-# Run tests
-pytest backend/tests/
-
-# Structure:
-# backend/tests/
-#   ├── test_vehicles.py
-#   ├── test_fuel_entries.py
-#   └── conftest.py  # fixtures
+# backend/tests/: conftest.py (SQLite in-memory, per-test rollback),
+# test_vehicles.py, test_fuel_entries.py, test_maintenances.py,
+# test_flexfuel.py, test_auth.py
 ```
 
 ## Current Feature Status
 
 ### Implemented ✅
-- Vehicle CRUD with soft delete
-- Fuel entry CRUD
-- Statistics calculation (consumption, costs)
-- Consumption history charting
-- Vehicle archiving
-- Pagination and filtering
-- Environment-based configuration
-
-### Partially Implemented 🟡
-- Maintenance tracking (models exist, no functionality)
+- Vehicle CRUD with soft delete, archiving, insurance km tracking
+- Fuel entry CRUD with offline queue, GPS capture, station autocomplete
+- Statistics (distance-weighted consumption, costs, seasonal autonomy)
+- Maintenance tracking with reminders (date + km)
+- FlexFuel E85: conversion record, rentability, BlendCalculator, E10 reference prices
+- Station price map (data.economie.gouv.fr)
+- Charts: consumption, price, monthly costs, distance, odometer, ethanol %, refueling patterns
+- CSV export (French formatting)
+- API key auth, dark mode, PWA
+- Backend test suite (82 tests)
 
 ### Not Implemented ❌
-- Authentication/authorization
+- CI/CD (Forgejo Actions — planned)
 - Multi-user support
 - Photo upload for receipts
-- Maintenance reminders
-- CSV/PDF export
-- Unit/integration tests
-- CI/CD pipeline
+- Push notifications
+- PDF export
 
 ## Common Tasks
 
@@ -449,34 +447,22 @@ def new_endpoint(data: Schema, db: Session = Depends(get_db)):
     return service.new_method(data)
 ```
 
-### Add a Frontend Feature
+### Add a Frontend Feature (React)
 
-```bash
-# 1. Create module class
-# frontend/js/NewFeature/NewFeature.js
-export default class NewFeature {
-    constructor(dashboard) {
-        this.dashboard = dashboard;
-        this.API_URL = API_URL;
-    }
+```typescript
+// 1. Types — frontend-react/src/types/index.ts
+export interface NewThing { id: number; name: string }
 
-    async loadData() {
-        const response = await fetch(`${this.API_URL}/endpoint`);
-        const data = await response.json();
-        // render data
-    }
+// 2. React Query hook — frontend-react/src/hooks/use-new-thing.ts
+export function useNewThings() {
+  return useQuery({
+    queryKey: ['newThings'],
+    queryFn: () => api.get<NewThing[]>('/new-things/'),
+  })
 }
 
-# 2. Import in Dashboard.js
-import NewFeature from './NewFeature/NewFeature.js';
-
-# 3. Initialize in Dashboard constructor
-this.newFeature = new NewFeature(this);
-
-# 4. Add to Dashboard methods
-loadNewFeature() {
-    this.newFeature.loadData();
-}
+// 3. Component — frontend-react/src/components/<domain>/NewThingCard.tsx
+//    shadcn/ui components, French labels, ErrorBoundary if it's a chart
 ```
 
 ### Debug Database Issues
@@ -554,6 +540,6 @@ ORDER BY odometer_reading;
 - Configuration: [backend/app/core/config.py](backend/app/core/config.py)
 - Vehicle endpoints: [backend/app/api/v1/endpoints/vehicles.py](backend/app/api/v1/endpoints/vehicles.py)
 - Fuel endpoints: [backend/app/api/v1/endpoints/fuel_entries.py](backend/app/api/v1/endpoints/fuel_entries.py)
-- Frontend entry: [frontend/index.html](frontend/index.html)
-- Main dashboard: [frontend/js/Dashboard.js](frontend/js/Dashboard.js)
+- Frontend entry: [frontend-react/src/App.tsx](frontend-react/src/App.tsx)
+- Main dashboard: [frontend-react/src/pages/Dashboard.tsx](frontend-react/src/pages/Dashboard.tsx)
 - Docker config: [docker-compose.yml](docker-compose.yml)

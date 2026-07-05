@@ -1,6 +1,6 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-05-27
+Last updated: 2026-07-05
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — full endpoint/schema/service reference | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
@@ -125,11 +125,8 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 ### Tests
 - **pytest** + **httpx** TestClient
 - SQLite in-memory database (session-scoped setup, per-test transaction rollback)
-- 45 tests total:
-  - `test_vehicles.py` — 15 tests (CRUD, filters, stats, consumption calculation)
-  - `test_fuel_entries.py` — 14 tests (CRUD, auto total_cost, pagination, statistics, consumption history, partial fill accumulation)
-  - `test_maintenances.py` — 10 tests (CRUD, all 10 types, statistics)
-  - `test_auth.py` — 6 tests (403 without key, valid key, health/docs bypass, auth disabled)
+- 82 tests total (as of 2026-07-05): vehicles, fuel entries (incl. distance-weighted average + partial-anchor regressions), maintenances, flexfuel, auth
+- Run inside Docker with live source: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`
 
 ---
 
@@ -203,6 +200,20 @@ VroomVroom/
 ├── docker-compose.prod.yml         # Prod (remote DB only)
 └── CLAUDE.md                       # Full reference for AI
 ```
+
+---
+
+## What Was Done (Session of 2026-07-05)
+
+### Math audit + fixes, E10 auto-capture, fixed costs
+
+Full math audit of backend + charts. See CONTEXT.md session log for detail. Highlights:
+- `average_consumption` is now **distance-weighted** everywhere (was simple mean on the headline stat); fill-to-fill segments anchor at the first **full** tank in all three backend methods and BlendCalculator.
+- `cost_per_km` now uses fill-to-fill distance; FlexFuel `monthly_average_savings` now averages over **calendar** months since conversion (break-even projection no longer optimistic).
+- BlendCalculator: sort-tiebreaker fix ported from backend; future-fills planner km column now cumulative.
+- New: E10 reference price auto-captured from the selected nearby station on E85 fills; `yearly_fixed_costs` on vehicles feeding CostOfOwnership (donut slice "Frais fixes").
+- Tests: 82 passing (two stale tests rewritten to match deliberate decisions: free-text maintenance types, DEBUG-gated Swagger).
+- **Deploy**: `alembic upgrade head` required (new `vehicles.yearly_fixed_costs` column).
 
 ---
 
@@ -386,12 +397,12 @@ User flagged that `MonthlyCostChart` (€/100km mode) was reporting ~5 €/100km
 
 **Consumption (L/100km):**
 `(liters * 100) / (current_odometer - previous_odometer)`
-First entry has no consumption. Partial fills accumulate liters until next full tank.
+Segments anchor at FULL tanks only; partial fills accumulate liters until the next full tank. Entries before the first full tank are display-only.
 
 **Vehicle Stats:**
-- Total distance = last_odometer - initial_odometer
-- Average consumption = (total_liters / total_distance) * 100
-- Cost per km = total_fuel_cost / total_distance
+- Total distance (display) = last_odometer - initial_odometer
+- Average consumption = distance-weighted: Σ segment_liters × 100 / Σ segment_km (2026-07-05: was a simple mean of segments)
+- Cost per km = total_fuel_cost / fill-to-fill distance (first→last entry, 2026-07-05: was initial_odometer-based)
 
 **Cost Stats (frontend):**
 - This month: sum of fuel + maintenance costs for current month
