@@ -10,14 +10,24 @@ class MaintenanceService:
     def __init__(self, db: Session):
         self.db = db
 
-    def _assert_vehicle_exists(self, vehicle_id: int) -> None:
+    def _assert_vehicle_exists(self, vehicle_id: int):
         from app.models.vehicle import Vehicle
-        if not self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first():
+        vehicle = self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+        if not vehicle:
             raise ValueError(f"Véhicule avec l'id {vehicle_id} introuvable")
+        return vehicle
 
     def create_maintenance(self, maintenance: MaintenanceCreate) -> Maintenance:
         """Create a new maintenance entry"""
-        self._assert_vehicle_exists(maintenance.vehicle_id)
+        vehicle = self._assert_vehicle_exists(maintenance.vehicle_id)
+
+        # Maintenance odometer feeds the cost-spreading math — reject readings
+        # below the vehicle's initial odometer (obvious typo)
+        if maintenance.odometer_reading < (vehicle.initial_odometer or 0):
+            raise ValueError(
+                f"Le kilométrage {maintenance.odometer_reading} km est inférieur "
+                f"au kilométrage initial du véhicule ({vehicle.initial_odometer:g} km)"
+            )
 
         db_maintenance = Maintenance(
             vehicle_id=maintenance.vehicle_id,
@@ -178,8 +188,16 @@ class MaintenanceService:
         total_cost = sum(entry.cost for entry in entries)
         last_entry = entries[-1]
 
-        # Find the earliest next_maintenance_date among all entries
-        next_dates = [entry.next_maintenance_date for entry in entries if entry.next_maintenance_date]
+        # Next due date: only the latest entry per maintenance type counts —
+        # an older vidange's next date is superseded by the newer vidange.
+        latest_by_type: dict = {}
+        for entry in entries:  # sorted by maintenance_date ASC
+            latest_by_type[entry.maintenance_type] = entry
+        next_dates = [
+            e.next_maintenance_date
+            for e in latest_by_type.values()
+            if e.next_maintenance_date
+        ]
         next_maintenance_date = min(next_dates) if next_dates else None
 
         return {

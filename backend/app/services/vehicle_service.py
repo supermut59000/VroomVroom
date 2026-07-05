@@ -135,6 +135,9 @@ class VehicleService:
         if today.month < start_date.month or (today.month == start_date.month and today.day < start_date.day):
             years_elapsed -= 1
 
+        # A start date in the future must not shrink the limit
+        years_elapsed = max(0, years_elapsed)
+
         # Calculate current limit
         annual_increase = vehicle.insurance_km_annual_increase or 0
         current_limit = vehicle.insurance_km_limit + (years_elapsed * annual_increase)
@@ -241,12 +244,11 @@ class VehicleService:
             FuelEntry.id,
         ).all()
 
-        if from_date is not None and entries:
+        if entries:
             # The anchor for fill-to-fill MUST be a full tank, otherwise the first
             # computed segment uses an artificially short distance (partial → next
-            # Plein) but counts liters that actually covered the trip from the
-            # previous — now excluded — Plein. Drop everything until the first
-            # full tank on/after from_date.
+            # Plein) but counts liters whose burn window is unknown. Drop
+            # everything until the first full tank (on/after from_date when set).
             first_full_idx = next(
                 (i for i, e in enumerate(entries) if getattr(e, "is_full_tank", True)),
                 None,
@@ -420,9 +422,16 @@ class VehicleService:
         else:
             last_odometer = vehicle.initial_odometer
 
-        # Cost per km
+        # Cost per km — over the distance actually covered by logged fills
+        # (first entry → last entry), not since initial_odometer: fuel burned
+        # before the first logged fill was never recorded, so including that
+        # distance would understate the ratio.
         total_fuel_cost = fuel_stats.total_cost
-        cost_per_km = total_fuel_cost / total_distance if total_distance > 0 else 0
+        cost_per_km = (
+            total_fuel_cost / fuel_stats.total_distance
+            if fuel_stats.total_distance > 0
+            else 0
+        )
 
         # Insurance limit calculation
         current_insurance_limit = self._calculate_current_insurance_limit(vehicle)

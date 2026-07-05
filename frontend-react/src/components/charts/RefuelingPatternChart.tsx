@@ -50,16 +50,18 @@ export function RefuelingPatternChart({ entries }: Props) {
     const BUCKETS = [0, 100, 200, 300, 400, 500, 600, 700, Infinity]
     const counts = Array(BUCKETS.length - 1).fill(0)
     let total = 0
+    let validSegments = 0
 
     for (let i = 1; i < fullEntries.length; i++) {
       const km = fullEntries[i].odometer_reading - fullEntries[i - 1].odometer_reading
       if (km <= 0) continue
       total += km
+      validSegments++
       const idx = BUCKETS.findIndex((b, j) => j > 0 && km < b) - 1
       if (idx >= 0 && idx < counts.length) counts[idx]++
     }
 
-    const avgKm = fullEntries.length > 1 ? Math.round(total / (fullEntries.length - 1)) : null
+    const avgKm = validSegments > 0 ? Math.round(total / validSegments) : null
 
     return {
       data: BUCKETS.slice(0, -1).map((start, i) => ({

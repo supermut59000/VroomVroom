@@ -32,31 +32,44 @@ interface TankState {
 }
 
 function computeAvgConsumption(entries: FuelEntry[], conversionDate: string): number | null {
+  // Same sort as the backend fill-to-fill pipeline: Partiel before Plein at
+  // the same stop so a booster folds into the closing full's segment.
   const sorted = [...entries]
     .filter((e) => e.fueling_date >= conversionDate)
     .sort((a, b) => {
       const d = a.fueling_date.localeCompare(b.fueling_date)
-      return d !== 0 ? d : a.id - b.id
+      if (d !== 0) return d
+      const odo = a.odometer_reading - b.odometer_reading
+      if (odo !== 0) return odo
+      const full = Number(a.is_full_tank) - Number(b.is_full_tank)
+      if (full !== 0) return full
+      return a.id - b.id
     })
 
+  // Distance-weighted (Σ liters × 100 / Σ km), anchored at the first full tank
   let prevFullOdo: number | null = null
   let accLiters = 0
-  const values: number[] = []
+  let sumLiters = 0
+  let sumKm = 0
 
   for (const e of sorted) {
+    if (prevFullOdo === null) {
+      if (e.is_full_tank) prevFullOdo = e.odometer_reading
+      continue
+    }
     accLiters += e.liters
     if (e.is_full_tank) {
-      if (prevFullOdo !== null) {
-        const dist = e.odometer_reading - prevFullOdo
-        if (dist > 0) values.push((accLiters * 100) / dist)
+      const dist = e.odometer_reading - prevFullOdo
+      if (dist > 0) {
+        sumLiters += accLiters
+        sumKm += dist
       }
       prevFullOdo = e.odometer_reading
       accLiters = 0
     }
   }
 
-  if (values.length === 0) return null
-  return values.reduce((a, b) => a + b, 0) / values.length
+  return sumKm > 0 ? (sumLiters * 100) / sumKm : null
 }
 
 function computeTankState(
@@ -326,13 +339,15 @@ function simulateFutureFills(
   const fills: FutureFill[] = []
   let rem = startRemaining
   let eth = startEthanol
+  let odoCursor = fromOdo
 
   for (let i = 0; i < intervals.length; i++) {
     const intervalKm = intervals[i]
     const consumed = (intervalKm * avgL100km) / 100
     const remAfter = Math.max(0, rem - consumed)
     const ethAfter = rem > 0 ? eth * (remAfter / rem) : 0
-    const odo = fromOdo + (i + 1) * intervalKm
+    odoCursor += intervalKm
+    const odo = odoCursor
 
     const rec = computeWinterRec(
       remAfter, ethAfter, tankCapacity, targetPct, tolerancePct,

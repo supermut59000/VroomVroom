@@ -211,9 +211,18 @@ class FlexfuelService:
             for month, savings in sorted(monthly_map.items())
         ]
 
-        current_month = date.today().strftime("%Y-%m")
-        completed_months = [m["savings"] for m in monthly_savings if m["month"] < current_month]
-        monthly_avg = round(sum(completed_months) / len(completed_months), 2) if completed_months else None
+        # Monthly average over calendar months elapsed since conversion
+        # (current partial month excluded). Months without any E85 fill count
+        # as zero — averaging only months-with-fills would inflate the rate and
+        # pull the projected break-even date too close.
+        today = date.today()
+        current_month = today.strftime("%Y-%m")
+        completed_savings = sum(m["savings"] for m in monthly_savings if m["month"] < current_month)
+        months_elapsed = (
+            (today.year - conversion.conversion_date.year) * 12
+            + (today.month - conversion.conversion_date.month)
+        )
+        monthly_avg = round(completed_savings / months_elapsed, 2) if months_elapsed > 0 else None
 
         return {
             "vehicle_id": vehicle_id,

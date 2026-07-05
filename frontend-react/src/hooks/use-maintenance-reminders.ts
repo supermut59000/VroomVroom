@@ -36,7 +36,11 @@ export function useMaintenanceReminders(vehicleId: number) {
     for (const m of latestByType.values()) {
       const label = getMaintenanceLabel(m.maintenance_type)
 
-      // Check date-based reminders
+      // Compute both triggers, then keep ONE reminder per type (the most
+      // urgent) — a date+km entry must not produce two badges.
+      let dateReminder: Reminder | null = null
+      let kmReminder: Reminder | null = null
+
       if (m.next_maintenance_date) {
         const nextDate = new Date(m.next_maintenance_date)
         nextDate.setHours(0, 0, 0, 0)
@@ -45,40 +49,49 @@ export function useMaintenanceReminders(vehicleId: number) {
           const daysOverdue = Math.round(
             (today.getTime() - nextDate.getTime()) / (1000 * 60 * 60 * 24),
           )
-          result.push({
+          dateReminder = {
             type: label,
             status: 'overdue',
             detail: `${label} dépassé${label.endsWith('e') ? 'e' : ''} de ${daysOverdue} jour${daysOverdue > 1 ? 's' : ''}`,
-          })
+          }
         } else if (nextDate <= in30Days) {
           const daysLeft = Math.round(
             (nextDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
           )
-          result.push({
+          dateReminder = {
             type: label,
             status: 'upcoming',
             detail: `${label} dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`,
-          })
+          }
         }
       }
 
-      // Check odometer-based reminders
       if (m.next_maintenance_odometer && lastOdometer > 0) {
         const kmRemaining = m.next_maintenance_odometer - lastOdometer
 
         if (kmRemaining <= 0) {
-          result.push({
+          kmReminder = {
             type: label,
             status: 'overdue',
             detail: `${label} dépassé${label.endsWith('e') ? 'e' : ''} de ${Math.abs(Math.round(kmRemaining))} km`,
-          })
+          }
         } else if (kmRemaining <= 1000) {
-          result.push({
+          kmReminder = {
             type: label,
             status: 'upcoming',
             detail: `${label} dans ${Math.round(kmRemaining)} km`,
-          })
+          }
         }
+      }
+
+      if (dateReminder && kmReminder) {
+        if (kmReminder.status === 'overdue' && dateReminder.status !== 'overdue') {
+          result.push(kmReminder)
+        } else {
+          result.push(dateReminder)
+        }
+      } else if (dateReminder || kmReminder) {
+        result.push((dateReminder ?? kmReminder)!)
       }
     }
 

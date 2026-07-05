@@ -150,6 +150,48 @@ class TestFuelStatistics:
         assert data["total_distance"] == 500
         assert data["average_consumption"] == 7.0  # 35L / 500km * 100
 
+    def test_average_consumption_distance_weighted(self, client, created_vehicle):
+        """A 600 km highway segment must weigh more than a 100 km city one."""
+        vid = created_vehicle["id"]
+        fills = [
+            {"odometer_reading": 10000, "liters": 40.0, "fueling_date": "2025-06-01"},
+            {"odometer_reading": 10100, "liters": 8.0, "fueling_date": "2025-06-05"},   # 8 L/100 over 100 km
+            {"odometer_reading": 10700, "liters": 36.0, "fueling_date": "2025-06-20"},  # 6 L/100 over 600 km
+        ]
+        for f in fills:
+            client.post("/api/v1/fuel-entries/", json={
+                "vehicle_id": vid,
+                "fuel_type": "essence",
+                "price_per_liter": 1.80,
+                "is_full_tank": True,
+                **f,
+            })
+
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/statistics")
+        # Weighted: (8 + 36) × 100 / 700 = 6.29 — NOT the simple mean 7.0
+        assert resp.json()["average_consumption"] == 6.29
+
+    def test_leading_partial_is_not_an_anchor(self, client, created_vehicle):
+        """History starting with a partial: segments anchor at the first FULL tank."""
+        vid = created_vehicle["id"]
+        fills = [
+            {"odometer_reading": 10000, "liters": 15.0, "is_full_tank": False, "fueling_date": "2025-06-01"},
+            {"odometer_reading": 10200, "liters": 30.0, "is_full_tank": True, "fueling_date": "2025-06-05"},
+            {"odometer_reading": 10700, "liters": 35.0, "is_full_tank": True, "fueling_date": "2025-06-20"},
+        ]
+        for f in fills:
+            client.post("/api/v1/fuel-entries/", json={
+                "vehicle_id": vid,
+                "fuel_type": "essence",
+                "price_per_liter": 1.80,
+                **f,
+            })
+
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/statistics")
+        # Only one valid segment: 35 L / 500 km = 7.0. The leading partial and
+        # the partial→full pseudo-segment must not pollute the average.
+        assert resp.json()["average_consumption"] == 7.0
+
 
 class TestConsumptionHistory:
     def test_consumption_history(self, client, created_vehicle):

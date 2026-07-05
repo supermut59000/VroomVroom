@@ -154,6 +154,14 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
     const monthlyFuelCost = new Map<string, number>()
     const monthlyDistance = new Map<string, number>()
 
+    // The first fill has no distance but its cost is real — count it in its
+    // month so €/100km and €/mois agree on total spend.
+    {
+      const d0 = new Date(sorted[0].fueling_date)
+      const key0 = `${d0.getFullYear()}-${String(d0.getMonth() + 1).padStart(2, '0')}`
+      monthlyFuelCost.set(key0, sorted[0].liters * sorted[0].price_per_liter)
+    }
+
     for (let i = 1; i < sorted.length; i++) {
       const distance = sorted[i].odometer_reading - sorted[i - 1].odometer_reading
       const d = new Date(sorted[i].fueling_date)

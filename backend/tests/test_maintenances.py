@@ -95,12 +95,26 @@ class TestMaintenanceTypes:
             })
             assert resp.status_code == 201, f"Failed to create maintenance type: {mt}"
 
-    def test_invalid_maintenance_type(self, client, created_vehicle):
+    def test_custom_maintenance_type_accepted(self, client, created_vehicle):
+        # maintenance_type is deliberately free text (see
+        # migrations/maintenance_type_to_varchar.sql) — user-defined types
+        # like "lavomatique" must be accepted.
         resp = client.post("/api/v1/maintenances/", json={
             "vehicle_id": created_vehicle["id"],
-            "maintenance_type": "nonexistent",
+            "maintenance_type": "lavomatique",
             "cost": 50.0,
             "odometer_reading": 10000,
+            "maintenance_date": "2025-06-15",
+        })
+        assert resp.status_code == 201
+        assert resp.json()["maintenance_type"] == "lavomatique"
+
+    def test_maintenance_odometer_below_initial_rejected(self, client, created_vehicle):
+        resp = client.post("/api/v1/maintenances/", json={
+            "vehicle_id": created_vehicle["id"],
+            "maintenance_type": "vidange",
+            "cost": 50.0,
+            "odometer_reading": 1,
             "maintenance_date": "2025-06-15",
         })
         assert resp.status_code == 422

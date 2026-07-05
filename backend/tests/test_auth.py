@@ -27,9 +27,12 @@ class TestAPIKeyAuth:
         assert resp.status_code == 200
         assert resp.json()["status"] == "healthy"
 
-    def test_docs_no_auth_required(self, client_with_auth):
+    def test_docs_gated_by_debug(self, client_with_auth):
+        # Swagger UI is only mounted when DEBUG=True (security decision);
+        # when mounted it bypasses the API key.
+        from app.core.config import settings
         resp = client_with_auth.get("/docs")
-        assert resp.status_code == 200
+        assert resp.status_code == (200 if settings.DEBUG else 404)
 
     def test_auth_disabled_when_key_empty(self, client):
         """When API_KEY is empty, all requests should pass without auth."""

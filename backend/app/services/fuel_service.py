@@ -251,47 +251,34 @@ class FuelService:
         else:
             total_distance = 0
 
-        # Calculate average consumption with proper partial fill handling
+        # Average consumption: distance-weighted over fill-to-fill segments
+        # (Σ liters × 100 / Σ km) so a 600 km highway segment weighs
+        # proportionally more than a 100 km city one. The anchor MUST be a full
+        # tank — a partial can't anchor a segment because the tank state there
+        # is unknown, so leading partials are excluded.
         average_consumption = None
-        if len(entries) > 1:
+        first_full_idx = next(
+            (i for i, e in enumerate(entries) if getattr(e, 'is_full_tank', True)),
+            None,
+        )
+        if first_full_idx is not None:
+            last_full_tank_odometer = float(entries[first_full_idx].odometer_reading)
             accumulated_liters = 0.0
-            last_full_tank_odometer = None
-            consumption_values = []
+            segment_liters = 0.0
+            segment_km = 0.0
 
-            for i, entry in enumerate(entries):
-                is_full = getattr(entry, 'is_full_tank', True)  # Default to True for old entries
+            for entry in entries[first_full_idx + 1:]:
+                accumulated_liters += entry.liters
+                if getattr(entry, 'is_full_tank', True):
+                    distance = float(entry.odometer_reading) - last_full_tank_odometer
+                    if distance > 0:
+                        segment_liters += accumulated_liters
+                        segment_km += distance
+                    last_full_tank_odometer = float(entry.odometer_reading)
+                    accumulated_liters = 0.0
 
-                if i == 0:
-                    # First entry - set reference point
-                    if is_full:
-                        last_full_tank_odometer = float(entry.odometer_reading)
-                        accumulated_liters = 0.0
-                    else:
-                        # First entry is partial, start accumulating
-                        last_full_tank_odometer = float(entry.odometer_reading)
-                        accumulated_liters = entry.liters
-                else:
-                    if is_full:
-                        # Full tank - calculate consumption
-                        total_liters_for_calc = accumulated_liters + entry.liters
-
-                        if last_full_tank_odometer is not None:
-                            distance = float(entry.odometer_reading) - last_full_tank_odometer
-
-                            if distance > 0:
-                                consumption = (total_liters_for_calc * 100) / distance
-                                consumption_values.append(consumption)
-
-                        # Reset for next calculation
-                        last_full_tank_odometer = float(entry.odometer_reading)
-                        accumulated_liters = 0.0
-                    else:
-                        # Partial fill - just accumulate liters
-                        accumulated_liters += entry.liters
-
-            # Calculate average from all valid consumption values
-            if consumption_values:
-                average_consumption = round(sum(consumption_values) / len(consumption_values), 2)
+            if segment_km > 0:
+                average_consumption = round(segment_liters * 100 / segment_km, 2)
 
         return FuelStatisticsResponse(
             total_entries=len(entries),
@@ -334,7 +321,7 @@ class FuelService:
         # Track accumulated liters from partial fills (total + E85 portion)
         accumulated_liters = 0.0
         accumulated_e85_liters = 0.0
-        # Track the odometer reading of the last full tank (or first entry)
+        # Track the odometer reading of the last full tank (segment anchor)
         last_full_tank_odometer = None
         # E85 fraction of the fuel ADDED at the previous Plein. That's what was
         # in the tank during the *current* segment, i.e. what got burned and
@@ -348,8 +335,10 @@ class FuelService:
         for i, entry in enumerate(entries):
             is_full = getattr(entry, 'is_full_tank', True)  # Default to True for old entries
 
-            if i == 0:
-                # First entry - no consumption calculation possible
+            if last_full_tank_odometer is None:
+                # No full-tank anchor yet — display-only points. A partial can't
+                # anchor a segment (tank state unknown), so its liters must NOT
+                # feed the first real segment.
                 data_points.append({
                     "date": entry.fueling_date,
                     "consumption": None,
@@ -368,11 +357,6 @@ class FuelService:
                     prev_added_e85_frac = (
                         1.0 if entry.fuel_type == FuelType.E85 else 0.0
                     )
-                else:
-                    # First entry is partial, start accumulating
-                    last_full_tank_odometer = entry.odometer_reading
-                    accumulated_liters = entry.liters
-                    accumulated_e85_liters = _e85_l(entry)
             else:
                 if is_full:
                     # Full tank - calculate consumption using accumulated liters + current liters
@@ -382,17 +366,13 @@ class FuelService:
                         total_e85_liters / total_liters if total_liters > 0 else None
                     )
 
-                    if last_full_tank_odometer is not None:
-                        distance = entry.odometer_reading - last_full_tank_odometer
+                    distance = entry.odometer_reading - last_full_tank_odometer
 
-                        if distance > 0:
-                            consumption = round((total_liters * 100) / distance, 2)
-                        else:
-                            consumption = None
-                            distance = None
+                    if distance > 0:
+                        consumption = round((total_liters * 100) / distance, 2)
                     else:
-                        distance = None
                         consumption = None
+                        distance = None
 
                     # Attribute the segment to the PREVIOUS Plein's composition
                     # (what was actually burned), not the fuel just added.
