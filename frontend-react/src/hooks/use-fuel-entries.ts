@@ -98,7 +98,17 @@ export function useGlobalStationHistory() {
 export function useCreateFuelEntry() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: FuelEntryCreate) => api.post<FuelEntry>('/fuel-entries/', data),
+    // allowOdometerDecrease maps to the backend's ?allow_odometer_decrease
+    // query param — set when the user explicitly confirmed a lower reading
+    // (backfill of an older fill, odometer swap).
+    mutationFn: ({
+      allowOdometerDecrease,
+      ...data
+    }: FuelEntryCreate & { allowOdometerDecrease?: boolean }) =>
+      api.post<FuelEntry>(
+        `/fuel-entries/${allowOdometerDecrease ? '?allow_odometer_decrease=true' : ''}`,
+        data,
+      ),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['fuelEntries', variables.vehicle_id] })
       queryClient.invalidateQueries({ queryKey: ['allFuelEntries', variables.vehicle_id] })

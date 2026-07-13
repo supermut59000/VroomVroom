@@ -37,6 +37,7 @@ import {
 } from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { useOffline } from '@/hooks/use-offline'
+import { ApiError } from '@/lib/api'
 import { NearbyStationsList } from './NearbyStationsList'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
 
@@ -117,9 +118,13 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const onSubmit = async (data: FormData) => {
     if (!vehicleId) return
 
-    // Check odometer
+    // Check odometer — a confirmed lower reading (backfill, odometer swap)
+    // must actually reach the backend as allow_odometer_decrease, otherwise
+    // the confirm is a lie and the create 422s anyway.
+    let allowOdometerDecrease = false
     if (latestEntry && data.odometer_reading < latestEntry.odometer_reading) {
       if (!confirm('Le compteur est inférieur au dernier relevé. Continuer ?')) return
+      allowOdometerDecrease = true
     }
     if (latestEntry && data.odometer_reading === latestEntry.odometer_reading) {
       if (!confirm('Le compteur est identique au dernier relevé. Continuer ?')) return
@@ -138,6 +143,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       latitude: geo.latitude,
       longitude: geo.longitude,
       notes: data.notes || null,
+      allowOdometerDecrease,
     }
 
     if (!isOnline) {
@@ -153,13 +159,16 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       await createFuelEntry.mutateAsync(payload)
       toast.success('Plein ajouté avec succès')
 
-      // Best-effort E10 reference auto-capture (one per date, E85 fills only)
+      // Best-effort E10 reference auto-capture (one per date, E85 fills only).
+      // e10Prices must be LOADED to dedup — while undefined, skip rather than
+      // risk inserting a duplicate for the same date.
       const e10Price = stationE10PriceRef.current
       if (
         isFlexfuel &&
         data.fuel_type === 'e85' &&
         e10Price != null &&
-        !e10Prices?.some((p) => p.reference_date === data.fueling_date)
+        e10Prices != null &&
+        !e10Prices.some((p) => p.reference_date === data.fueling_date)
       ) {
         try {
           await createE10Price.mutateAsync({
@@ -178,7 +187,19 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       geo.reset()
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur lors de l'ajout")
+      // ApiError = the server received and rejected the entry — show why.
+      // Anything else (timeout, DNS, connection refused) = server unreachable
+      // even though navigator.onLine is true (LTE up, homelab down): queue it
+      // instead of losing the fill.
+      if (e instanceof ApiError) {
+        toast.error(e.message)
+      } else {
+        addToQueue(payload)
+        toast.info('Serveur injoignable — plein mis en file d\'attente, synchronisation automatique')
+        form.reset()
+        geo.reset()
+        onClose()
+      }
     }
   }
 
