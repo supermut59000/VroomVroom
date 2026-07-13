@@ -367,6 +367,21 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-07-13 (suite — flow audit & fixes)
+
+### Pump-flow audit: 4 fixes + frontend test suite
+
+Full /app-audit pass on the fill-logging pipeline. Findings and solutions tracked in [FLOW_FIXES.md](FLOW_FIXES.md) (temp file, delete after deploy). Summary:
+
+1. **Confirm now honest**: confirming "compteur inférieur" sends `allow_odometer_decrease=true` end-to-end (dialog → hook → offline queue). Backfilling an older fill works.
+2. **Queue poison pills**: sync distinguishes permanent 4xx (dropped + toast naming the lost entry) from transient failures (retried). Sync success surfaces a toast + invalidates fuel/vehicle caches.
+3. **Server-down ≠ data loss**: a create that fails on transport (timeout/DNS/refused while `navigator.onLine` is true) is queued instead of dropped.
+4. **E10 auto-capture** dedup guard requires the price list to be loaded.
+5. **Prod auth ambiguity**: frontend build has no `VITE_API_KEY` → prod API_KEY must be empty → API open behind the proxy. **Risk accepted by user (LAN-only), do not change, do not re-propose.**
+6. **Frontend tests exist now**: blend math extracted to `src/lib/blend-math.ts` (pure module), 15 vitest tests in `blend-math.test.ts` (singularity regression, renderer contract sweep, weighted-vs-mean discrimination, booster tiebreaker, planner cumulative odo). `npm run test`. To run in CI alongside backend pytest when Forgejo Actions is wired: `cd frontend-react && npm ci && npm run test && npm run build`.
+
+---
+
 ## Session log — 2026-07-13
 
 ### BlendCalculator crash on pure-E85 tank (2nd vehicle)

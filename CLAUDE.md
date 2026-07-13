@@ -399,6 +399,9 @@ docker compose run --rm -v ./backend:/app backend sh -c \
 # backend/tests/: conftest.py (SQLite in-memory, per-test rollback),
 # test_vehicles.py, test_fuel_entries.py, test_maintenances.py,
 # test_flexfuel.py, test_auth.py
+
+# Frontend (vitest — pure blend-math functions in src/lib/blend-math.test.ts):
+cd frontend-react && npm run test
 ```
 
 ## Current Feature Status
