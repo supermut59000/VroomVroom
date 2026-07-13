@@ -184,7 +184,10 @@ function computeThresholds(
 ): Thresholds {
   const eps = 0.001
   if (avgL100km <= 0 || Math.abs(ethFraction - 0.85) < eps) {
-    return { odoA: null, odoB: null, odoBNow: false }
+    // Degenerate case: tank is (numerically) pure E85 — both km formulas
+    // divide by (ethFraction − 0.85). A pure-E85 tank sits above any target
+    // < 85%, so dilution applies immediately; no km horizon to compute.
+    return { odoA: null, odoB: null, odoBNow: true }
   }
 
   const targetMax = (targetPct + tolerancePct) / 100
@@ -610,18 +613,20 @@ export function BlendCalculator({
               5 L+ {dilutantLabel} → {target}%
             </p>
           </>
-        ) : (
+        ) : odoB !== null ? (
           <>
             <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">
               À partir du km
             </p>
             <p className="text-base font-bold text-blue-800 dark:text-blue-200">
-              {odoB!.toLocaleString('fr-FR')}
+              {odoB.toLocaleString('fr-FR')}
             </p>
             <p className="text-[11px] text-blue-600 dark:text-blue-500 mt-0.5">
-              dans ~{(odoB! - inputOdo).toLocaleString('fr-FR')} km
+              dans ~{(odoB - inputOdo).toLocaleString('fr-FR')} km
             </p>
           </>
+        ) : (
+          <p className="text-sm font-medium text-muted-foreground">—</p>
         )}
       </div>
     </div>

@@ -8,6 +8,7 @@ import {
 import { useVehicle } from '@/hooks/use-vehicles'
 import { useAllFuelEntries } from '@/hooks/use-fuel-entries'
 import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { BlendCalculator } from './BlendCalculator'
 
 interface BlendCalculatorDialogProps {
@@ -48,12 +49,14 @@ export function BlendCalculatorDialog({ vehicleId, onClose }: BlendCalculatorDia
             Aucune conversion FlexFuel enregistrée pour ce véhicule.
           </p>
         ) : vehicle && entries ? (
-          <BlendCalculator
-            conversion={conversion}
-            vehicle={vehicle}
-            entries={entries}
-            embedded
-          />
+          <ErrorBoundary>
+            <BlendCalculator
+              conversion={conversion}
+              vehicle={vehicle}
+              entries={entries}
+              embedded
+            />
+          </ErrorBoundary>
         ) : (
           <p className="py-4 text-sm text-muted-foreground">Chargement…</p>
         )}

@@ -367,6 +367,18 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-07-13
+
+### BlendCalculator crash on pure-E85 tank (2nd vehicle)
+
+**Bug**: opening the Mélange E85 dialog crashed the whole app ("Cannot read properties of null (reading 'toLocaleString')") for a vehicle whose post-conversion history is 100% E85. `computeThresholds` has a degenerate early return when `ethFraction ≈ 0.85` (both km formulas divide by `ethFraction − 0.85`): it returned `{odoB: null, odoBNow: false}`, and card B's renderer discriminated on `odoBNow` then force-unwrapped `odoB!`. The first vehicle's blend history never hits exactly 0.85; a second vehicle running pure E85 does — hence "only with 2 vehicles".
+
+**Fix** (`BlendCalculator.tsx`): degenerate case now returns `odoBNow: true` (a pure-E85 tank is above any target < 85% → dilution applies now); card B render null-guards `odoB` (`—` fallback) instead of `!`. **Containment** (`BlendCalculatorDialog.tsx`): dialog content wrapped in `ErrorBoundary` — a future calculator crash degrades the dialog, not the dashboard (same pattern as FuelCharts per-chart boundaries).
+
+Swept the rest of the frontend for the same pattern: remaining `!` unwraps (OdometerChart `remaining!`, VehicleDetailsDialog ranges) are transitively guarded — `Math.round(null)` renders 0 but those paths are gated by the section's `range_km != null` guard. `/app-audit` skill updated with this bug class (compute/render shape mismatch, "only with N entities" heuristic, blast-radius rule).
+
+---
+
 ## Session log — 2026-07-05
 
 ### Math audit — weighted averages, stale-fix ports, break-even honesty
