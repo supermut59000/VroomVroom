@@ -371,7 +371,7 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ### Pump-flow audit: 4 fixes + frontend test suite
 
-Full /app-audit pass on the fill-logging pipeline. Findings and solutions tracked in [FLOW_FIXES.md](FLOW_FIXES.md) (temp file, delete after deploy). Summary:
+Full /app-audit pass on the fill-logging pipeline. Findings were tracked in a temp FLOW_FIXES.md, deleted after deploy (all fixed & verified). Summary:
 
 1. **Confirm now honest**: confirming "compteur inférieur" sends `allow_odometer_decrease=true` end-to-end (dialog → hook → offline queue). Backfilling an older fill works.
 2. **Queue poison pills**: sync distinguishes permanent 4xx (dropped + toast naming the lost entry) from transient failures (retried). Sync success surfaces a toast + invalidates fuel/vehicle caches.
