@@ -17,8 +17,6 @@ interface ConsumptionChartProps {
   dataPoints: ConsumptionDataPoint[]
   /** When true, split the line by dominant fuel (E85 vs Essence/E10) — raw measured values, no normalisation. */
   splitByFuelType?: boolean
-  /** Backend distance-weighted average. Used as reference line in single-line mode. */
-  avgConsumption?: number | null
 }
 
 type Point = {
@@ -34,7 +32,6 @@ type Point = {
 export function ConsumptionChart({
   dataPoints,
   splitByFuelType = false,
-  avgConsumption,
 }: ConsumptionChartProps) {
   const chartData = useMemo<Point[]>(() => {
     return dataPoints
@@ -72,6 +69,20 @@ export function ConsumptionChart({
     }
   }, [chartData])
 
+  // Average of the DISPLAYED points (distance-weighted). Respects the date
+  // filter — the backend all-time average would sit off the visible points
+  // whenever a filter is active.
+  const avgDisplayed = useMemo(() => {
+    let dist = 0
+    let liters = 0
+    for (const p of chartData) {
+      if (p.distance <= 0) continue
+      dist += p.distance
+      liters += (p.measured * p.distance) / 100
+    }
+    return dist > 0 ? (liters * 100) / dist : null
+  }, [chartData])
+
   if (chartData.length < 2) {
     return (
       <Card>
@@ -93,8 +104,8 @@ export function ConsumptionChart({
 
   const subtitle = showSplit
     ? `Essence ${avg.essence.toFixed(2)} L/100 · E85 ${avg.e85.toFixed(2)} L/100`
-    : avgConsumption != null && avgConsumption > 0
-    ? `Moyenne : ${avgConsumption.toFixed(2)} L/100km`
+    : avgDisplayed != null
+    ? `Moyenne : ${avgDisplayed.toFixed(2)} L/100km`
     : null
 
   const lastPoint = chartData[chartData.length - 1]
@@ -187,9 +198,9 @@ export function ConsumptionChart({
                 activeDot={{ r: 8, strokeWidth: 2 }}
               />
             )}
-            {!showSplit && avgConsumption != null && avgConsumption > 0 && (
+            {!showSplit && avgDisplayed != null && (
               <ReferenceLine
-                y={avgConsumption}
+                y={avgDisplayed}
                 stroke="hsl(0, 72%, 51%)"
                 strokeDasharray="5 5"
               />
