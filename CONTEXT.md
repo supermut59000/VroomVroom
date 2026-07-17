@@ -367,6 +367,19 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 
 ---
 
+## Session log — 2026-07-17
+
+### ConsumptionChart : Moyenne de la période affichée + Bilan de période (KPI)
+
+**ConsumptionChart fix**: en mode ligne unique, le sous-titre « Moyenne » et la ligne rouge utilisaient `stats.average_consumption` (moyenne globale all-time) alors que les points affichés respectent le filtre de dates — la ligne pouvait donc être sous tous les points (7.35 global vs pleins d'été E85 à 8.7–10.7). Corrigé : moyenne pondérée distance calculée sur les points affichés (même méthode que le mode split). Prop `avgConsumption` supprimée (chart + FuelCharts). Sans filtre, identique à la moyenne backend.
+
+**Nouveau — Bilan de période** (bouton « Bilan » dans VehicleDetailsDialog, à côté d'Historique) :
+- **Backend**: `GET /vehicles/{id}/period-stats?start_date=&end_date=` → `VehiclePeriodStats`. `VehicleService.get_period_stats`: entrées bornées aux dates, distance = span odomètre des entrées de la période, conso pondérée distance ancrée au premier Plein DANS la période, prix moyen pondéré litres + breakdown par carburant, maintenance de la période, économies E85 vs 100% E10 (même formule que la rentabilité, bornée aux dates, part E85 des litres, compteur skipped sans prix E10), €/100km, €/jour (carburant+maintenance), km/jour. 422 si end < start. 5 tests (`TestPeriodStats`).
+- **Frontend**: `PeriodStatsDialog.tsx` — 2 date inputs (défaut 30 derniers jours) + presets 30 j / 3 mois / 1 an / Année en cours. KPI en 3 blocs choisis par l'utilisateur : Essentiels (distance + km/j, conso, carburant € + pleins·L, prix moyen €/L avec détail par carburant), carte verte Économies E85 (montant, mix % E85, warning pleins ignorés), Coûts avancés (€/100km, €/jour, maintenance € + interventions, période en jours). Hook `usePeriodStats` (`['periodStats', id, start, end]`), activé seulement dialog ouvert + dates valides.
+- Idée écartée à ce stade : comparaison vs période précédente (deltas ↑↓) — proposée, non retenue par l'utilisateur pour l'instant.
+
+---
+
 ## Session log — 2026-07-13 (suite — flow audit & fixes)
 
 ### Pump-flow audit: 4 fixes + frontend test suite
