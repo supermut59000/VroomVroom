@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pencil, Leaf, DollarSign, Navigation, History } from 'lucide-react'
+import { Pencil, Leaf, DollarSign, Navigation, History, CalendarRange } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,7 @@ import { CostOfOwnershipSection } from './CostOfOwnershipSection'
 import { FlexfuelConversionDialog } from '@/components/flexfuel/FlexfuelConversionDialog'
 import { E10ReferencePriceDialog } from '@/components/flexfuel/E10ReferencePriceDialog'
 import { VehicleTimelineSheet } from './VehicleTimelineSheet'
+import { PeriodStatsDialog } from './PeriodStatsDialog'
 
 interface VehicleDetailsDialogProps {
   vehicleId: number | null
@@ -39,6 +40,7 @@ export function VehicleDetailsDialog({
   const [conversionDialogOpen, setConversionDialogOpen] = useState(false)
   const [e10PriceDialogOpen, setE10PriceDialogOpen] = useState(false)
   const [timelineOpen, setTimelineOpen] = useState(false)
+  const [periodStatsOpen, setPeriodStatsOpen] = useState(false)
 
   const open = vehicleId !== null
 
@@ -423,6 +425,10 @@ export function VehicleDetailsDialog({
                 <History className="mr-2 h-4 w-4" />
                 Historique
               </Button>
+              <Button variant="outline" onClick={() => setPeriodStatsOpen(true)}>
+                <CalendarRange className="mr-2 h-4 w-4" />
+                Bilan
+              </Button>
               <Button onClick={() => onEdit(vehicleId!)}>
                 <Pencil className="mr-2 h-4 w-4" />
                 Modifier
@@ -448,6 +454,13 @@ export function VehicleDetailsDialog({
         vehicleId={vehicleId}
         open={timelineOpen}
         onClose={() => setTimelineOpen(false)}
+      />
+
+      {/* Bilan de période */}
+      <PeriodStatsDialog
+        vehicleId={vehicleId}
+        open={periodStatsOpen}
+        onOpenChange={setPeriodStatsOpen}
       />
     </Dialog>
   )

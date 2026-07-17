@@ -1,4 +1,5 @@
 import logging
+from datetime import date
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ from app.schemas.vehicle import (
     VehicleList,
     VehicleStats,
     VehicleTimeline,
+    VehiclePeriodStats,
 )
 from app.core.enums import FuelType
 from app.services.vehicle_service import VehicleService
@@ -156,6 +158,32 @@ def get_vehicles_stats_batch(
         except Exception:
             logger.exception("Failed to compute stats for vehicle %d in batch", v.id)
     return result
+
+
+@router.get("/{vehicle_id}/period-stats", response_model=VehiclePeriodStats)
+def get_vehicle_period_stats(
+    vehicle_id: int,
+    start_date: date = Query(..., description="Début de la période (inclus)"),
+    end_date: date = Query(..., description="Fin de la période (incluse)"),
+    db: Session = Depends(get_db)
+):
+    """
+    Bilan entre deux dates : km, consommation, coûts, économies E85.
+    """
+    if end_date < start_date:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="La date de fin doit être postérieure à la date de début",
+        )
+
+    vehicle_service = VehicleService(db)
+    try:
+        return vehicle_service.get_period_stats(vehicle_id, start_date, end_date)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Véhicule non trouvé",
+        )
 
 
 @router.get("/{vehicle_id}/stats", response_model=VehicleStats)

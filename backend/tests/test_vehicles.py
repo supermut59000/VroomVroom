@@ -158,3 +158,107 @@ class TestVehicleFilters:
         assert resp.status_code == 200
         vehicles = resp.json()
         assert all(v["is_active"] for v in vehicles)
+
+
+class TestPeriodStats:
+    def _fill(self, client, vid, odo, liters, price, fdate, fuel="essence", full=True):
+        resp = client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid,
+            "fuel_type": fuel,
+            "liters": liters,
+            "price_per_liter": price,
+            "odometer_reading": odo,
+            "fueling_date": fdate,
+            "is_full_tank": full,
+        })
+        assert resp.status_code == 201
+
+    def test_period_stats_essentials(self, client, created_vehicle):
+        vid = created_vehicle["id"]
+        # Outside the period (before)
+        self._fill(client, vid, 10000, 40.0, 1.80, "2025-05-01")
+        # Inside the period
+        self._fill(client, vid, 10500, 35.0, 1.80, "2025-06-01")
+        self._fill(client, vid, 11000, 35.0, 1.90, "2025-06-15")
+        self._fill(client, vid, 11600, 42.0, 2.00, "2025-06-29")
+        # Outside the period (after)
+        self._fill(client, vid, 12000, 30.0, 1.80, "2025-07-10")
+
+        resp = client.get(
+            f"/api/v1/vehicles/{vid}/period-stats?start_date=2025-06-01&end_date=2025-06-30"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["days"] == 30
+        assert data["fill_count"] == 3
+        assert data["distance_km"] == 1100  # 11600 - 10500
+        assert data["total_liters"] == 112.0
+        # 35×1.80 + 35×1.90 + 42×2.00 = 63 + 66.5 + 84 = 213.5
+        assert data["total_fuel_cost"] == 213.5
+        # Consumption anchored at first full IN the period:
+        # (35 + 42) × 100 / (11600 − 10500) = 7.0
+        assert data["avg_consumption"] == 7.0
+        # Liters-weighted price: 213.5 / 112 = 1.906
+        assert data["avg_price_per_liter"] == 1.906
+        # €/100km: 213.5 × 100 / 1100 = 19.41
+        assert data["fuel_cost_per_100km"] == 19.41
+        assert data["km_per_day"] == round(1100 / 30, 1)
+        # No conversion on this vehicle → no E85 block
+        assert data["e85_savings"] is None
+
+    def test_period_stats_maintenance_and_cost_per_day(self, client, created_vehicle):
+        vid = created_vehicle["id"]
+        self._fill(client, vid, 10500, 40.0, 2.00, "2025-06-05")
+        client.post("/api/v1/maintenances/", json={
+            "vehicle_id": vid,
+            "maintenance_type": "vidange",
+            "cost": 90.0,
+            "odometer_reading": 10500,
+            "maintenance_date": "2025-06-10",
+        })
+        resp = client.get(
+            f"/api/v1/vehicles/{vid}/period-stats?start_date=2025-06-01&end_date=2025-06-30"
+        )
+        data = resp.json()
+        assert data["maintenance_cost"] == 90.0
+        assert data["maintenance_count"] == 1
+        # (80 fuel + 90 maintenance) / 30 days
+        assert data["cost_per_day"] == round((80.0 + 90.0) / 30, 2)
+
+    def test_period_stats_e85_savings(self, client, created_conversion, created_flexfuel_vehicle):
+        vid = created_flexfuel_vehicle["id"]
+        client.post("/api/v1/flexfuel/e10-prices", json={
+            "reference_date": "2024-01-01", "price_per_liter": 1.80,
+        })
+        # E85 fill inside the period (conversion date is 2024-01-15)
+        self._fill(client, vid, 50500, 40.0, 0.90, "2024-02-10", fuel="e85")
+        # Essence booster inside the period
+        self._fill(client, vid, 51000, 5.0, 1.80, "2024-02-20", fuel="essence", full=False)
+
+        resp = client.get(
+            f"/api/v1/vehicles/{vid}/period-stats?start_date=2024-02-01&end_date=2024-02-28"
+        )
+        data = resp.json()
+        # Savings: 40 / 1.197 × 1.80 − 36 = 60.15 − 36 = 24.15 (opc 19.7%)
+        assert data["e85_savings"] == round(40 / 1.197 * 1.80 - 36.0, 2)
+        # E85 share of liters: 40 / 45
+        assert data["e85_share_liters"] == round(40 / 45, 3)
+        assert data["skipped_fills_no_e10_price"] == 0
+
+    def test_period_stats_invalid_range(self, client, created_vehicle):
+        vid = created_vehicle["id"]
+        resp = client.get(
+            f"/api/v1/vehicles/{vid}/period-stats?start_date=2025-06-30&end_date=2025-06-01"
+        )
+        assert resp.status_code == 422
+
+    def test_period_stats_empty_period(self, client, created_vehicle):
+        vid = created_vehicle["id"]
+        resp = client.get(
+            f"/api/v1/vehicles/{vid}/period-stats?start_date=2030-01-01&end_date=2030-01-31"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["fill_count"] == 0
+        assert data["distance_km"] == 0
+        assert data["avg_consumption"] is None

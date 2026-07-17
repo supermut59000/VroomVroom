@@ -8,6 +8,7 @@ import type {
   VehicleStats,
   VehicleCostStats,
   VehicleTimeline,
+  VehiclePeriodStats,
   FuelEntry,
   Maintenance,
 } from '@/types'
@@ -120,5 +121,21 @@ export function useDeleteVehicle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
     },
+  })
+}
+
+export function usePeriodStats(
+  vehicleId: number | null,
+  startDate: string,
+  endDate: string,
+) {
+  return useQuery({
+    queryKey: ['periodStats', vehicleId, startDate, endDate],
+    queryFn: () =>
+      api.get<VehiclePeriodStats>(
+        `/vehicles/${vehicleId}/period-stats?start_date=${startDate}&end_date=${endDate}`,
+      ),
+    enabled:
+      vehicleId !== null && !!startDate && !!endDate && startDate <= endDate,
   })
 }

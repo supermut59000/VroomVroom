@@ -8,7 +8,16 @@ from app.models.fuel_entry import FuelEntry
 from app.models.maintenance import Maintenance
 from app.models.flexfuel_conversion import FlexfuelConversion
 
-from app.schemas.vehicle import VehicleCreate, VehicleUpdate, VehicleStats, SeasonStats, VehicleTimeline, VehicleTimelineEvent
+from app.schemas.vehicle import (
+    VehicleCreate,
+    VehicleUpdate,
+    VehicleStats,
+    SeasonStats,
+    VehicleTimeline,
+    VehicleTimelineEvent,
+    VehiclePeriodStats,
+    FuelTypePeriodBreakdown,
+)
 from app.core.enums import FuelType
 from app.services.fuel_service import FuelService
 
@@ -381,6 +390,142 @@ class VehicleService:
             )
 
         return result
+
+    def get_period_stats(self, vehicle_id: int, start_date: date, end_date: date) -> VehiclePeriodStats:
+        """Bilan entre deux dates: km, consommation, coûts, économies E85."""
+        vehicle = self.get_vehicle(vehicle_id)
+        if not vehicle:
+            raise ValueError(f"Vehicle with id {vehicle_id} not found")
+
+        entries = (
+            self.db.query(FuelEntry)
+            .filter(
+                FuelEntry.vehicle_id == vehicle_id,
+                FuelEntry.is_active == True,
+                FuelEntry.fueling_date >= start_date,
+                FuelEntry.fueling_date <= end_date,
+            )
+            .order_by(
+                FuelEntry.fueling_date,
+                FuelEntry.odometer_reading,
+                FuelEntry.is_full_tank.asc(),
+                FuelEntry.id,
+            )
+            .all()
+        )
+
+        days = (end_date - start_date).days + 1
+        total_liters = sum(e.liters for e in entries)
+        total_cost = sum(e.total_cost for e in entries)
+
+        # Observed distance: odometer span across entries in the period
+        distance_km = (
+            float(entries[-1].odometer_reading - entries[0].odometer_reading)
+            if len(entries) > 1
+            else 0.0
+        )
+
+        # Consumption: distance-weighted fill-to-fill, anchored at the first
+        # full tank inside the period (same rules as the global stats)
+        avg_consumption = None
+        first_full_idx = next(
+            (i for i, e in enumerate(entries) if getattr(e, "is_full_tank", True)),
+            None,
+        )
+        if first_full_idx is not None:
+            anchor = float(entries[first_full_idx].odometer_reading)
+            acc = seg_liters = seg_km = 0.0
+            for e in entries[first_full_idx + 1:]:
+                acc += e.liters
+                if getattr(e, "is_full_tank", True):
+                    d = float(e.odometer_reading) - anchor
+                    if d > 0:
+                        seg_liters += acc
+                        seg_km += d
+                    anchor = float(e.odometer_reading)
+                    acc = 0.0
+            if seg_km > 0:
+                avg_consumption = round(seg_liters * 100 / seg_km, 2)
+
+        # Per-fuel breakdown (liters-weighted price)
+        by_fuel: dict[str, list[float]] = {}
+        for e in entries:
+            key = e.fuel_type.value if e.fuel_type else "inconnu"
+            bucket = by_fuel.setdefault(key, [0.0, 0.0])
+            bucket[0] += e.liters
+            bucket[1] += e.total_cost
+        fuel_breakdown = [
+            FuelTypePeriodBreakdown(
+                fuel_type=k,
+                liters=round(liters, 2),
+                total_cost=round(cost, 2),
+                avg_price_per_liter=round(cost / liters, 3) if liters > 0 else 0,
+            )
+            for k, (liters, cost) in sorted(by_fuel.items())
+        ]
+
+        # Maintenance in the period
+        maintenances = (
+            self.db.query(Maintenance)
+            .filter(
+                Maintenance.vehicle_id == vehicle_id,
+                Maintenance.is_active == True,
+                Maintenance.maintenance_date >= start_date,
+                Maintenance.maintenance_date <= end_date,
+            )
+            .all()
+        )
+        maintenance_cost = round(sum(m.cost for m in maintenances), 2)
+
+        # E85 savings vs 100% E10 — same formula as the rentability calc,
+        # bounded to the period (FlexFuel vehicles only)
+        e85_savings = None
+        e85_share = None
+        skipped = 0
+        flexfuel = (
+            self.db.query(FlexfuelConversion)
+            .filter(FlexfuelConversion.vehicle_id == vehicle_id, FlexfuelConversion.is_active == True)
+            .first()
+        )
+        if flexfuel:
+            from app.services.flexfuel_service import FlexfuelService
+            ff = FlexfuelService(self.db)
+            factor = 1 + flexfuel.overconsumption_pct / 100
+            savings = 0.0
+            e85_liters = 0.0
+            for e in entries:
+                if e.fuel_type == FuelType.E85 and e.fueling_date >= flexfuel.conversion_date:
+                    e85_liters += e.liters
+                    ref_price = ff.get_latest_e10_price_at_date(e.fueling_date)
+                    if ref_price is None:
+                        skipped += 1
+                        continue
+                    savings += (e.liters / factor) * ref_price - e.total_cost
+            e85_savings = round(savings, 2)
+            e85_share = round(e85_liters / total_liters, 3) if total_liters > 0 else None
+
+        total_period_cost = total_cost + maintenance_cost
+        return VehiclePeriodStats(
+            vehicle_id=vehicle_id,
+            start_date=start_date,
+            end_date=end_date,
+            days=days,
+            distance_km=distance_km,
+            fill_count=len(entries),
+            total_liters=round(total_liters, 2),
+            total_fuel_cost=round(total_cost, 2),
+            avg_consumption=avg_consumption,
+            avg_price_per_liter=round(total_cost / total_liters, 3) if total_liters > 0 else None,
+            fuel_breakdown=fuel_breakdown,
+            e85_savings=e85_savings,
+            e85_share_liters=e85_share,
+            skipped_fills_no_e10_price=skipped,
+            fuel_cost_per_100km=round(total_cost * 100 / distance_km, 2) if distance_km > 0 else None,
+            maintenance_cost=maintenance_cost,
+            maintenance_count=len(maintenances),
+            cost_per_day=round(total_period_cost / days, 2) if days > 0 else None,
+            km_per_day=round(distance_km / days, 1) if days > 0 else None,
+        )
 
     def get_vehicle_stats(self, vehicle_id: int) -> VehicleStats:
         """

@@ -319,6 +319,36 @@ export interface E10ReferencePriceCreate {
   notes?: string | null
 }
 
+// Bilan de période (2 dates → stats)
+export interface FuelTypePeriodBreakdown {
+  fuel_type: string
+  liters: number
+  total_cost: number
+  avg_price_per_liter: number
+}
+
+export interface VehiclePeriodStats {
+  vehicle_id: number
+  start_date: string
+  end_date: string
+  days: number
+  distance_km: number
+  fill_count: number
+  total_liters: number
+  total_fuel_cost: number
+  avg_consumption: number | null
+  avg_price_per_liter: number | null
+  fuel_breakdown: FuelTypePeriodBreakdown[]
+  e85_savings: number | null
+  e85_share_liters: number | null
+  skipped_fills_no_e10_price: number
+  fuel_cost_per_100km: number | null
+  maintenance_cost: number
+  maintenance_count: number
+  cost_per_day: number | null
+  km_per_day: number | null
+}
+
 // Vehicle Timeline
 export interface VehicleTimelineEvent {
   event_type: 'fuel' | 'maintenance'

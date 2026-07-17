@@ -149,6 +149,39 @@ class VehicleStats(BaseModel):
     winter: Optional[SeasonStats] = None
 
 
+# Bilan de période — stats entre deux dates
+class FuelTypePeriodBreakdown(BaseModel):
+    fuel_type: str
+    liters: float
+    total_cost: float
+    avg_price_per_liter: float
+
+
+class VehiclePeriodStats(BaseModel):
+    vehicle_id: int
+    start_date: date
+    end_date: date
+    days: int
+    # Essentiels
+    distance_km: float
+    fill_count: int
+    total_liters: float
+    total_fuel_cost: float
+    avg_consumption: Optional[float] = None       # L/100km, pondérée distance, fill-to-fill
+    avg_price_per_liter: Optional[float] = None   # pondéré litres, tous carburants
+    fuel_breakdown: List[FuelTypePeriodBreakdown] = []
+    # Économies E85 (FlexFuel uniquement)
+    e85_savings: Optional[float] = None           # vs 100% E10, même formule que la rentabilité
+    e85_share_liters: Optional[float] = None      # part des litres en E85 (0..1)
+    skipped_fills_no_e10_price: int = 0
+    # Coûts avancés
+    fuel_cost_per_100km: Optional[float] = None
+    maintenance_cost: float = 0
+    maintenance_count: int = 0
+    cost_per_day: Optional[float] = None          # (carburant + maintenance) / jours
+    km_per_day: Optional[float] = None
+
+
 # Schéma pour la timeline unifiée
 class VehicleTimelineEvent(BaseModel):
     event_type: Literal["fuel", "maintenance"]
