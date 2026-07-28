@@ -14,8 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useVehicle } from '@/hooks/use-vehicles'
-import { useCreateMaintenance } from '@/hooks/use-maintenances'
-import { MAINTENANCE_TYPES } from '@/lib/constants'
+import { useCreateMaintenance, useMaintenanceTypeOptions } from '@/hooks/use-maintenances'
 
 const schema = z.object({
   maintenance_date: z.string().min(1, 'Date requise'),
@@ -40,6 +39,7 @@ interface MaintenanceAddDialogProps {
 export function MaintenanceAddDialog({ vehicleId, onClose }: MaintenanceAddDialogProps) {
   const { data: vehicle } = useVehicle(vehicleId)
   const createMaintenance = useCreateMaintenance()
+  const typeOptions = useMaintenanceTypeOptions(vehicleId)
 
   const form = useForm<FormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -112,7 +112,7 @@ export function MaintenanceAddDialog({ vehicleId, onClose }: MaintenanceAddDialo
                 placeholder="vidange, nettoyage…"
               />
               <datalist id="maintenance-type-options">
-                {MAINTENANCE_TYPES.map((mt) => (
+                {typeOptions.map((mt) => (
                   <option key={mt} value={mt} />
                 ))}
               </datalist>

@@ -25,16 +25,45 @@ export function getMaintenanceLabel(type: string): string {
 
 export const FUEL_TYPES: FuelType[] = ['essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85']
 
-// Preset suggestions shown in the type input datalist — stored as-is in the DB
+// Preset suggestions shown in the type input datalist — stored as-is in the DB.
+// Types already used on the vehicle are merged in at runtime, see
+// useMaintenanceTypeOptions() in hooks/use-maintenances.ts
 export const MAINTENANCE_TYPES: string[] = [
+  // Moteur / vidange
   'Vidange',
-  'Rotation pneus',
-  'Freins',
-  'Changement pneus',
-  'Batterie',
+  'Filtre à huile',
   'Filtre à air',
+  'Filtre à carburant',
+  'Filtre habitacle',
   'Bougies',
   'Courroie de distribution',
+  'Courroie accessoire',
+  'Liquide de refroidissement',
+  'Révision constructeur',
+  // Pneus / roues
+  'Pression des pneus',
+  'Rotation pneus',
+  'Changement pneus',
+  'Équilibrage',
+  'Géométrie / parallélisme',
+  'Pneus hiver',
+  'Pneus été',
+  // Freinage / liaison au sol
+  'Freins',
+  'Plaquettes de frein',
+  'Disques de frein',
+  'Liquide de frein',
+  'Amortisseurs',
+  'Embrayage',
+  // Électrique
+  'Batterie',
+  'Ampoules / éclairage',
+  'Essuie-glaces',
+  // Divers
+  'Climatisation',
+  'Échappement',
+  'Pare-brise',
   'Contrôle technique',
+  'Lavage / nettoyage',
   'Autre',
 ]

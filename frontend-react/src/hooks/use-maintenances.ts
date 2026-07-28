@@ -1,5 +1,7 @@
+import { useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { MAINTENANCE_TYPES } from '@/lib/constants'
 import type {
   Maintenance,
   MaintenanceCreate,
@@ -13,6 +15,25 @@ export function useMaintenances(vehicleId: number | null) {
     queryFn: () => api.get<Maintenance[]>(`/maintenances/vehicle/${vehicleId}`),
     enabled: vehicleId !== null,
   })
+}
+
+/**
+ * Suggestions for the maintenance type input: types already used on this
+ * vehicle first (most likely to recur), then the presets. Dedup is
+ * case-insensitive so "vidange" typed once doesn't duplicate "Vidange".
+ */
+export function useMaintenanceTypeOptions(vehicleId: number | null) {
+  const { data } = useMaintenances(vehicleId)
+
+  return useMemo(() => {
+    const used = new Map<string, string>()
+    for (const m of data ?? []) {
+      const type = m.maintenance_type?.trim()
+      if (type && !used.has(type.toLowerCase())) used.set(type.toLowerCase(), type)
+    }
+    const presets = MAINTENANCE_TYPES.filter((t) => !used.has(t.toLowerCase()))
+    return [...used.values(), ...presets]
+  }, [data])
 }
 
 export function useMaintenanceStats(vehicleId: number | null) {
