@@ -399,7 +399,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
               {routesUnavailable && ' — temps de trajet indisponibles'}
             </p>
             <div className="space-y-1">
-              {sorted.map((s, idx) => {
+              {sorted.map((s) => {
                 const stationPrice = s.prices[fuelKey]
                 const isCheapest = minPrice != null && stationPrice === minPrice
                 const knownName = stationHistory.find(

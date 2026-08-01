@@ -69,7 +69,7 @@ The app is **not** meant to become a full fleet management system. Keep it focus
   - `dist()` is NOT supported in `order_by` — sort client-side with haversine
   - `within_distance(geom, geom'POINT(lon lat)', Xkm)` works in `where`
 - **E10 reference prices are global** — one shared price list, not per-vehicle. I fill up my E85 car and reference the E10 price I see at that station for savings calculation.
-- **TSC is strict in production**: `bun run build` runs `tsc -b && vite build`. Unused imports are errors. Always run `npx tsc --noEmit` before committing.
+- **TSC is strict in production**: `bun run build` runs `tsc -b && vite build`. Unused imports/variables are errors. Always run **`npm run build`** (or `npx tsc -b`) before committing — **not** `npx tsc --noEmit`: `tsconfig.json` is a solution file (`"files": []` + `references`), so `--noEmit` compiles zero files and passes on code that fails the real build.
 - **Running backend tests**: no system pytest, no venv. Use Docker: `docker compose run --rm backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`. 50 tests total (49 pass — `test_invalid_maintenance_type` is a pre-existing failure unrelated to security/features, maintenance_type accepts any string).
 
 ---

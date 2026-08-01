@@ -55,8 +55,10 @@ cd frontend-react
 npm install
 npm run dev  # Vite dev server
 
-# Type-check before committing (strict, unused imports are errors)
-npx tsc --noEmit
+# Type-check before committing (strict, unused imports/vars are errors).
+# Use `tsc -b`: tsconfig.json is a solution file ("files": [] + references),
+# so `tsc --noEmit` compiles NOTHING and passes on code that fails the build.
+npm run build   # tsc -b && vite build — what Docker runs
 ```
 
 ## Database Migrations (Alembic)
@@ -398,7 +400,7 @@ python-dotenv==1.0.0
 - Raise HTTPException for errors (404, 400, 422)
 
 **Frontend (React — `frontend-react/`):**
-- TypeScript strict mode (`npx tsc --noEmit` before committing — unused imports are build errors)
+- TypeScript strict mode — run `npm run build` (`tsc -b && vite build`) before committing; unused imports/vars are build errors. `tsc --noEmit` is useless here (solution-style tsconfig, compiles nothing).
 - React Query hooks in `src/hooks/`, no useEffect data fetching
 - shadcn/ui components, Recharts for charts, Zod + react-hook-form for forms
 - French UI strings
