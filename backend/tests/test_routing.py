@@ -48,7 +48,12 @@ def _clean_cache():
 
 @pytest.fixture()
 def spy(monkeypatch):
-    """Replace the provider call; records every URL requested.
+    """Replace the provider call; records every request made.
+
+    Accepts a payload dict, an exception to raise, or a callable receiving
+    (url, json_body) and returning a payload — the callable form lets a test
+    answer each batch according to what that batch actually asked for, which
+    survives the concurrent batching.
 
     Re-arming the spy starts a fresh recording window, so a test can assert on
     the calls made *after* a setup step.
@@ -59,16 +64,31 @@ def spy(monkeypatch):
     def make(payload_or_exc):
         calls.clear()
 
-        def fake_get(url, params=None, timeout=None):
+        def respond(url, json_body=None):
             calls.append(url)
             if isinstance(payload_or_exc, Exception):
                 raise payload_or_exc
+            if callable(payload_or_exc):
+                return FakeResponse(payload_or_exc(url, json_body))
             return FakeResponse(payload_or_exc)
 
-        monkeypatch.setattr(routing_service.httpx, "get", fake_get)
+        monkeypatch.setattr(
+            routing_service.httpx, "get", lambda url, params=None, timeout=None: respond(url)
+        )
+        monkeypatch.setattr(
+            routing_service.httpx,
+            "post",
+            lambda url, json=None, timeout=None: respond(url, json),
+        )
         return calls
 
     return make
+
+
+def coords_from_osrm_url(url):
+    """The lon,lat;lon,lat... segment of an OSRM table URL."""
+    points = url.rsplit("/", 1)[-1]
+    return [tuple(float(v) for v in pair.split(",")) for pair in points.split(";")]
 
 
 class TestMatrixMapping:
@@ -210,11 +230,166 @@ class TestProviderFailure:
         assert legs == [{"distance_m": None, "duration_s": None}]
 
 
+class TestBatching:
+    """A 50 km search can hold a few hundred stations — well past any provider's
+    table limit — so requests are split. Batches run concurrently, so the only
+    thing keeping legs aligned is the reassembly order."""
+
+    # Destination i sits at longitude 5.000 + i/1000, and the fake provider
+    # answers with that i. Any batch shuffled or misaligned shows up instantly.
+    @staticmethod
+    def _destinations(count):
+        return [{"latitude": 45.0, "longitude": 5.0 + i / 1000} for i in range(count)]
+
+    @staticmethod
+    def _answer_by_longitude(url, _json):
+        coords = coords_from_osrm_url(url)
+        # coords[0] is the origin; the rest are this batch's destinations.
+        indices = [round((lon - 5.0) * 1000) for lon, _lat in coords[1:]]
+        return osrm_payload(*[(float(i), float(i) * 2) for i in indices])
+
+    def test_large_search_is_split_into_batches(self, client, spy, monkeypatch):
+        monkeypatch.setattr(routing_service.settings, "ROUTING_MAX_BATCH", 95)
+        calls = spy(self._answer_by_longitude)
+
+        resp = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": self._destinations(200)},
+        )
+
+        assert resp.status_code == 200
+        assert len(calls) == 3, "200 destinations at 95 per batch = 3 requests"
+
+    def test_legs_stay_aligned_across_batch_boundaries(self, client, spy, monkeypatch):
+        monkeypatch.setattr(routing_service.settings, "ROUTING_MAX_BATCH", 95)
+        spy(self._answer_by_longitude)
+
+        legs = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": self._destinations(200)},
+        ).json()["legs"]
+
+        assert len(legs) == 200
+        # Every leg must carry its own destination's answer, including the ones
+        # straddling the 95/190 boundaries.
+        for i, leg in enumerate(legs):
+            assert leg["distance_m"] == pytest.approx(float(i)), f"leg {i} misaligned"
+            assert leg["duration_s"] == pytest.approx(float(i) * 2)
+
+    def test_one_failing_batch_does_not_void_the_others(self, client, spy, monkeypatch):
+        """A blip on batch 2 must leave batches 1 and 3 usable."""
+        monkeypatch.setattr(routing_service.settings, "ROUTING_MAX_BATCH", 95)
+
+        def flaky(url, json_body):
+            coords = coords_from_osrm_url(url)
+            first = round((coords[1][0] - 5.0) * 1000)
+            if first == 95:  # the middle batch
+                raise httpx.ConnectError("blip")
+            return TestBatching._answer_by_longitude(url, json_body)
+
+        spy(flaky)
+
+        legs = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": self._destinations(200)},
+        ).json()["legs"]
+
+        assert legs[0]["distance_m"] == pytest.approx(0.0)
+        assert legs[94]["distance_m"] == pytest.approx(94.0)
+        assert legs[95] == {"distance_m": None, "duration_s": None}
+        assert legs[189] == {"distance_m": None, "duration_s": None}
+        assert legs[190]["distance_m"] == pytest.approx(190.0)
+
+
+class TestValhallaProvider:
+    @pytest.fixture(autouse=True)
+    def _use_valhalla(self, monkeypatch):
+        monkeypatch.setattr(routing_service.settings, "ROUTING_PROVIDER", "valhalla")
+        monkeypatch.setattr(routing_service.settings, "ROUTING_URL", "http://valhalla:8002")
+
+    @staticmethod
+    def valhalla_payload(*cells):
+        """cells: (distance_km, time_s) per target, None for unreachable."""
+        row = [
+            {"distance": None, "time": None} if c is None else {"distance": c[0], "time": c[1]}
+            for c in cells
+        ]
+        return {"sources_to_targets": [row]}
+
+    def test_kilometres_are_converted_to_metres(self, client, spy):
+        """Valhalla answers in km, the API contract is metres — the conversion
+        is the whole difference between 25 km and 25 m."""
+        spy(self.valhalla_payload((25.1549, 2932.8)))
+
+        legs = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": [VALLEY]},
+        ).json()["legs"]
+
+        assert legs[0]["distance_m"] == pytest.approx(25154.9)
+        assert legs[0]["duration_s"] == pytest.approx(2932.8)
+
+    def test_targets_keep_their_order(self, client, spy):
+        spy(self.valhalla_payload((25.1549, 2932.8), (44.8934, 3781.3)))
+
+        legs = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": [VALLEY, MOUNTAIN]},
+        ).json()["legs"]
+
+        assert legs[0]["distance_m"] == pytest.approx(25154.9)
+        assert legs[1]["distance_m"] == pytest.approx(44893.4)
+
+    def test_no_origin_column_is_skipped(self, client, spy):
+        """Unlike OSRM, Valhalla returns one cell per target and no self-column.
+        Skipping a column here would drop the first station."""
+        spy(self.valhalla_payload((1.234, 300.0)))
+
+        legs = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": [VALLEY]},
+        ).json()["legs"]
+
+        assert len(legs) == 1
+        assert legs[0]["distance_m"] == pytest.approx(1234.0)
+
+    def test_unreachable_target(self, client, spy):
+        spy(self.valhalla_payload((25.1549, 2932.8), None))
+
+        legs = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": [VALLEY, MOUNTAIN]},
+        ).json()["legs"]
+
+        assert legs[1] == {"distance_m": None, "duration_s": None}
+
+    def test_request_targets_the_valhalla_endpoint(self, client, spy):
+        calls = spy(self.valhalla_payload((1.0, 60.0)))
+
+        client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": [VALLEY]},
+        )
+
+        assert calls == ["http://valhalla:8002/sources_to_targets"]
+
+    def test_outage_falls_back_like_osrm(self, client, spy):
+        spy(httpx.ConnectError("valhalla down"))
+
+        resp = client.post(
+            "/api/v1/routing/matrix",
+            json={"origin": ORIGIN, "destinations": [VALLEY]},
+        )
+
+        assert resp.status_code == 200
+        assert resp.json()["legs"] == [{"distance_m": None, "duration_s": None}]
+
+
 class TestValidation:
     def test_too_many_destinations_rejected(self, client):
         resp = client.post(
             "/api/v1/routing/matrix",
-            json={"origin": ORIGIN, "destinations": [VALLEY] * 51},
+            json={"origin": ORIGIN, "destinations": [VALLEY] * 301},
         )
         assert resp.status_code == 422
 

@@ -385,6 +385,40 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 - **Tests** : 18 tests (`test_routing.py`) — mapping des legs sur le bon index (colonne 0 = origine, à ne jamais confondre avec une station), cache partiel (n'interroge que les nouvelles stations, et le résultat atterrit dans le bon slot), dérive GPS, panne fournisseur, non-mise-en-cache des échecs, bornes de validation, éviction. Suite backend : **82 → 100 tests**.
 - **Non fait volontairement** : pas de routage dans `NearbyStationsList` (dialogue d'ajout de plein) — on y est déjà à la station, le temps de trajet n'y sert à rien et ça ferait un appel OSRM à chaque ouverture.
 
+### Limite de 25 stations → pagination complète
+
+La liste ne demandait qu'**une page de 25** à data.economie.gouv.fr, or l'API
+renvoie les enregistrements dans un ordre **arbitraire** (pas par distance) :
+un rayon de 50 km autour de Nieppe contient **288 stations**. On triait donc
+par prix un sous-ensemble aléatoire de 25 — le badge « moins cher » ne voulait
+rien dire aux grands rayons.
+
+- Pagination par pages de 100 (plafond de l'API) jusqu'à `MAX_STATIONS = 300`.
+- Backend : `MAX_DESTINATIONS` 50 → 300, et découpage automatique en lots de
+  `ROUTING_MAX_BATCH` (95 par défaut) exécutés **en parallèle** — `osrm-routed`
+  refuse par défaut les tables de plus de 100 coordonnées, origine comprise.
+  La latence reste celle d'un aller-retour au lieu de s'additionner.
+- Un lot en échec n'invalide pas les autres (test dédié).
+
+### Support Valhalla — `ROUTING_PROVIDER=osrm|valhalla`
+
+Valhalla est **tuilé** : il ne charge que les tuiles utiles, donc la RAM ne
+dépend plus de la taille du jeu de données (France servie en quelques Go contre
+~16 Go pour OSRM, dont un `osrm-extract` à ~45 Go inatteignable ici).
+
+- `/sources_to_targets` au lieu du `table` d'OSRM, et **distances en km à
+  convertir en mètres** — piège d'unité couvert par un test dédié.
+- Pas de colonne origine à sauter côté Valhalla (contrairement à OSRM) : test
+  dédié aussi, sauter une colonne perdrait la première station.
+- Stack autonome dans [deploy/valhalla/](deploy/valhalla/) — **volontairement
+  hors du docker-compose VroomVroom** : l'utilisateur veut la réutiliser pour
+  d'autres projets (GPS maison). Expose aussi `/route`, `/isochrone`,
+  `/trace_route`, `/optimized_route`.
+- **Piège documenté** : couverture partielle (une seule région) → le moteur
+  rabat les points hors zone sur la route la plus proche de SON jeu de données
+  et renvoie un temps plausible mais faux. Pour rouler partout en France :
+  construire la France entière.
+
 ### Bug corrigé au passage — badge « moins cher » sur la mauvaise station
 
 `isCheapest` valait `idx === 0`, mais le comparateur fait remonter les **favoris** en tête de tous les tris. Une station favorite à 1.899 €/L affichée avant une autre à 1.689 recevait donc le badge vert « moins cher » — et depuis la nouvelle carte, aussi le marqueur vert. Mensonge d'affichage qui pousse vers la station la plus chère, exactement l'inverse du but du dialogue.

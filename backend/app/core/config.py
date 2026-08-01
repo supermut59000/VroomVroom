@@ -40,8 +40,18 @@ class Settings(BaseSettings):
     # Defaults to the public OSRM demo server (no key, fair-use only).
     # Point ROUTING_URL at a self-hosted OSRM container in .env for unlimited use.
     ROUTING_URL: str = "https://router.project-osrm.org"
+    # "osrm" or "valhalla" — Valhalla is tile-based and needs far less RAM,
+    # at the cost of a different matrix API (handled in RoutingService).
+    ROUTING_PROVIDER: str = "osrm"
+    # OSRM calls it a profile ("driving"), Valhalla calls it a costing ("auto").
     ROUTING_PROFILE: str = "driving"
+    ROUTING_PROFILE_VALHALLA: str = "auto"
     ROUTING_TIMEOUT: float = 8.0
+    # Destinations per provider request. osrm-routed defaults to a 100
+    # coordinate table limit (origin included), so stay under it and let the
+    # service split larger searches into concurrent batches.
+    ROUTING_MAX_BATCH: int = 95
+    ROUTING_MAX_CONCURRENCY: int = 4
     # Road distances between two fixed points don't change; 6 h keeps the
     # demo server untouched for a whole day of normal use.
     ROUTING_CACHE_TTL: int = 21600

@@ -2,9 +2,9 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
-# OSRM's table service degrades badly past a few dozen points, and the station
-# list itself is capped at 25 by the price API — 50 leaves room to spare.
-MAX_DESTINATIONS = 50
+# A 50 km search around a dense area returns a few hundred stations (288 around
+# Nieppe). Requests larger than one provider batch are split automatically.
+MAX_DESTINATIONS = 300
 
 
 class Coordinate(BaseModel):

@@ -46,6 +46,11 @@ export const STATION_FUEL_OPTIONS: { label: string; key: keyof StationPrices }[]
 const API_BASE =
   'https://data.economie.gouv.fr/api/explore/v2.1/catalog/datasets/prix-des-carburants-en-france-flux-instantane-v2/records'
 
+/** Opendatasoft's per-request ceiling. */
+const PAGE_SIZE = 100
+/** Enough for a 50 km radius anywhere in France; also the routing cap. */
+const MAX_STATIONS = 300
+
 function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000
   const toRad = (d: number) => (d * Math.PI) / 180
@@ -99,19 +104,27 @@ export function useNearbyStations(): UseNearbyStationsReturn {
       'geom',
     ].join(',')
 
-    const params = new URLSearchParams({
-      where: `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km)`,
-      select,
-      limit: '25',
-    })
-
     try {
-      const res = await window.fetch(`${API_BASE}?${params.toString()}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      // The API caps a page at 100 and returns rows in arbitrary order — not
+      // by distance. Fetching one page of 25 meant sorting a *random* subset:
+      // a 50 km search around Nieppe holds 288 stations. Page through instead.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data: { results: any[] } = await res.json()
+      const rows: any[] = []
+      for (let offset = 0; offset < MAX_STATIONS; offset += PAGE_SIZE) {
+        const params = new URLSearchParams({
+          where: `within_distance(geom, geom'POINT(${lon} ${lat})', ${radiusKm}km)`,
+          select,
+          limit: String(Math.min(PAGE_SIZE, MAX_STATIONS - offset)),
+          offset: String(offset),
+        })
+        const res = await window.fetch(`${API_BASE}?${params.toString()}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const page: { results: unknown[]; total_count?: number } = await res.json()
+        rows.push(...page.results)
+        if (page.results.length < PAGE_SIZE) break
+      }
 
-      const parsed: NearbyStation[] = data.results
+      const parsed: NearbyStation[] = rows
         .map((r) => {
           const stationLat = r.geom?.lat ?? r.geom?.latitude ?? null
           const stationLon = r.geom?.lon ?? r.geom?.longitude ?? null

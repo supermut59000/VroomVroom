@@ -16,7 +16,7 @@ VroomVroom is a **vehicle management web application** for tracking vehicles, fu
 - Backend: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic 2.x, MariaDB/MySQL, Alembic (migrations)
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, TanStack React Query, Recharts
 - Infrastructure: Docker Compose, Uvicorn ASGI server
-- Tests: pytest + httpx (SQLite in-memory, 100 tests) + vitest (24 frontend tests)
+- Tests: pytest + httpx (SQLite in-memory, 109 tests) + vitest (24 frontend tests)
 
 ## Quick Start
 
@@ -355,13 +355,21 @@ DEBUG=False
 CORS_ORIGINS=http://localhost:3055,https://carmanagement.home.ouiouibaguette.fr
 
 # Routing (driving distance/time to fuel stations) — all optional
-# Defaults to the public OSRM demo server. Point at a self-hosted OSRM
-# container for unlimited use; no code change needed.
+# Defaults to the public OSRM demo server. Switch to a self-hosted server
+# (see deploy/valhalla/) without any code change.
+ROUTING_PROVIDER=osrm          # osrm | valhalla
 ROUTING_URL=https://router.project-osrm.org
-ROUTING_PROFILE=driving
+ROUTING_PROFILE=driving        # OSRM profile
+ROUTING_PROFILE_VALHALLA=auto  # Valhalla costing
 ROUTING_TIMEOUT=8.0
 ROUTING_CACHE_TTL=21600
+ROUTING_MAX_BATCH=95           # destinations per provider request
+ROUTING_MAX_CONCURRENCY=4
 ```
+
+**Self-hosted routing:** [deploy/valhalla/](deploy/valhalla/) is a standalone
+Valhalla stack (independent of VroomVroom — reusable by other projects). It
+also exposes `/route`, `/isochrone`, `/trace_route` and more.
 
 ### Docker Compose Ports
 - Frontend: 3055 → 3000 (container)
@@ -432,7 +440,7 @@ cd frontend-react && npm run test
 - Charts: consumption, price, monthly costs, distance, odometer, ethanol %, refueling patterns
 - CSV export (French formatting)
 - API key auth, dark mode, PWA
-- Backend test suite (100 tests) + frontend pure-function tests (24 vitest)
+- Backend test suite (109 tests) + frontend pure-function tests (24 vitest)
 
 ### Not Implemented ❌
 - CI/CD (Forgejo Actions — planned)

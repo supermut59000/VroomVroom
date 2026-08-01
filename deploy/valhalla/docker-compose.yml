@@ -1,0 +1,32 @@
+# Standalone Valhalla routing server — deliberately NOT part of the VroomVroom
+# stack. Run it wherever you like; VroomVroom is just one client among others
+# (homemade GPS, future projects) that talk to it over the LAN.
+#
+# First start downloads France and builds the tiles (long, see README.md).
+# Every later start reuses ./tiles and comes up in seconds.
+
+services:
+  valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    container_name: valhalla
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./tiles:/custom_files
+    environment:
+      # Geofabrik extract to build from. Swap for a région while testing —
+      # see README.md for why partial coverage needs care.
+      tile_urls: https://download.geofabrik.de/europe/france-latest.osm.pbf
+      # Rebuild tiles only when the .pbf changes, not on every restart.
+      force_rebuild: "False"
+      build_elevation: "False"
+      build_admins: "True"
+      build_time_zones: "True"
+      serve_tiles: "True"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8002/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30m

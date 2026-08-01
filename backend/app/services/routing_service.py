@@ -1,6 +1,7 @@
 import logging
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Optional, Tuple
 
 import httpx
@@ -99,10 +100,44 @@ class RoutingService:
                 del _cache[key]
 
     def _fetch(self, origin: Coordinate, destinations: List[Coordinate]) -> List[RouteLeg]:
-        """Query the provider. Returns empty legs (never raises) on any failure —
-        the station list stays usable with straight-line distances."""
-        empty = [RouteLeg() for _ in destinations]
+        """Query the provider, splitting into batches it will accept.
 
+        A 50 km search can hold a few hundred stations, well past any provider's
+        table limit. Batches run concurrently so total latency stays close to a
+        single round trip instead of adding up.
+        """
+        batch_size = max(1, settings.ROUTING_MAX_BATCH)
+        batches = [
+            destinations[start : start + batch_size]
+            for start in range(0, len(destinations), batch_size)
+        ]
+
+        if len(batches) == 1:
+            return self._fetch_batch(origin, batches[0])
+
+        workers = min(len(batches), max(1, settings.ROUTING_MAX_CONCURRENCY))
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            # executor.map preserves input order, so the batches reassemble
+            # into the caller's destination order.
+            results = list(pool.map(lambda b: self._fetch_batch(origin, b), batches))
+
+        legs: List[RouteLeg] = []
+        for batch_legs in results:
+            legs.extend(batch_legs)
+        return legs
+
+    def _fetch_batch(self, origin: Coordinate, destinations: List[Coordinate]) -> List[RouteLeg]:
+        """One provider request. Returns empty legs (never raises) on any
+        failure — the station list stays usable with straight-line distances."""
+        try:
+            if settings.ROUTING_PROVIDER.lower() == "valhalla":
+                return self._fetch_valhalla(origin, destinations)
+            return self._fetch_osrm(origin, destinations)
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            logger.warning("Routing provider unavailable: %s", exc)
+            return [RouteLeg() for _ in destinations]
+
+    def _fetch_osrm(self, origin: Coordinate, destinations: List[Coordinate]) -> List[RouteLeg]:
         # OSRM takes lon,lat pairs; the origin is coordinate 0, so destination
         # j sits at column j+1 of the returned 1 x (n+1) row.
         points = ";".join(
@@ -113,21 +148,17 @@ class RoutingService:
             f"/table/v1/{settings.ROUTING_PROFILE}/{points}"
         )
 
-        try:
-            response = httpx.get(
-                url,
-                params={"sources": "0", "annotations": "duration,distance"},
-                timeout=settings.ROUTING_TIMEOUT,
-            )
-            response.raise_for_status()
-            payload = response.json()
-        except (httpx.HTTPError, ValueError) as exc:
-            logger.warning("Routing provider unavailable: %s", exc)
-            return empty
+        response = httpx.get(
+            url,
+            params={"sources": "0", "annotations": "duration,distance"},
+            timeout=settings.ROUTING_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json()
 
         if payload.get("code") != "Ok":
             logger.warning("Routing provider returned %s", payload.get("code"))
-            return empty
+            return [RouteLeg() for _ in destinations]
 
         durations = (payload.get("durations") or [[]])[0]
         distances = (payload.get("distances") or [[]])[0]
@@ -142,4 +173,44 @@ class RoutingService:
                 legs.append(RouteLeg())
             else:
                 legs.append(RouteLeg(distance_m=float(distance), duration_s=float(duration)))
+        return legs
+
+    def _fetch_valhalla(self, origin: Coordinate, destinations: List[Coordinate]) -> List[RouteLeg]:
+        """Valhalla's matrix endpoint.
+
+        Unlike OSRM it takes one source and N targets explicitly, so there is no
+        origin column to skip. Distances come back in the requested unit —
+        kilometres — and must be converted to metres.
+        """
+        url = f"{settings.ROUTING_URL.rstrip('/')}/sources_to_targets"
+        response = httpx.post(
+            url,
+            json={
+                "sources": [{"lat": origin.latitude, "lon": origin.longitude}],
+                "targets": [
+                    {"lat": point.latitude, "lon": point.longitude} for point in destinations
+                ],
+                "costing": settings.ROUTING_PROFILE_VALHALLA,
+                "units": "kilometers",
+            },
+            timeout=settings.ROUTING_TIMEOUT,
+        )
+        response.raise_for_status()
+        payload = response.json()
+
+        rows = payload.get("sources_to_targets") or []
+        row = rows[0] if rows else []
+
+        legs: List[RouteLeg] = []
+        for index in range(len(destinations)):
+            cell = row[index] if index < len(row) else None
+            time_s = cell.get("time") if cell else None
+            distance_km = cell.get("distance") if cell else None
+            # Valhalla reports null time/distance for an unreachable target.
+            if time_s is None or distance_km is None:
+                legs.append(RouteLeg())
+            else:
+                legs.append(
+                    RouteLeg(distance_m=float(distance_km) * 1000.0, duration_s=float(time_s))
+                )
         return legs
