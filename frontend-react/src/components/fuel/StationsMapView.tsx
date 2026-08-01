@@ -55,7 +55,10 @@ export function StationsMapView({ origin, stations }: StationsMapViewProps) {
   }, [origin, stations])
 
   return (
-    <div className="h-full min-h-[280px] overflow-hidden rounded-md border">
+    // MapLibre reads its container size at init, and a percentage height
+    // inside this dialog's flex chain resolves to 0 — use a definite height,
+    // same as the StationsMap chart does.
+    <div className="h-[360px] overflow-hidden rounded-md border sm:h-[440px]">
       <Map center={[origin.lon, origin.lat]} zoom={11}>
         <MapControls />
         <FitBounds bounds={bounds} />

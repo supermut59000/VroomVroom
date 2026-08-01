@@ -77,14 +77,3 @@ export function formatDrivingTime(seconds: number): string {
 export function formatRoadDistance(meters: number): string {
   return meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toFixed(1)} km`
 }
-
-/**
- * A road that is much longer than the straight line means something is in the
- * way — the case that makes "3 km away" a lie worth warning about.
- */
-export const DETOUR_RATIO_THRESHOLD = 1.8
-
-export function detourRatio(roadM: number, crowFliesM: number): number {
-  if (crowFliesM <= 0) return 1
-  return roadM / crowFliesM
-}

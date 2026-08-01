@@ -6,7 +6,6 @@ import {
   Navigation,
   BookMarked,
   Star,
-  TriangleAlert,
   List,
   Map as MapIcon,
 } from 'lucide-react'
@@ -34,8 +33,6 @@ import {
   useStationRoutes,
   formatDrivingTime,
   formatRoadDistance,
-  detourRatio,
-  DETOUR_RATIO_THRESHOLD,
 } from '@/hooks/use-station-routes'
 import { cheapestPrice, compareStations } from '@/lib/station-sort'
 import type { StationSortKeys, StationSortMode } from '@/lib/station-sort'
@@ -382,7 +379,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
 
         {/* Map view */}
         {!loading && view === 'map' && sorted.length > 0 && origin != null && (
-          <div className="flex min-h-[280px] flex-1 flex-col">
+          <div className="flex-1 overflow-y-auto">
             <StationsMapView
               origin={{ lat: origin.lat, lon: origin.lon, label: origin.mode === 'gps' ? 'Votre position' : origin.label }}
               stations={mappedStations}
@@ -407,9 +404,6 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                 )?.station_name ?? null
                 const displayName = knownName ?? s.name
                 const route = routes.get(s.id)
-                const isDetour =
-                  route?.distance_m != null &&
-                  detourRatio(route.distance_m, s.distanceM) >= DETOUR_RATIO_THRESHOLD
                 return (
                   <div
                     key={s.id}
@@ -462,20 +456,9 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                         <p className="text-sm text-muted-foreground">N/D</p>
                       )}
                       {route?.distance_m != null && route.duration_s != null ? (
-                        <>
-                          <p className="text-xs text-muted-foreground">
-                            {formatRoadDistance(route.distance_m)} · {formatDrivingTime(route.duration_s)}
-                          </p>
-                          {isDetour && (
-                            <p
-                              className="flex items-center justify-end gap-1 text-xs text-amber-600 dark:text-amber-500"
-                              title={`${formatDist(s.distanceM)} à vol d'oiseau, mais ${formatRoadDistance(route.distance_m)} par la route`}
-                            >
-                              <TriangleAlert className="h-3 w-3 shrink-0" />
-                              détour
-                            </p>
-                          )}
-                        </>
+                        <p className="text-xs text-muted-foreground">
+                          {formatRoadDistance(route.distance_m)} · {formatDrivingTime(route.duration_s)}
+                        </p>
                       ) : (
                         <p className="text-xs text-muted-foreground">
                           {formatDist(s.distanceM)}
