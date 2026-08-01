@@ -394,3 +394,16 @@ export interface FlexfuelRentabilitySummary {
   data_points: FlexfuelSavingsDataPoint[]
   monthly_savings: FlexfuelMonthlySavings[]
 }
+
+/** Road distance and driving time from a search origin to one station. */
+export interface RouteLeg {
+  /** null when the provider is unreachable or the point can't be routed to */
+  distance_m: number | null
+  duration_s: number | null
+}
+
+export interface RouteMatrix {
+  legs: RouteLeg[]
+  provider: string
+  cached: boolean
+}

@@ -1,7 +1,7 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-07-05
+Last updated: 2026-08-01
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
@@ -364,6 +364,35 @@ The consumption calculation already handles this correctly: partial 'essence' ac
 - **No rate limiting**: acceptable for single-user homelab
 - **Offline queue stored in localStorage**: acceptable since only user is the owner
 - **CSP/HSTS headers**: handle at reverse proxy level (Nginx/Traefik), not in app
+- **Position GPS envoyée à un tiers (routage)**: depuis 2026-08-01, les recherches de stations envoient les coordonnées à `router.project-osrm.org` (projet OSRM/FOSSGIS). Atténué : l'appel passe par le backend, donc OSRM voit l'IP du serveur et non celle du téléphone. Suppression complète possible sans changement de code en pointant `ROUTING_URL` vers un OSRM auto-hébergé.
+- **Pas de rate limit sur `/routing/matrix`**: cohérent avec l'absence de rate limiting ailleurs ; à noter que ce proxy est un amplificateur sortant vers un service public tiers.
+
+---
+
+## Session log — 2026-08-01
+
+### Temps de trajet réel + carte dans StationPricesDialog
+
+**Problème constaté sur le terrain** : la liste des stations n'affichait que la distance à vol d'oiseau. Une station annoncée « proche » était de l'autre côté d'une montagne — plus d'1 h de route au GPS. Et aucun moyen de voir où sont réellement les stations.
+
+- **Backend — nouveau service de routage** : `POST /api/v1/routing/matrix` (`{origin, destinations[]}` → `{legs[], provider, cached}`). `RoutingService` interroge le service `table` d'un serveur **OSRM** (une seule requête pour toutes les stations, renvoie distance ET durée). Défaut = serveur public `router.project-osrm.org` (sans clé, usage raisonnable) ; `ROUTING_URL` dans `.env` permet de pointer vers un OSRM auto-hébergé plus tard **sans changement de code**.
+- **Cache par paire origine/destination** (pas par requête), TTL 6 h, coords arrondies à 4 décimales (~11 m) : changer de carburant ou de rayon ne redemande que les stations réellement nouvelles, et une dérive GPS de quelques mètres retombe sur le cache. Plafond 5000 entrées. **Les échecs ne sont jamais mis en cache** — une panne du fournisseur ne doit pas effacer les distances pendant 6 h.
+- **Jamais d'erreur 500** : fournisseur injoignable ou station non routable → `legs` à `null`, le frontend retombe sur le vol d'oiseau (explicitement étiqueté « à vol d'oiseau » dans l'UI, pas de mensonge silencieux).
+- **Frontend** : hook `useStationRoutes` (React Query, staleTime 6 h, `retry: false`). Chaque ligne affiche `12,4 km · 18 min` par la route. Badge ⚠ **détour** quand route/vol d'oiseau ≥ 1.8 (le cas montagne), avec le détail en tooltip.
+- **Tri** : le bouton bascule prix/distance devient un Select à 3 modes — prix, distance, **temps de trajet**. Les stations non routables tombent en bas du tri par temps plutôt que de passer pour instantanées.
+- **Onglets Liste / Carte** : nouvelle vue carte (`StationsMapView.tsx`) réutilisant `@/components/ui/map` (MapLibre, déjà présent pour `StationsMap`). Marqueur bleu = origine, marqueurs stations avec label prix, vert = moins cher, jaune = favori. Popup : nom, prix, distance/temps route, lien **« Y aller »** (Google Maps directions, ouvre l'app GPS native sur mobile). La carte n'est montée que quand l'onglet est actif (MapLibre supporte mal un conteneur caché) et refit ses bounds via `map.fitBounds` quand l'origine ou la liste change.
+- **Dépendance backend ajoutée** : `httpx==0.28.1` (déjà utilisé en tests). **Rebuild backend nécessaire.**
+- **Tests** : 18 tests (`test_routing.py`) — mapping des legs sur le bon index (colonne 0 = origine, à ne jamais confondre avec une station), cache partiel (n'interroge que les nouvelles stations, et le résultat atterrit dans le bon slot), dérive GPS, panne fournisseur, non-mise-en-cache des échecs, bornes de validation, éviction. Suite backend : **82 → 100 tests**.
+- **Non fait volontairement** : pas de routage dans `NearbyStationsList` (dialogue d'ajout de plein) — on y est déjà à la station, le temps de trajet n'y sert à rien et ça ferait un appel OSRM à chaque ouverture.
+
+### Bug corrigé au passage — badge « moins cher » sur la mauvaise station
+
+`isCheapest` valait `idx === 0`, mais le comparateur fait remonter les **favoris** en tête de tous les tris. Une station favorite à 1.899 €/L affichée avant une autre à 1.689 recevait donc le badge vert « moins cher » — et depuis la nouvelle carte, aussi le marqueur vert. Mensonge d'affichage qui pousse vers la station la plus chère, exactement l'inverse du but du dialogue.
+
+- Tri et « moins cher » extraits dans `src/lib/station-sort.ts` (pur, testable) : `cheapestPrice()` = minimum réel des prix connus, `compareStations()` = favoris d'abord puis prix/distance/temps.
+- `cheapestPrice` renvoie `null` en dessous de 2 prix connus — une station seule n'est « la moins chère » de rien.
+- Le badge ne dépend plus du mode de tri : la moins chère reste signalée même en tri par temps, ce qui est plus utile et surtout vrai.
+- 9 tests vitest (`station-sort.test.ts`), dont le scénario exact du bug (favori cher en tête ≠ moins cher). Frontend : 15 → 24 tests.
 
 ---
 

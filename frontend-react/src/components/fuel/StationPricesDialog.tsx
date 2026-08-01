@@ -1,5 +1,15 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { Fuel, MapPin, Loader2, ArrowUpDown, Navigation, BookMarked, Star } from 'lucide-react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import {
+  Fuel,
+  MapPin,
+  Loader2,
+  Navigation,
+  BookMarked,
+  Star,
+  TriangleAlert,
+  List,
+  Map as MapIcon,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +30,17 @@ import { useNearbyStations, STATION_FUEL_OPTIONS } from '@/hooks/use-nearby-stat
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { useGlobalStationHistory } from '@/hooks/use-fuel-entries'
 import { useFavoriteStations } from '@/hooks/use-favorite-stations'
+import {
+  useStationRoutes,
+  formatDrivingTime,
+  formatRoadDistance,
+  detourRatio,
+  DETOUR_RATIO_THRESHOLD,
+} from '@/hooks/use-station-routes'
+import { cheapestPrice, compareStations } from '@/lib/station-sort'
+import type { StationSortKeys, StationSortMode } from '@/lib/station-sort'
+import { StationsMapView } from './StationsMapView'
+import type { MappedStation } from './StationsMapView'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
 
 interface Commune {
@@ -40,7 +61,14 @@ interface StationPricesDialogProps {
   onClose: () => void
 }
 
-type SortMode = 'price' | 'distance'
+type SortMode = StationSortMode
+type ViewMode = 'list' | 'map'
+
+const SORT_LABELS: Record<SortMode, string> = {
+  price: 'Prix',
+  distance: 'Distance',
+  time: 'Temps de trajet',
+}
 
 const GEO_API = 'https://geo.api.gouv.fr/communes'
 
@@ -63,6 +91,7 @@ function communeLabel(c: Commune): string {
 export function StationPricesDialog({ open, onClose }: StationPricesDialogProps) {
   const [fuelKey, setFuelKey] = useState<keyof StationPrices>('e10')
   const [sortMode, setSortMode] = useState<SortMode>('price')
+  const [view, setView] = useState<ViewMode>('list')
   const [radiusKm, setRadiusKm] = useState(5)
   const [origin, setOrigin] = useState<SearchOrigin | null>(null)
   const [cityInput, setCityInput] = useState('')
@@ -85,6 +114,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
       setOrigin(null)
       setCityInput('')
       setSuggestions([])
+      setView('list')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -157,21 +187,59 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
     suggestTimer.current = setTimeout(() => fetchSuggestions(value), 300)
   }
 
-  const sorted = [...stations].sort((a, b) => {
-    // Favorites always float to top
-    const favA = isFavorite(a.id) ? 0 : 1
-    const favB = isFavorite(b.id) ? 0 : 1
-    if (favA !== favB) return favA - favB
-    if (sortMode === 'price') {
-      const pa = a.prices[fuelKey] ?? Infinity
-      const pb = b.prices[fuelKey] ?? Infinity
-      return pa - pb
-    }
-    return a.distanceM - b.distanceM
+  // Road distance/time to each station. Straight-line distance is a poor guide
+  // wherever a mountain or a river sits in between.
+  const routeTargets = useMemo(
+    () => stations.map((s) => ({ id: s.id, latitude: s.latitude, longitude: s.longitude })),
+    [stations],
+  )
+  const { routes, loading: routesLoading, unavailable: routesUnavailable } = useStationRoutes(
+    origin ? { latitude: origin.lat, longitude: origin.lon } : null,
+    routeTargets,
+  )
+
+  const sortKeys = (s: (typeof stations)[number]): StationSortKeys => ({
+    isFavorite: isFavorite(s.id),
+    price: s.prices[fuelKey],
+    distanceM: s.distanceM,
+    durationS: routes.get(s.id)?.duration_s ?? null,
   })
+
+  const sorted = [...stations].sort((a, b) =>
+    compareStations(sortKeys(a), sortKeys(b), sortMode),
+  )
+
+  // The cheapest station is the one with the lowest price — not the first row.
+  // Favourites float to the top of every sort, so row 0 is regularly something
+  // more expensive.
+  const minPrice = cheapestPrice(stations.map((s) => ({ price: s.prices[fuelKey] })))
 
   const formatDist = (m: number) =>
     m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`
+
+  const mappedStations = useMemo<MappedStation[]>(
+    () =>
+      sorted.map((s) => {
+        const knownName = stationHistory.find(
+          (e) => haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 200,
+        )?.station_name ?? null
+        return {
+          id: s.id,
+          name: knownName ?? s.name,
+          address: s.address,
+          latitude: s.latitude,
+          longitude: s.longitude,
+          price: s.prices[fuelKey],
+          isCheapest: minPrice != null && s.prices[fuelKey] === minPrice,
+          isFavorite: isFavorite(s.id),
+          crowFliesM: s.distanceM,
+          route: routes.get(s.id),
+        }
+      }),
+    // `sorted` is rebuilt each render from these same inputs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stations, sortMode, fuelKey, minPrice, routes, stationHistory, isFavorite],
+  )
 
   const fuelLabel = STATION_FUEL_OPTIONS.find((o) => o.key === fuelKey)?.label ?? fuelKey
 
@@ -231,15 +299,18 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
             </SelectContent>
           </Select>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSortMode(sortMode === 'price' ? 'distance' : 'price')}
-            className="h-9"
-          >
-            <ArrowUpDown className="mr-1 h-3.5 w-3.5" />
-            {sortMode === 'price' ? 'Tri: prix' : 'Tri: distance'}
-          </Button>
+          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+            <SelectTrigger className="h-9 w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORT_LABELS) as SortMode[]).map((mode) => (
+                <SelectItem key={mode} value={mode}>
+                  Tri&nbsp;: {SORT_LABELS[mode].toLowerCase()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {origin != null && (
             <Badge variant="outline" className="h-9 gap-1 px-2 text-xs">
@@ -272,6 +343,30 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
           </div>
         )}
 
+        {/* Liste / Carte */}
+        {!loading && sorted.length > 0 && (
+          <div className="grid grid-cols-2 gap-1 rounded-md bg-muted p-1">
+            {([
+              ['list', 'Liste', List],
+              ['map', 'Carte', MapIcon],
+            ] as const).map(([mode, label, Icon]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setView(mode)}
+                className={`flex items-center justify-center gap-1.5 rounded-sm px-2 py-1.5 text-sm font-medium transition-colors ${
+                  view === mode
+                    ? 'bg-background shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Loading stations */}
         {loading && (
           <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
@@ -285,20 +380,36 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
           <p className="text-sm text-destructive">{error}</p>
         )}
 
+        {/* Map view */}
+        {!loading && view === 'map' && sorted.length > 0 && origin != null && (
+          <div className="flex min-h-[280px] flex-1 flex-col">
+            <StationsMapView
+              origin={{ lat: origin.lat, lon: origin.lon, label: origin.mode === 'gps' ? 'Votre position' : origin.label }}
+              stations={mappedStations}
+            />
+          </div>
+        )}
+
         {/* Station list */}
-        {!loading && sorted.length > 0 && (
+        {!loading && view === 'list' && sorted.length > 0 && (
           <div className="flex-1 overflow-y-auto">
             <p className="mb-2 text-xs text-muted-foreground">
               {sorted.length} stations dans un rayon de {radiusKm} km — {fuelLabel}
+              {routesLoading && ' — calcul des temps de trajet…'}
+              {routesUnavailable && ' — temps de trajet indisponibles'}
             </p>
             <div className="space-y-1">
               {sorted.map((s, idx) => {
                 const stationPrice = s.prices[fuelKey]
-                const isCheapest = idx === 0 && stationPrice != null && sortMode === 'price'
+                const isCheapest = minPrice != null && stationPrice === minPrice
                 const knownName = stationHistory.find(
                   (e) => haversineM(e.latitude, e.longitude, s.latitude, s.longitude) < 200,
                 )?.station_name ?? null
                 const displayName = knownName ?? s.name
+                const route = routes.get(s.id)
+                const isDetour =
+                  route?.distance_m != null &&
+                  detourRatio(route.distance_m, s.distanceM) >= DETOUR_RATIO_THRESHOLD
                 return (
                   <div
                     key={s.id}
@@ -350,7 +461,27 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                       ) : (
                         <p className="text-sm text-muted-foreground">N/D</p>
                       )}
-                      <p className="text-xs text-muted-foreground">{formatDist(s.distanceM)}</p>
+                      {route?.distance_m != null && route.duration_s != null ? (
+                        <>
+                          <p className="text-xs text-muted-foreground">
+                            {formatRoadDistance(route.distance_m)} · {formatDrivingTime(route.duration_s)}
+                          </p>
+                          {isDetour && (
+                            <p
+                              className="flex items-center justify-end gap-1 text-xs text-amber-600 dark:text-amber-500"
+                              title={`${formatDist(s.distanceM)} à vol d'oiseau, mais ${formatRoadDistance(route.distance_m)} par la route`}
+                            >
+                              <TriangleAlert className="h-3 w-3 shrink-0" />
+                              détour
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {formatDist(s.distanceM)}
+                          <span className="block text-[10px]">à vol d'oiseau</span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 )

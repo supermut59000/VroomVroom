@@ -16,7 +16,7 @@ VroomVroom is a **vehicle management web application** for tracking vehicles, fu
 - Backend: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic 2.x, MariaDB/MySQL, Alembic (migrations)
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, TanStack React Query, Recharts
 - Infrastructure: Docker Compose, Uvicorn ASGI server
-- Tests: pytest + httpx (SQLite in-memory, 82 tests)
+- Tests: pytest + httpx (SQLite in-memory, 100 tests) + vitest (24 frontend tests)
 
 ## Quick Start
 
@@ -208,6 +208,12 @@ CREATE TABLE fuel_entries (
 | GET | `/vehicle/{vehicle_id}/statistics` | Get fuel statistics |
 | GET | `/vehicle/{vehicle_id}/consumption-history` | Get consumption over time (for charts) |
 
+### Routing (`/api/v1/routing`)
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| POST | `/matrix` | Road distance + driving time from one origin to many stations (OSRM proxy, 6 h per-pair cache, never 500s — returns null legs on provider failure) |
+
 ## Key Implementation Patterns
 
 ### Backend Patterns
@@ -345,6 +351,14 @@ DEBUG=False
 
 # CORS (comma-separated)
 CORS_ORIGINS=http://localhost:3055,https://carmanagement.home.ouiouibaguette.fr
+
+# Routing (driving distance/time to fuel stations) — all optional
+# Defaults to the public OSRM demo server. Point at a self-hosted OSRM
+# container for unlimited use; no code change needed.
+ROUTING_URL=https://router.project-osrm.org
+ROUTING_PROFILE=driving
+ROUTING_TIMEOUT=8.0
+ROUTING_CACHE_TTL=21600
 ```
 
 ### Docker Compose Ports
@@ -400,7 +414,7 @@ docker compose run --rm -v ./backend:/app backend sh -c \
 # test_vehicles.py, test_fuel_entries.py, test_maintenances.py,
 # test_flexfuel.py, test_auth.py
 
-# Frontend (vitest — pure blend-math functions in src/lib/blend-math.test.ts):
+# Frontend (vitest — pure functions in src/lib/: blend-math.test.ts, station-sort.test.ts):
 cd frontend-react && npm run test
 ```
 
@@ -416,7 +430,7 @@ cd frontend-react && npm run test
 - Charts: consumption, price, monthly costs, distance, odometer, ethanol %, refueling patterns
 - CSV export (French formatting)
 - API key auth, dark mode, PWA
-- Backend test suite (82 tests)
+- Backend test suite (100 tests) + frontend pure-function tests (24 vitest)
 
 ### Not Implemented ❌
 - CI/CD (Forgejo Actions — planned)

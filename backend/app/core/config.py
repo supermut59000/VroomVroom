@@ -36,6 +36,16 @@ class Settings(BaseSettings):
     # API Key authentication (optional — if empty, auth is disabled)
     API_KEY: str = ""
 
+    # Routing — driving distance/time between the user and fuel stations.
+    # Defaults to the public OSRM demo server (no key, fair-use only).
+    # Point ROUTING_URL at a self-hosted OSRM container in .env for unlimited use.
+    ROUTING_URL: str = "https://router.project-osrm.org"
+    ROUTING_PROFILE: str = "driving"
+    ROUTING_TIMEOUT: float = 8.0
+    # Road distances between two fixed points don't change; 6 h keeps the
+    # demo server untouched for a whole day of normal use.
+    ROUTING_CACHE_TTL: int = 21600
+
     # Logging
     LOG_LEVEL: str = "INFO"
 

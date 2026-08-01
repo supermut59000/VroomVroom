@@ -125,7 +125,8 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 ### Tests
 - **pytest** + **httpx** TestClient
 - SQLite in-memory database (session-scoped setup, per-test transaction rollback)
-- 82 tests total (as of 2026-07-05): vehicles, fuel entries (incl. distance-weighted average + partial-anchor regressions), maintenances, flexfuel, auth
+- 100 tests total (as of 2026-08-01): vehicles, fuel entries (incl. distance-weighted average + partial-anchor regressions), maintenances, flexfuel, auth, routing (station driving times)
+- Frontend: 24 vitest tests over the pure functions in `src/lib/` (blend-math, station-sort)
 - Run inside Docker with live source: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`
 
 ---
