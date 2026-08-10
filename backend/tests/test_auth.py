@@ -27,6 +27,16 @@ class TestAPIKeyAuth:
         assert resp.status_code == 200
         assert resp.json()["status"] == "healthy"
 
+    def test_health_returns_503_when_database_is_unreachable(self, client, monkeypatch):
+        def unavailable():
+            raise RuntimeError("database down")
+
+        monkeypatch.setattr("app.main.SessionLocal", unavailable)
+        resp = client.get("/health")
+
+        assert resp.status_code == 503
+        assert resp.json() == {"status": "unhealthy", "db": "unreachable"}
+
     def test_docs_gated_by_debug(self, client_with_auth):
         # Swagger UI is only mounted when DEBUG=True (security decision);
         # when mounted it bypasses the API key.

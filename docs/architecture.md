@@ -164,6 +164,7 @@ All routes prefix with `/api/v1` and use optional `X-API-Key` auth (configured a
 | fueling_date | date | No (default today) | |
 | is_full_tank | bool | No (default True) | Critical for consumption calc |
 | notes | str (max 500) | Optional | |
+| client_request_id | UUID | Optional | Idempotency key for safe client retries; distinct from odometer/date |
 
 Validators: `liters > 0`, `price_per_liter > 0`, `odometer_reading >= 0`.
 

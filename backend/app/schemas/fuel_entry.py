@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from typing import Optional, List
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.enums import FuelType
@@ -26,6 +27,7 @@ class FuelEntryBase(BaseModel):
         description="Whether this was a full tank fill-up (affects consumption calculation)",
     )
     notes: Optional[str] = Field(None, max_length=500, description="Additional notes about this fueling")
+    client_request_id: Optional[UUID] = Field(None, description="Stable ID used to make client retries idempotent")
 
     @field_validator('liters')
     @classmethod

@@ -143,6 +143,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       latitude: geo.latitude,
       longitude: geo.longitude,
       notes: data.notes || null,
+      client_request_id: crypto.randomUUID(),
       allowOdometerDecrease,
     }
 

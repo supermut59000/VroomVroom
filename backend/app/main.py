@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 import uvicorn
@@ -41,13 +42,19 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    db = None
     try:
         db = SessionLocal()
         db.execute(text("SELECT 1"))
-        db.close()
         return {"status": "healthy"}
     except Exception:
-        return {"status": "unhealthy", "db": "unreachable"}
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "unhealthy", "db": "unreachable"},
+        )
+    finally:
+        if db is not None:
+            db.close()
 
 
 if __name__ == "__main__":

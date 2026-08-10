@@ -146,6 +146,7 @@ export interface FuelEntry {
   fueling_date: string
   is_full_tank: boolean
   notes: string | null
+  client_request_id: string | null
   created_at: string
   updated_at: string | null
 }
@@ -163,6 +164,7 @@ export interface FuelEntryCreate {
   fueling_date: string
   is_full_tank?: boolean
   notes?: string | null
+  client_request_id?: string
 }
 
 export interface FuelEntryUpdate {

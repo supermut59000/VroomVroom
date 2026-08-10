@@ -125,8 +125,15 @@ export function useCreateFuelEntry() {
 export function useUpdateFuelEntry(vehicleId: number) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: FuelEntryUpdate }) =>
-      api.put<FuelEntry>(`/fuel-entries/${id}`, data),
+    mutationFn: ({ id, data, allowOdometerDecrease }: {
+      id: number
+      data: FuelEntryUpdate
+      allowOdometerDecrease?: boolean
+    }) =>
+      api.put<FuelEntry>(
+        `/fuel-entries/${id}${allowOdometerDecrease ? '?allow_odometer_decrease=true' : ''}`,
+        data,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fuelEntries', vehicleId] })
       queryClient.invalidateQueries({ queryKey: ['allFuelEntries', vehicleId] })

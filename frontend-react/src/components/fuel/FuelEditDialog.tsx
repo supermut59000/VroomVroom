@@ -89,9 +89,16 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
 
   const onSubmit = async (data: FormData) => {
     if (!entry) return
+    const allowOdometerDecrease = data.odometer_reading < entry.odometer_reading
+    if (
+      allowOdometerDecrease &&
+      !confirm('Le compteur est inférieur au relevé enregistré. Confirmer cette correction ?')
+    ) return
+
     try {
       await updateFuelEntry.mutateAsync({
         id: entry.id,
+        allowOdometerDecrease,
         data: {
           fueling_date: data.fueling_date,
           odometer_reading: data.odometer_reading,

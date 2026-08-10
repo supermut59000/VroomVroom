@@ -39,6 +39,17 @@ class TestMaintenanceCRUD:
         assert resp.status_code == 200
         assert resp.json()["cost"] == 120.00
 
+    def test_update_maintenance_rejects_odometer_below_initial(
+        self, client, sample_maintenance_data
+    ):
+        entry_id = client.post("/api/v1/maintenances/", json=sample_maintenance_data).json()["id"]
+
+        resp = client.put(
+            f"/api/v1/maintenances/{entry_id}",
+            json={"odometer_reading": 1},
+        )
+        assert resp.status_code == 422
+
     def test_delete_maintenance(self, client, sample_maintenance_data):
         create_resp = client.post("/api/v1/maintenances/", json=sample_maintenance_data)
         entry_id = create_resp.json()["id"]

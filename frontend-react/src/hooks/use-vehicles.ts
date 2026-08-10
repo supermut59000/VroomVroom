@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
+import { shouldFetchIndividualStats } from '@/lib/vehicle-stats'
 import type {
   Vehicle,
   VehicleList,
@@ -41,7 +42,7 @@ export function useVehicleStats(id: number | null) {
   return useQuery({
     queryKey: ['vehicleStats', id],
     queryFn: () => api.get<VehicleStats>(`/vehicles/${id}/stats`),
-    enabled: id !== null && !batch,
+    enabled: shouldFetchIndividualStats(batch, id),
     // If batch data is available, use it directly without fetching
     ...(batch && id !== null && String(id) in batch
       ? { initialData: batch[String(id)], staleTime: 30_000 }

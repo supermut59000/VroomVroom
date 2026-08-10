@@ -18,6 +18,36 @@ class TestFuelEntryCRUD:
         expected = round(sample_fuel_entry_data["liters"] * sample_fuel_entry_data["price_per_liter"], 2)
         assert round(data["total_cost"], 2) == expected
 
+    def test_client_retry_is_idempotent(self, client, sample_fuel_entry_data):
+        sample_fuel_entry_data["client_request_id"] = "0d03fe3d-ae3a-4455-83f2-5ef4c72d6077"
+        first = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)
+        retry = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)
+
+        assert retry.status_code == 201
+        assert retry.json()["id"] == first.json()["id"]
+        assert client.get("/api/v1/fuel-entries/").json()["total"] == 1
+
+    def test_same_odometer_blend_fills_remain_distinct(self, client, sample_fuel_entry_data):
+        partial = {
+            **sample_fuel_entry_data,
+            "fuel_type": "essence",
+            "is_full_tank": False,
+            "client_request_id": "f81e6a3c-31b7-40cc-a765-7548ed81766c",
+        }
+        full = {
+            **sample_fuel_entry_data,
+            "fuel_type": "e85",
+            "is_full_tank": True,
+            "client_request_id": "eb53db74-e4ef-454d-9dda-bf90102f6014",
+        }
+
+        first = client.post("/api/v1/fuel-entries/", json=partial)
+        second = client.post("/api/v1/fuel-entries/", json=full)
+
+        assert first.status_code == second.status_code == 201
+        assert first.json()["id"] != second.json()["id"]
+        assert client.get("/api/v1/fuel-entries/").json()["total"] == 2
+
     def test_create_fuel_entry_invalid_liters(self, client, sample_fuel_entry_data):
         sample_fuel_entry_data["liters"] = -5
         resp = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)
@@ -47,6 +77,40 @@ class TestFuelEntryCRUD:
         resp = client.put(f"/api/v1/fuel-entries/{entry_id}", json={"liters": 45.0})
         assert resp.status_code == 200
         assert resp.json()["liters"] == 45.0
+
+    def test_update_rejects_out_of_sequence_odometer(self, client, sample_fuel_entry_data):
+        first = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data).json()
+        later = {
+            **sample_fuel_entry_data,
+            "odometer_reading": 11000,
+            "fueling_date": "2025-07-15",
+        }
+        client.post("/api/v1/fuel-entries/", json=later)
+
+        resp = client.put(
+            f"/api/v1/fuel-entries/{first['id']}",
+            json={"odometer_reading": 12000},
+        )
+        assert resp.status_code == 422
+
+    def test_update_allows_equal_odometer_blend_pair(self, client, sample_fuel_entry_data):
+        partial = client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "fuel_type": "essence",
+            "is_full_tank": False,
+        }).json()
+        client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "fuel_type": "e85",
+            "is_full_tank": True,
+        })
+
+        resp = client.put(
+            f"/api/v1/fuel-entries/{partial['id']}",
+            json={"odometer_reading": sample_fuel_entry_data["odometer_reading"], "liters": 5.0},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["odometer_reading"] == sample_fuel_entry_data["odometer_reading"]
 
     def test_delete_fuel_entry(self, client, sample_fuel_entry_data):
         create_resp = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)

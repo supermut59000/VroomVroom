@@ -40,6 +40,10 @@ class FuelEntry(Base):
     is_full_tank = Column(Boolean, nullable=False, default=True)
     notes = Column(Text, nullable=True)
 
+    # Stable identity for client retries. Nullable keeps legacy/API-created
+    # entries valid; distinct IDs still allow same-odometer blend fills.
+    client_request_id = Column(String(36), nullable=True, unique=True)
+
     # Soft delete
     is_active = Column(Boolean, nullable=False, default=True)
 

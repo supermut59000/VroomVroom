@@ -130,7 +130,10 @@ def update_maintenance(
     """Update a maintenance entry"""
     maintenance_service = MaintenanceService(db)
 
-    db_maintenance = maintenance_service.update_maintenance(maintenance_id, maintenance_update)
+    try:
+        db_maintenance = maintenance_service.update_maintenance(maintenance_id, maintenance_update)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     if not db_maintenance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

@@ -1,6 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, desc, asc
+from sqlalchemy.exc import IntegrityError
 from app.models.fuel_entry import FuelEntry
 from app.core.enums import FuelType
 from app.schemas.fuel_entry import FuelEntryCreate, FuelEntryUpdate, FuelStatisticsResponse
@@ -17,7 +18,17 @@ class FuelService:
             raise ValueError(f"Véhicule avec l'id {vehicle_id} introuvable")
 
     def create_fuel_entry(self, fuel_entry: FuelEntryCreate, allow_odometer_decrease: bool = False) -> FuelEntry:
-        """Create a new fuel entry"""
+        """Create a new fuel entry."""
+        client_request_id = str(fuel_entry.client_request_id) if fuel_entry.client_request_id else None
+        if client_request_id:
+            existing = self.db.query(FuelEntry).filter(
+                FuelEntry.client_request_id == client_request_id
+            ).first()
+            if existing:
+                if existing.vehicle_id != fuel_entry.vehicle_id:
+                    raise ValueError("Identifiant de requête déjà utilisé pour un autre véhicule")
+                return existing
+
         self._assert_vehicle_exists(fuel_entry.vehicle_id)
 
         # Odometer monotonicity — allow equal (blend fills share same odometer)
@@ -51,10 +62,21 @@ class FuelService:
             fueling_date=fuel_entry.fueling_date,
             is_full_tank=fuel_entry.is_full_tank,
             notes=fuel_entry.notes,
+            client_request_id=client_request_id,
         )
-        
+
         self.db.add(db_fuel_entry)
-        self.db.commit()
+        try:
+            self.db.commit()
+        except IntegrityError:
+            self.db.rollback()
+            if client_request_id:
+                existing = self.db.query(FuelEntry).filter(
+                    FuelEntry.client_request_id == client_request_id
+                ).first()
+                if existing:
+                    return existing
+            raise
         self.db.refresh(db_fuel_entry)
         return db_fuel_entry
 
@@ -115,18 +137,58 @@ class FuelService:
         )
 
     def update_fuel_entry(
-        self, 
-        entry_id: int, 
-        fuel_entry_update: FuelEntryUpdate
+        self,
+        entry_id: int,
+        fuel_entry_update: FuelEntryUpdate,
+        allow_odometer_decrease: bool = False,
     ) -> Optional[FuelEntry]:
-        """Update a fuel entry"""
+        """Update a fuel entry."""
         db_fuel_entry = self.get_fuel_entry(entry_id)
         if not db_fuel_entry:
             return None
-        
-        # Update fields
+
         update_data = fuel_entry_update.model_dump(exclude_unset=True)
-        
+        if "odometer_reading" in update_data and not allow_odometer_decrease:
+            new_odometer = update_data["odometer_reading"]
+            new_date = update_data.get("fueling_date", db_fuel_entry.fueling_date)
+            if new_odometer < (db_fuel_entry.vehicle.initial_odometer or 0):
+                raise ValueError(
+                    f"Le kilométrage {new_odometer} km est inférieur au kilométrage initial "
+                    f"du véhicule ({db_fuel_entry.vehicle.initial_odometer:g} km)"
+                )
+            previous = (
+                self.db.query(FuelEntry)
+                .filter(
+                    FuelEntry.vehicle_id == db_fuel_entry.vehicle_id,
+                    FuelEntry.id != entry_id,
+                    FuelEntry.is_active == True,
+                    FuelEntry.fueling_date < new_date,
+                )
+                .order_by(FuelEntry.odometer_reading.desc())
+                .first()
+            )
+            following = (
+                self.db.query(FuelEntry)
+                .filter(
+                    FuelEntry.vehicle_id == db_fuel_entry.vehicle_id,
+                    FuelEntry.id != entry_id,
+                    FuelEntry.is_active == True,
+                    FuelEntry.fueling_date > new_date,
+                )
+                .order_by(FuelEntry.odometer_reading.asc())
+                .first()
+            )
+            if previous and new_odometer < previous.odometer_reading:
+                raise ValueError(
+                    f"Le kilométrage {new_odometer} km est inférieur au relevé précédent "
+                    f"({previous.odometer_reading} km)"
+                )
+            if following and new_odometer > following.odometer_reading:
+                raise ValueError(
+                    f"Le kilométrage {new_odometer} km est supérieur au relevé suivant "
+                    f"({following.odometer_reading} km)"
+                )
+
         # Recalculate total cost if liters or price_per_liter changed
         if "liters" in update_data or "price_per_liter" in update_data:
             new_liters = update_data.get("liters", db_fuel_entry.liters)

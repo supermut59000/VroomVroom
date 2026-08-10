@@ -1,8 +1,17 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-07-05
+Last updated: 2026-08-10
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — full endpoint/schema/service reference | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## 2026-08-10 — Offline/idempotency resilience
+
+- A single `OfflineProvider` owns queue state; retries are delayed and cannot double-submit from multiple hook instances.
+- `fuel_entries.client_request_id` provides UUID-based idempotency while preserving legitimate E10-partial + E85-full entries at the same odometer.
+- Fuel/maintenance edit validation, missing-batch stats fallback, and HTTP 503 database health reporting added.
+- Deploy migration: `alembic upgrade head`. Tests: 115 backend, 25 frontend.
 
 ---
 
@@ -125,8 +134,8 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 ### Tests
 - **pytest** + **httpx** TestClient
 - SQLite in-memory database (session-scoped setup, per-test transaction rollback)
-- 109 tests total (as of 2026-08-01): vehicles, fuel entries (incl. distance-weighted average + partial-anchor regressions), maintenances, flexfuel, auth, routing (station driving times)
-- Frontend: 24 vitest tests over the pure functions in `src/lib/` (blend-math, station-sort)
+- 115 tests total (as of 2026-08-10): vehicles, fuel entries (incl. distance-weighted average, partial-anchor, idempotency, and same-odometer blend regressions), maintenances, flexfuel, auth, routing
+- Frontend: 25 vitest tests over pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats fallback)
 - Run inside Docker with live source: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`
 
 ---

@@ -123,13 +123,20 @@ def get_fuel_entry(
 def update_fuel_entry(
     entry_id: int = Path(..., description="Fuel entry ID"),
     fuel_entry_update: FuelEntryUpdate = ...,
+    allow_odometer_decrease: bool = Query(False, description="Autoriser une correction de compteur décroissante"),
     db: Session = Depends(get_db)
 ):
     """Update a fuel entry"""
     fuel_service = FuelService(db)
 
     try:
-        db_fuel_entry = fuel_service.update_fuel_entry(entry_id, fuel_entry_update)
+        db_fuel_entry = fuel_service.update_fuel_entry(
+            entry_id,
+            fuel_entry_update,
+            allow_odometer_decrease=allow_odometer_decrease,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
     except Exception:
         logger.exception("Unexpected error updating fuel entry %d", entry_id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")

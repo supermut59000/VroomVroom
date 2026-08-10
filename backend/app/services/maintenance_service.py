@@ -114,8 +114,14 @@ class MaintenanceService:
         if not db_maintenance:
             return None
 
-        # Update fields
         update_data = maintenance_update.model_dump(exclude_unset=True)
+        if "odometer_reading" in update_data:
+            vehicle = self._assert_vehicle_exists(db_maintenance.vehicle_id)
+            if update_data["odometer_reading"] < (vehicle.initial_odometer or 0):
+                raise ValueError(
+                    f"Le kilométrage {update_data['odometer_reading']} km est inférieur "
+                    f"au kilométrage initial du véhicule ({vehicle.initial_odometer:g} km)"
+                )
 
         for field, value in update_data.items():
             setattr(db_maintenance, field, value)

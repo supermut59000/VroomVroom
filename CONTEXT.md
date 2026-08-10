@@ -1,9 +1,23 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-08-01
+Last updated: 2026-08-10
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## Session log — 2026-08-10
+
+### Offline idempotency and high-impact audit fixes
+
+- Offline queue now has one React provider instead of three independent hook stores, retries transient failures after 60 seconds rather than looping, and preserves entries added during an in-flight sync.
+- Fuel submissions carry a UUID `client_request_id`; backend uniqueness makes response-loss and cross-tab retries idempotent. This is deliberately **not** odometer-based: an E10 partial and E85 full at the same date/odometer remain two valid entries.
+- Fuel edits validate chronology unless the user explicitly confirms a decreasing correction. Equal odometers remain valid. Maintenance edits now enforce the same initial-odometer floor as creation.
+- Per-vehicle stats fall back to the individual endpoint when batch stats omit that vehicle.
+- `/health` returns HTTP 503 when MariaDB is unreachable, so Docker/reverse-proxy monitoring detects the outage.
+- Regression coverage: idempotent retry, distinct same-odometer blend pair, update invariants, stats fallback, and unhealthy status. 115 backend tests + 25 frontend tests pass; production build passes.
+- **Deploy:** run `cd backend && alembic upgrade head` for `fuel_entries.client_request_id`.
 
 ---
 
