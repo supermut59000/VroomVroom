@@ -75,7 +75,7 @@ curl -s -X POST http://localhost:8002/sources_to_targets \
 
 ## Brancher VroomVroom dessus
 
-Dans `backend/.env` :
+Dans le fichier racine `.env.docker` :
 
 ```bash
 ROUTING_PROVIDER=valhalla

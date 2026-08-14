@@ -78,28 +78,16 @@ docker-compose up -d --build backend frontend
 
 ## Configuration Files
 
-### Backend Environment (.env)
+### Backend Environment (`.env.docker`)
 
-Located at: `backend/.env`
+Create the ignored file at the repository root, then replace the database and
+API values for production:
 
 ```bash
-# Database Configuration (REMOTE)
-DB_HOST=192.168.25.46
-DB_PORT=3306
-DB_USER=mathis
-DB_PASSWORD=mathis
-DB_NAME=vehicle_management
-
-# Environment
-DEBUG=False
-ENVIRONMENT=production
-LOG_LEVEL=INFO
-
-# CORS
-BACKEND_CORS_ORIGINS=https://carmanagement.home.ouiouibaguette.fr,https://carmanagementapi.home.ouiouibaguette.fr,*
+cp .env.example .env.docker
 ```
 
-**Important:** Make sure to use `.env` (not `.env.local`) in production!
+Both `docker-compose.yml` and `docker-compose.prod.yml` load this root file.
 
 ### Frontend Configuration
 
@@ -247,12 +235,12 @@ docker-compose -f docker-compose.prod.yml logs backend
 
 ### CORS Errors
 
-1. Verify CORS settings in `backend/.env`:
+1. Verify CORS settings in the root `.env.docker`:
 ```bash
 BACKEND_CORS_ORIGINS=https://carmanagement.home.ouiouibaguette.fr,https://carmanagementapi.home.ouiouibaguette.fr,*
 ```
 
-2. Restart backend after changing `.env`:
+2. Restart backend after changing `.env.docker`:
 ```bash
 docker-compose -f docker-compose.prod.yml restart backend
 ```
@@ -284,7 +272,7 @@ ports:
 
 1. **Change Default Password**:
 ```bash
-# In backend/.env
+# In the root .env.docker
 DB_PASSWORD=your-strong-password-here
 ```
 

@@ -1,7 +1,7 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-08-10
+Last updated: 2026-08-14
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 
@@ -19,6 +19,7 @@ Last updated: 2026-08-10
 - Period `€/100 km` is now labelled as spending per observed 100 km, matching its boundary-fill approximation.
 - Backend dependencies were refreshed and `SettingsConfigDict` removed the Pydantic configuration warning. Frontend lockfiles were refreshed; `npm audit` reports zero vulnerabilities.
 - Existing Valhalla at `192.168.25.25:8002` verified: `/status`, `/sources_to_targets`, `/route`, and the VroomVroom `RoutingService` all work. Test route: 23.628 km / 1131 s; km→m conversion confirmed.
+- Docker configuration now uses one ignored `.env.docker` at the repository root for both Compose files; copy the tracked `.env.example` to create it.
 - Tests: 119 backend + 27 frontend pass; production build passes; Alembic has one head. No migration required.
 
 ---

@@ -33,7 +33,7 @@ services:
     volumes:
       - ./backend/data:/app/data
     env_file:
-      - ./backend/.env.docker
+      - ./.env.docker
     environment:
       - PYTHONPATH=/app
     restart: unless-stopped

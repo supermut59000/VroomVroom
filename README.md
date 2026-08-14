@@ -59,7 +59,8 @@ All user data (vehicles, fuel entries, maintenance) stays on your server. No ana
 ## Quick Start
 
 ```bash
-docker-compose up -d
+cp .env.example .env.docker
+docker compose up -d
 
 # Frontend: http://localhost:3055
 # Backend API: http://localhost:8055

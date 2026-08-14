@@ -10,7 +10,8 @@ services:
       - "8055:8000"
     volumes:
       - ./backend/data:/app/data
-      - ./backend/.env:/app/.env
+    env_file:
+      - ./.env.docker
     environment:
       - PYTHONPATH=/app
     restart: unless-stopped

@@ -337,35 +337,16 @@ const COLORS = { fuel: 'var(--color-chart-fuel)' }
 
 ## Configuration Files
 
-### Environment Variables (`backend/.env`)
+### Environment Variables (root `.env.docker`)
+
 ```bash
-# Database
-DB_HOST=192.168.25.9
-DB_PORT=3306
-DB_USER=vehicleadmin
-DB_PASSWORD=***
-DB_NAME=vehicle_management
-
-# API
-API_HOST=0.0.0.0
-API_PORT=8000
-DEBUG=False
-
-# CORS (comma-separated)
-CORS_ORIGINS=http://localhost:3055,https://carmanagement.home.ouiouibaguette.fr
-
-# Routing (driving distance/time to fuel stations) — all optional
-# Defaults to the public OSRM demo server. Switch to a self-hosted server
-# (see deploy/valhalla/) without any code change.
-ROUTING_PROVIDER=osrm          # osrm | valhalla
-ROUTING_URL=https://router.project-osrm.org
-ROUTING_PROFILE=driving        # OSRM profile
-ROUTING_PROFILE_VALHALLA=auto  # Valhalla costing
-ROUTING_TIMEOUT=8.0
-ROUTING_CACHE_TTL=21600
-ROUTING_MAX_BATCH=95           # destinations per provider request
-ROUTING_MAX_CONCURRENCY=4
+cp .env.example .env.docker
 ```
+
+Both Compose files load `.env.docker` from the repository root. The tracked
+`.env.example` contains every supported setting and defaults routing to the
+Valhalla server at `192.168.25.25:8002`. Edit database credentials, CORS, and
+`API_KEY` in `.env.docker`; never commit that file.
 
 **Self-hosted routing:** [deploy/valhalla/](deploy/valhalla/) is a standalone
 Valhalla stack (independent of VroomVroom — reusable by other projects). It
@@ -543,8 +524,8 @@ docker logs vroomvroom-backend
 # Check config.js environment detection
 console.log(API_URL);  # In browser console
 
-# Verify CORS settings in backend/.env
-# CORS_ORIGINS must include frontend URL
+# Verify CORS settings in the root .env.docker
+# BACKEND_CORS_ORIGINS must include the frontend URL
 
 # Check network in docker-compose
 docker network inspect vroomvroom_vroomvroom-network

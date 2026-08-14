@@ -690,15 +690,13 @@ New section in the vehicle details popup showing estimated range per meteorologi
 
 ---
 
-## Environment Variables (`backend/.env`)
+## Environment Variables (root `.env.docker`)
+
+Both development and production Compose files read the same ignored root file:
 
 ```bash
-DB_HOST=192.168.25.46      # Database host
-DB_PORT=3306               # Database port
-DB_USER=<user>             # Database user
-DB_PASSWORD=<password>     # Database password
-DB_NAME=vehicle_management # Database name
-API_KEY=<your-key>         # API key (empty = auth disabled)
-DEBUG=False
-BACKEND_CORS_ORIGINS=https://carmanagement.home.ouiouibaguette.fr,https://carmanagementapi.home.ouiouibaguette.fr
+cp .env.example .env.docker
 ```
+
+`.env.example` documents database, API key, CORS, pool, logging, and routing
+settings. It defaults routing to Valhalla at `http://192.168.25.25:8002`.
