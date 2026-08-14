@@ -40,7 +40,8 @@ def osrm_payload(*legs):
 
 
 @pytest.fixture(autouse=True)
-def _clean_cache():
+def _clean_cache(monkeypatch):
+    monkeypatch.setattr(routing_service.settings, "ROUTING_PROVIDER", "osrm")
     clear_cache()
     yield
     clear_cache()

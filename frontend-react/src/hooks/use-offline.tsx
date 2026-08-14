@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
+import { isPermanentQueueStatus } from '@/lib/offline'
 import type { FuelEntryCreate, FuelEntry } from '@/types'
 
 const QUEUE_KEY = 'vv_offline_queue'
@@ -91,7 +92,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
           )
           synced++
         } catch (e) {
-          if (e instanceof ApiError && e.status >= 400 && e.status < 500) {
+          if (e instanceof ApiError && isPermanentQueueStatus(e.status)) {
             rejected++
             toast.error(
               `Plein rejeté (${item.data.liters} L du ${item.data.fueling_date}) : ${e.message}`,

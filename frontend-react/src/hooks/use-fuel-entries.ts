@@ -99,8 +99,8 @@ export function useCreateFuelEntry() {
   const queryClient = useQueryClient()
   return useMutation({
     // allowOdometerDecrease maps to the backend's ?allow_odometer_decrease
-    // query param — set when the user explicitly confirmed a lower reading
-    // (backfill of an older fill, odometer swap).
+    // query param — set when the user explicitly confirmed a lower historical
+    // reading. Odometer replacements are not supported by the statistics model.
     mutationFn: ({
       allowOdometerDecrease,
       ...data

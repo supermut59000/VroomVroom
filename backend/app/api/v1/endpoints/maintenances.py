@@ -42,7 +42,7 @@ def create_maintenance(
         return db_maintenance
     except ValueError as e:
         logger.warning("Validation error creating maintenance for vehicle %d: %s", maintenance.vehicle_id, e)
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e))
     except Exception:
         logger.exception("Unexpected error creating maintenance entry")
         raise HTTPException(
@@ -133,7 +133,7 @@ def update_maintenance(
     try:
         db_maintenance = maintenance_service.update_maintenance(maintenance_id, maintenance_update)
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e))
     if not db_maintenance:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

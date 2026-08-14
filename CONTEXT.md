@@ -7,6 +7,22 @@ Last updated: 2026-08-10
 
 ---
 
+## Session log — 2026-08-14
+
+### Audit fixes and live Valhalla verification
+
+- Fuel creation now preserves the fuel type selected in the form for every vehicle, including hybrids and alternate-fuel fills.
+- Fuel entries cannot be created below the vehicle's initial odometer, even with the historical-correction override. Raising a vehicle's initial odometer above existing fuel or maintenance history is also rejected.
+- Offline sync retains 401, 403 and 429 responses for retry; only payload failures (400/404/409/422) are permanently rejected.
+- Same-stop latest-fill lookup deterministically prefers the full tank, preventing an Essence booster from becoming the next FlexFuel default.
+- The decreasing-odometer override is documented as a historical correction only; odometer replacement/reset epochs are not modeled.
+- Period `€/100 km` is now labelled as spending per observed 100 km, matching its boundary-fill approximation.
+- Backend dependencies were refreshed and `SettingsConfigDict` removed the Pydantic configuration warning. Frontend lockfiles were refreshed; `npm audit` reports zero vulnerabilities.
+- Existing Valhalla at `192.168.25.25:8002` verified: `/status`, `/sources_to_targets`, `/route`, and the VroomVroom `RoutingService` all work. Test route: 23.628 km / 1131 s; km→m conversion confirmed.
+- Tests: 119 backend + 27 frontend pass; production build passes; Alembic has one head. No migration required.
+
+---
+
 ## Session log — 2026-08-10
 
 ### Offline idempotency and high-impact audit fixes

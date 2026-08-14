@@ -77,6 +77,31 @@ class TestVehicleCRUD:
         assert data["year"] == 2023
         assert data["brand"] == "Peugeot"  # unchanged
 
+    def test_update_initial_odometer_cannot_pass_existing_history(self, client, created_vehicle):
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": created_vehicle["id"],
+            "fuel_type": "essence",
+            "liters": 40.0,
+            "price_per_liter": 1.8,
+            "odometer_reading": 10500,
+            "fueling_date": "2025-06-01",
+            "is_full_tank": True,
+        })
+
+        resp = client.put(
+            f"/api/v1/vehicles/{created_vehicle['id']}",
+            json={"initial_odometer": 10600},
+        )
+        assert resp.status_code == 422
+        assert "premier relevé" in resp.json()["detail"]
+
+    def test_update_required_field_cannot_be_null(self, client, created_vehicle):
+        resp = client.put(
+            f"/api/v1/vehicles/{created_vehicle['id']}",
+            json={"initial_odometer": None},
+        )
+        assert resp.status_code == 422
+
     def test_soft_delete_vehicle(self, client, created_vehicle):
         resp = client.delete(f"/api/v1/vehicles/{created_vehicle['id']}")
         assert resp.status_code == 204

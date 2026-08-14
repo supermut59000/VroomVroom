@@ -7,7 +7,7 @@
 
 services:
   valhalla:
-    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    image: ghcr.io/valhalla/valhalla-scripted:latest
     container_name: valhalla
     ports:
       - "8002:8002"

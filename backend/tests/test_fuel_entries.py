@@ -48,6 +48,15 @@ class TestFuelEntryCRUD:
         assert first.json()["id"] != second.json()["id"]
         assert client.get("/api/v1/fuel-entries/").json()["total"] == 2
 
+    def test_create_fuel_entry_below_initial_odometer_rejected(self, client, sample_fuel_entry_data):
+        sample_fuel_entry_data["odometer_reading"] = 9999
+        resp = client.post(
+            "/api/v1/fuel-entries/?allow_odometer_decrease=true",
+            json=sample_fuel_entry_data,
+        )
+        assert resp.status_code == 422
+        assert "kilométrage initial" in resp.json()["detail"]
+
     def test_create_fuel_entry_invalid_liters(self, client, sample_fuel_entry_data):
         sample_fuel_entry_data["liters"] = -5
         resp = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)
@@ -159,6 +168,22 @@ class TestFuelEntryList:
         resp = client.get(f"/api/v1/fuel-entries/vehicle/{created_vehicle['id']}/latest")
         assert resp.status_code == 200
         assert resp.json()["odometer_reading"] == 11000
+
+    def test_latest_same_stop_prefers_full_tank(self, client, sample_fuel_entry_data, created_vehicle):
+        client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "fuel_type": "essence",
+            "is_full_tank": False,
+        })
+        full = client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "fuel_type": "e85",
+            "is_full_tank": True,
+        }).json()
+
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{created_vehicle['id']}/latest")
+        assert resp.status_code == 200
+        assert resp.json()["id"] == full["id"]
 
     def test_pagination(self, client, sample_fuel_entry_data):
         # Create 3 entries

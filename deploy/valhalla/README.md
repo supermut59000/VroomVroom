@@ -31,6 +31,12 @@ Une seule instance sert tous tes projets :
 Profils de coût (`costing`) : `auto`, `truck`, `bicycle`, `pedestrian`,
 `motorcycle`, `bus`, `taxi`.
 
+## Image Docker
+
+La stack utilise l'image officielle maintenue `ghcr.io/valhalla/valhalla-scripted`.
+L'ancienne image GIS•OPS a été archivée en mars 2026 et a migré vers le dépôt
+Valhalla officiel.
+
 ## Prérequis
 
 - **Disque** : ~30 Go libres (pbf ~4-5 Go + tuiles France ~10-20 Go + marge)
@@ -52,9 +58,9 @@ docker compose logs -f valhalla
 
 Le **premier** démarrage télécharge `france-latest.osm.pbf` puis construit les
 tuiles : compte **plusieurs heures**. Le conteneur ne répond pas pendant ce
-temps (`start_period: 30m` sur le healthcheck évite juste qu'il soit tué trop
-tôt — allonge-le si besoin). Les démarrages suivants réutilisent `./tiles` et
-prennent quelques secondes.
+temps. Le healthcheck restera `starting`, puis éventuellement `unhealthy`,
+mais Docker laisse le build continuer. Les démarrages suivants réutilisent
+`./tiles` et prennent quelques secondes.
 
 Vérification :
 

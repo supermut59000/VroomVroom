@@ -112,7 +112,13 @@ def update_vehicle(
                 detail="Un autre véhicule possède déjà cette plaque d'immatriculation"
             )
     
-    return vehicle_service.update_vehicle(vehicle_id, vehicle_update)
+    try:
+        return vehicle_service.update_vehicle(vehicle_id, vehicle_update)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(e),
+        )
 
 
 @router.delete("/{vehicle_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -172,7 +178,7 @@ def get_vehicle_period_stats(
     """
     if end_date < start_date:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="La date de fin doit être postérieure à la date de début",
         )
 

@@ -132,7 +132,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
 
     const payload = {
       vehicle_id: vehicleId,
-      fuel_type: isFlexfuel ? data.fuel_type : (vehicle?.fuel_type ?? data.fuel_type),
+      fuel_type: data.fuel_type,
       liters: data.liters,
       price_per_liter: data.price_per_liter,
       odometer_reading: data.odometer_reading,

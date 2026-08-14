@@ -83,6 +83,29 @@ class VehicleService:
         
         # Mise à jour uniquement des champs fournis
         update_data = vehicle_data.model_dump(exclude_unset=True)
+        required = {"brand", "model", "year", "license_plate", "fuel_type", "initial_odometer", "is_active"}
+        if any(update_data.get(field) is None for field in required & update_data.keys()):
+            raise ValueError("Les champs obligatoires du véhicule ne peuvent pas être nuls")
+
+        if "initial_odometer" in update_data:
+            readings = [
+                self.db.query(func.min(FuelEntry.odometer_reading)).filter(
+                    FuelEntry.vehicle_id == vehicle_id,
+                    FuelEntry.is_active == True,
+                ).scalar(),
+                self.db.query(func.min(Maintenance.odometer_reading)).filter(
+                    Maintenance.vehicle_id == vehicle_id,
+                    Maintenance.is_active == True,
+                ).scalar(),
+            ]
+            first_reading = min(value for value in readings if value is not None) if any(
+                value is not None for value in readings
+            ) else None
+            if first_reading is not None and update_data["initial_odometer"] > first_reading:
+                raise ValueError(
+                    f"Le kilométrage initial ne peut pas dépasser le premier relevé ({first_reading:g} km)"
+                )
+
         for field, value in update_data.items():
             setattr(db_vehicle, field, value)
         
@@ -520,6 +543,9 @@ class VehicleService:
             e85_savings=e85_savings,
             e85_share_liters=e85_share,
             skipped_fills_no_e10_price=skipped,
+            # Spending recorded in the period divided by the observed odometer span.
+            # Boundary fills finance travel outside the selected dates, so this is
+            # intentionally labelled as spending per observed 100 km in the UI.
             fuel_cost_per_100km=round(total_cost * 100 / distance_km, 2) if distance_km > 0 else None,
             maintenance_cost=maintenance_cost,
             maintenance_count=len(maintenances),

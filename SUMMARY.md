@@ -6,6 +6,17 @@ Last updated: 2026-08-10
 
 ---
 
+## 2026-08-14 — Audit fixes and Valhalla verification
+
+- Fixed selected fuel types being overwritten on non-FlexFuel submissions.
+- Added initial-odometer invariants, deterministic same-stop latest-fill ordering, and retry-safe handling of auth/rate-limit failures in the offline queue.
+- Clarified that decreasing odometers are historical corrections, not modeled odometer resets, and labelled period €/100 km as spending over observed distance.
+- Refreshed backend/frontend dependencies; dependency audits are clean.
+- Verified Valhalla at `192.168.25.25:8002` directly and through `RoutingService`.
+- Tests: 119 backend, 27 frontend; production build passes; no migration.
+
+---
+
 ## 2026-08-10 — Offline/idempotency resilience
 
 - A single `OfflineProvider` owns queue state; retries are delayed and cannot double-submit from multiple hook instances.
@@ -134,8 +145,8 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 ### Tests
 - **pytest** + **httpx** TestClient
 - SQLite in-memory database (session-scoped setup, per-test transaction rollback)
-- 115 tests total (as of 2026-08-10): vehicles, fuel entries (incl. distance-weighted average, partial-anchor, idempotency, and same-odometer blend regressions), maintenances, flexfuel, auth, routing
-- Frontend: 25 vitest tests over pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats fallback)
+- 119 tests total (as of 2026-08-14): vehicles, fuel entries (incl. distance-weighted average, partial-anchor, idempotency, initial-odometer, and same-stop latest regressions), maintenances, flexfuel, auth, routing
+- Frontend: 27 vitest tests over pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats fallback, offline queue status classification)
 - Run inside Docker with live source: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`
 
 ---

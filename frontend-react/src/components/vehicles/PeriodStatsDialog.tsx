@@ -178,9 +178,9 @@ export function PeriodStatsDialog({ vehicleId, open, onOpenChange }: PeriodStats
             {/* Coûts avancés */}
             <div className="grid grid-cols-2 gap-3">
               <Kpi
-                label="Coût / 100 km"
+                label="Dépenses / 100 km"
                 value={stats.fuel_cost_per_100km != null ? eur(stats.fuel_cost_per_100km, 2) : '—'}
-                sub="carburant seul"
+                sub="carburant · km observés"
               />
               <Kpi
                 label="Coût / jour"

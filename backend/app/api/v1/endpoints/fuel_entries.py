@@ -34,7 +34,7 @@ class FuelEntryOrderBy(str, Enum):
 @router.post("/", response_model=FuelEntryResponse, status_code=status.HTTP_201_CREATED)
 def create_fuel_entry(
     fuel_entry: FuelEntryCreate,
-    allow_odometer_decrease: bool = Query(False, description="Autoriser un kilométrage décroissant (remise à zéro compteur)"),
+    allow_odometer_decrease: bool = Query(False, description="Autoriser une correction historique confirmée"),
     db: Session = Depends(get_db)
 ):
     """Create a new fuel entry"""
@@ -43,7 +43,7 @@ def create_fuel_entry(
         return fuel_service.create_fuel_entry(fuel_entry, allow_odometer_decrease=allow_odometer_decrease)
     except ValueError as e:
         logger.warning("Validation error creating fuel entry for vehicle %d: %s", fuel_entry.vehicle_id, e)
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e))
     except Exception:
         logger.exception("Unexpected error creating fuel entry")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")
@@ -136,7 +136,7 @@ def update_fuel_entry(
             allow_odometer_decrease=allow_odometer_decrease,
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(e))
     except Exception:
         logger.exception("Unexpected error updating fuel entry %d", entry_id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erreur interne du serveur")

@@ -12,10 +12,12 @@ class FuelService:
     def __init__(self, db: Session):
         self.db = db
 
-    def _assert_vehicle_exists(self, vehicle_id: int) -> None:
+    def _assert_vehicle_exists(self, vehicle_id: int):
         from app.models.vehicle import Vehicle
-        if not self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first():
+        vehicle = self.db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+        if not vehicle:
             raise ValueError(f"Véhicule avec l'id {vehicle_id} introuvable")
+        return vehicle
 
     def create_fuel_entry(self, fuel_entry: FuelEntryCreate, allow_odometer_decrease: bool = False) -> FuelEntry:
         """Create a new fuel entry."""
@@ -29,7 +31,12 @@ class FuelService:
                     raise ValueError("Identifiant de requête déjà utilisé pour un autre véhicule")
                 return existing
 
-        self._assert_vehicle_exists(fuel_entry.vehicle_id)
+        vehicle = self._assert_vehicle_exists(fuel_entry.vehicle_id)
+        if fuel_entry.odometer_reading < (vehicle.initial_odometer or 0):
+            raise ValueError(
+                f"Le kilométrage {fuel_entry.odometer_reading} km est inférieur "
+                f"au kilométrage initial du véhicule ({vehicle.initial_odometer:g} km)"
+            )
 
         # Odometer monotonicity — allow equal (blend fills share same odometer)
         if not allow_odometer_decrease:
@@ -246,7 +253,12 @@ class FuelService:
         return (
             self.db.query(FuelEntry)
             .filter(FuelEntry.vehicle_id == vehicle_id, FuelEntry.is_active == True)
-            .order_by(desc(FuelEntry.fueling_date), desc(FuelEntry.odometer_reading))
+            .order_by(
+                desc(FuelEntry.fueling_date),
+                desc(FuelEntry.odometer_reading),
+                desc(FuelEntry.is_full_tank),
+                desc(FuelEntry.id),
+            )
             .first()
         )
 
