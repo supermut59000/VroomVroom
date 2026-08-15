@@ -8,7 +8,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { useVehicleTimeline } from '@/hooks/use-vehicles'
-import { FUEL_TYPE_LABELS } from '@/lib/constants'
+import { FUEL_ENTRY_TYPE_LABELS } from '@/lib/constants'
 import type { FuelType } from '@/types'
 
 interface VehicleTimelineSheetProps {
@@ -78,7 +78,7 @@ export function VehicleTimelineSheet({
                               {isFuel
                                 ? (d.station_name as string | null) ??
                                   (d.fuel_type
-                                    ? FUEL_TYPE_LABELS[d.fuel_type as FuelType]
+                                    ? FUEL_ENTRY_TYPE_LABELS[d.fuel_type as FuelType]
                                     : 'Plein')
                                 : (d.maintenance_type as string) ?? 'Maintenance'}
                             </span>
@@ -102,7 +102,7 @@ export function VehicleTimelineSheet({
                                 )}
                                 {d.fuel_type && (
                                   <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                                    {FUEL_TYPE_LABELS[d.fuel_type as FuelType]}
+                                    {FUEL_ENTRY_TYPE_LABELS[d.fuel_type as FuelType]}
                                   </Badge>
                                 )}
                                 {d.is_full_tank === false && (

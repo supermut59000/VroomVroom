@@ -15,7 +15,7 @@ import type { ConsumptionDataPoint } from '@/types'
 
 interface ConsumptionChartProps {
   dataPoints: ConsumptionDataPoint[]
-  /** When true, split the line by dominant fuel (E85 vs Essence/E10) — raw measured values, no normalisation. */
+  /** When true, split the line by dominant fuel (E85 vs Essence) — raw measured values, no normalisation. */
   splitByFuelType?: boolean
 }
 
@@ -139,7 +139,7 @@ export function ConsumptionChart({
               formatter={(value: number, name: string, props) => {
                 const item = props.payload as Point
                 const label =
-                  name === 'e85' ? 'E85' : name === 'essence' ? 'Essence/E10' : 'Consommation'
+                  name === 'e85' ? 'E85' : name === 'essence' ? 'Essence (E10/SP98)' : 'Consommation'
                 const e85Pct =
                   item.e85_fraction != null
                     ? ` · ${Math.round(item.e85_fraction * 100)}% E85`
@@ -168,7 +168,7 @@ export function ConsumptionChart({
               <Line
                 type="monotone"
                 dataKey="essence"
-                name="Essence/E10"
+                name="Essence (E10/SP98)"
                 stroke="hsl(25, 95%, 53%)"
                 strokeWidth={2}
                 dot={{ r: 4 }}

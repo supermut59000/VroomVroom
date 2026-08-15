@@ -3,19 +3,42 @@ import type { FuelEntry } from '@/types'
 // Pure blend/tank math for FlexFuel vehicles — no React, no DOM.
 // Consumed by BlendCalculator and unit-tested in blend-math.test.ts.
 
-// Fixed ethanol content by fuel type (fraction 0–1) — used for history only.
+// Conservative upper bounds: overestimating ethanol recommends more gasoline,
+// never less. Winter-grade E85 is 60–75%; transition periods may still carry
+// summer stock, so only the mandatory winter window uses 75%.
+export function e85EthanolFraction(date: string | Date = new Date()): number {
+  let month: number
+  let day: number
+  if (typeof date === 'string') {
+    const parts = date.slice(0, 10).split('-').map(Number)
+    month = parts[1]
+    day = parts[2]
+  } else {
+    month = date.getMonth() + 1
+    day = date.getDate()
+  }
+
+  const winter = month === 11 || month === 12 || month <= 2 ||
+    (month === 3 && day <= 15) || (month === 10 && day === 31)
+  return winter ? 0.75 : 0.85
+}
+
 export const ETHANOL_FRACTION: Record<string, number> = {
-  e85: 0.85,
   essence: 0.10,
+  sp98: 0.05,
   diesel: 0.0,
   gpl: 0.0,
   electrique: 0.0,
   hybride: 0.0,
 }
 
+export function fuelEthanolFraction(fuelType: string, date: string | Date): number {
+  return fuelType === 'e85' ? e85EthanolFraction(date) : (ETHANOL_FRACTION[fuelType] ?? 0)
+}
+
 export const MIN_PUMP_LITERS = 5
 
-export type DilutantType = 'e10' | 'sp95'
+export type DilutantType = 'e10' | 'sp98'
 
 export interface TankState {
   litersInTank: number
@@ -104,7 +127,7 @@ export function computeTankState(
       sorted[i].odometer_reading === stopOdo
     ) {
       const e = sorted[i]
-      const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
+      const fillEthFraction = fuelEthanolFraction(e.fuel_type, e.fueling_date)
       accLiters += e.liters
       accEthLiters += e.liters * fillEthFraction
       if (e.is_full_tank) stopIsFull = true
@@ -150,18 +173,14 @@ export function computeTankState(
 // Two km landmarks computed from the current tank state:
 //
 // odoA — last km at which a FULL E85 fill would still land ≤ targetMax.
-//   Derived from: r_A = tank × (targetMax − 0.85) / (ethFrac − 0.85)
-//   At remaining = r_A, result = targetMax exactly.
-//
 // odoB — first km at which an OPTIMAL blend (min-pump dilutant → exact target)
-//   becomes feasible. Diluting below 5 L is impossible at French pumps.
-//   Derived from solving x_ideal = 5 in the blend formula:
-//   r_B = [5 × (dilFrac − 0.85) − tank × (target − 0.85)] / (0.85 − ethFrac)
+//   becomes feasible. Both use today's conservative seasonal E85 fraction.
 
 export interface Thresholds {
-  odoA: number | null  // null = already past
-  odoB: number | null  // null = now (remaining ≤ rB already)
+  odoA: number | null  // null = already past or no deadline
+  odoB: number | null  // null = now or unnecessary
   odoBNow: boolean
+  pureE85AlwaysSafe: boolean
 }
 
 export function computeThresholds(
@@ -173,32 +192,33 @@ export function computeThresholds(
   dilutantEthFraction: number,
   avgL100km: number,
   fromOdo: number,
+  e85EthFraction: number = 0.85,
 ): Thresholds {
   const eps = 0.001
-  if (avgL100km <= 0 || Math.abs(ethFraction - 0.85) < eps) {
-    // Degenerate case: tank is (numerically) pure E85 — both km formulas
-    // divide by (ethFraction − 0.85). A pure-E85 tank sits above any target
-    // < 85%, so dilution applies immediately; no km horizon to compute.
-    return { odoA: null, odoB: null, odoBNow: true }
-  }
-
   const targetMax = (targetPct + tolerancePct) / 100
   const target = targetPct / 100
 
+  if (e85EthFraction <= targetMax) {
+    return { odoA: null, odoB: null, odoBNow: false, pureE85AlwaysSafe: true }
+  }
+  if (avgL100km <= 0 || Math.abs(ethFraction - e85EthFraction) < eps) {
+    return { odoA: null, odoB: null, odoBNow: true, pureE85AlwaysSafe: false }
+  }
+
   // Threshold A: last km for pure E85 fill ≤ targetMax
-  const rA = (tankCapacity * (targetMax - 0.85)) / (ethFraction - 0.85)
+  const rA = (tankCapacity * (targetMax - e85EthFraction)) / (ethFraction - e85EthFraction)
   const odoA =
     rA >= 0 && remaining > rA
       ? Math.round(fromOdo + ((remaining - rA) * 100) / avgL100km)
       : null
 
   // Threshold B: first km where blend with exactly MIN_PUMP_LITERS dilutant → exact target
-  const denomB = 0.85 - ethFraction
+  const denomB = e85EthFraction - ethFraction
   let odoB: number | null = null
   let odoBNow = false
   if (denomB > eps) {
     const rB =
-      (MIN_PUMP_LITERS * (dilutantEthFraction - 0.85) - tankCapacity * (target - 0.85)) / denomB
+      (MIN_PUMP_LITERS * (dilutantEthFraction - e85EthFraction) - tankCapacity * (target - e85EthFraction)) / denomB
     if (rB <= 0 || remaining <= rB) {
       odoBNow = true
     } else {
@@ -208,7 +228,7 @@ export function computeThresholds(
     odoBNow = true
   }
 
-  return { odoA, odoB, odoBNow }
+  return { odoA, odoB, odoBNow, pureE85AlwaysSafe: false }
 }
 
 // ─── Winter smart recommendation ───────────────────────────────────────────
@@ -233,6 +253,7 @@ export function computeWinterRec(
   dilutantEthFraction: number,
   avgL100km: number,
   currentOdo: number,
+  e85EthFraction: number = 0.85,
 ): WinterRec {
   const ethFraction = remainingLiters > 0 ? ethanolLiters / remainingLiters : 0
   const currentPct = ethFraction * 100
@@ -245,13 +266,13 @@ export function computeWinterRec(
   }
 
   // Pure E85 keeps ethanol within targetMax
-  const afterE85Pct = (ethanolLiters + toAdd * 0.85) / tankCapacity
+  const afterE85Pct = (ethanolLiters + toAdd * e85EthFraction) / tankCapacity
   if (afterE85Pct <= targetMax) {
     let kmSafe: number | null = null
     let kmRelative: number | null = null
     const f = afterE85Pct
-    if (f < 0.85 - 0.001) {
-      const rSafe = (tankCapacity * (targetMax - 0.85)) / (f - 0.85)
+    if (f < e85EthFraction - 0.001) {
+      const rSafe = (tankCapacity * (targetMax - e85EthFraction)) / (f - e85EthFraction)
       if (rSafe >= 0 && rSafe < tankCapacity) {
         const dist = ((tankCapacity - rSafe) * 100) / avgL100km
         kmSafe = Math.round(currentOdo + dist)
@@ -268,8 +289,8 @@ export function computeWinterRec(
   }
 
   // Blend needed
-  const numerator = target * (remainingLiters + toAdd) - ethanolLiters - 0.85 * toAdd
-  const denominator = dilutantEthFraction - 0.85
+  const numerator = target * (remainingLiters + toAdd) - ethanolLiters - e85EthFraction * toAdd
+  const denominator = dilutantEthFraction - e85EthFraction
   const xIdeal = numerator / denominator
 
   let x: number
@@ -298,7 +319,7 @@ export function computeWinterRec(
   }
 
   const e85 = Math.round((toAdd - x) * 10) / 10
-  const resultEthanol = ethanolLiters + x * dilutantEthFraction + e85 * 0.85
+  const resultEthanol = ethanolLiters + x * dilutantEthFraction + e85 * e85EthFraction
   const resultTotal = remainingLiters + x + e85
   const resultPct = resultTotal > 0 ? (resultEthanol / resultTotal) * 100 : 0
   const withinTolerance =
@@ -330,6 +351,7 @@ export function simulateFutureFills(
   targetPct: number,
   tolerancePct: number,
   dilutantEthFraction: number,
+  e85EthFraction: number = 0.85,
 ): FutureFill[] {
   const fills: FutureFill[] = []
   let rem = startRemaining
@@ -346,7 +368,7 @@ export function simulateFutureFills(
 
     const rec = computeWinterRec(
       remAfter, ethAfter, tankCapacity, targetPct, tolerancePct,
-      dilutantEthFraction, avgL100km, odo,
+      dilutantEthFraction, avgL100km, odo, e85EthFraction,
     )
 
     let dilLiters: number, e85Liters: number, resultPct: number, type: FutureFill['type']
@@ -367,7 +389,7 @@ export function simulateFutureFills(
     })
 
     rem = Math.min(remAfter + dilLiters + e85Liters, tankCapacity)
-    eth = Math.min(ethAfter + dilLiters * dilutantEthFraction + e85Liters * 0.85, tankCapacity)
+    eth = Math.min(ethAfter + dilLiters * dilutantEthFraction + e85Liters * e85EthFraction, tankCapacity)
   }
 
   return fills

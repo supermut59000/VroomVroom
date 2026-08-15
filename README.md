@@ -15,6 +15,7 @@ Personal vehicle management app for tracking fuel, maintenance, and costs. Desig
 - Automatic consumption calculation (L/100km) with partial fill accumulation
 - Consumption history chart (Recharts)
 - Price per liter, station name, location tracking
+- SP95-E10 and SP98-E5 tracking under Essence, with seasonal E85 blend calculations
 - CSV export (French formatting, semicolon separator, Excel-compatible)
 
 **Maintenance**

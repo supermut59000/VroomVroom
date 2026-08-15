@@ -31,7 +31,7 @@ import { Separator } from '@/components/ui/separator'
 import { SwipeableCard } from '@/components/ui/swipeable-card'
 import { useVehicle } from '@/hooks/use-vehicles'
 import { useAllFuelEntries, useFuelStats, useDeleteFuelEntry } from '@/hooks/use-fuel-entries'
-import { FUEL_TYPE_LABELS, FUEL_TYPE_COLORS } from '@/lib/constants'
+import { FUEL_ENTRY_TYPE_LABELS, FUEL_TYPE_COLORS } from '@/lib/constants'
 import { exportFuelEntriesCSV } from '@/lib/csv'
 import { FuelEditDialog } from './FuelEditDialog'
 import { FuelCharts } from './FuelCharts'
@@ -204,7 +204,7 @@ export function FuelViewDialog({ vehicleId, onClose }: FuelViewDialogProps) {
                           <Badge variant="outline" className="text-xs">Partiel</Badge>
                         )}
                         <Badge className={`${FUEL_TYPE_COLORS[entry.fuel_type].bg} ${FUEL_TYPE_COLORS[entry.fuel_type].text} border-0 text-xs`}>
-                          {FUEL_TYPE_LABELS[entry.fuel_type]}
+                          {FUEL_ENTRY_TYPE_LABELS[entry.fuel_type]}
                         </Badge>
                       </div>
                       <div className="flex flex-wrap gap-x-4 text-xs text-muted-foreground">

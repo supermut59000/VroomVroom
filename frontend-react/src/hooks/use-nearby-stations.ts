@@ -28,6 +28,7 @@ export interface NearbyStation {
 /** Map our app FuelType to the API price field */
 export const FUEL_API_FIELD: Partial<Record<FuelType, keyof StationPrices>> = {
   essence: 'e10',
+  sp98: 'sp98',
   diesel: 'diesel',
   e85: 'e85',
   gpl: 'gpl',
@@ -35,7 +36,7 @@ export const FUEL_API_FIELD: Partial<Record<FuelType, keyof StationPrices>> = {
 
 /** All selectable fuel types for the standalone price search */
 export const STATION_FUEL_OPTIONS: { label: string; key: keyof StationPrices }[] = [
-  { label: 'E10 (Sans-plomb)', key: 'e10' },
+  { label: 'E10 (Essence)', key: 'e10' },
   { label: 'SP95', key: 'sp95' },
   { label: 'SP98', key: 'sp98' },
   { label: 'Gazole (Diesel)', key: 'diesel' },

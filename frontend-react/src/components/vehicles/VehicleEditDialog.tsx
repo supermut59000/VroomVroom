@@ -70,7 +70,7 @@ export function VehicleEditDialog({ vehicleId, onClose }: VehicleEditDialogProps
         model: vehicle.model,
         year: vehicle.year,
         license_plate: vehicle.license_plate,
-        fuel_type: vehicle.fuel_type,
+        fuel_type: vehicle.fuel_type === 'sp98' ? 'essence' : vehicle.fuel_type,
         initial_odometer: vehicle.initial_odometer,
         tank_capacity: vehicle.tank_capacity ?? '',
         acquisition_date: vehicle.acquisition_date ?? '',

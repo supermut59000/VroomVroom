@@ -4,6 +4,8 @@ import {
   computeTankState,
   computeThresholds,
   computeWinterRec,
+  e85EthanolFraction,
+  fuelEthanolFraction,
   simulateFutureFills,
 } from './blend-math'
 import type { FuelEntry } from '@/types'
@@ -34,6 +36,20 @@ function entry(partial: Partial<FuelEntry>): FuelEntry {
 
 const CONVERSION = '2026-01-01'
 
+describe('seasonal ethanol defaults', () => {
+  it('uses the conservative seasonal maximum for E85', () => {
+    expect(e85EthanolFraction('2026-03-15')).toBe(0.75)
+    expect(e85EthanolFraction('2026-03-16')).toBe(0.85)
+    expect(e85EthanolFraction('2026-10-30')).toBe(0.85)
+    expect(e85EthanolFraction('2026-10-31')).toBe(0.75)
+  })
+
+  it('distinguishes SP98-E5 from E10', () => {
+    expect(fuelEthanolFraction('essence', '2026-07-01')).toBe(0.1)
+    expect(fuelEthanolFraction('sp98', '2026-07-01')).toBe(0.05)
+  })
+})
+
 describe('computeThresholds', () => {
   it('pure-E85 tank (ethFraction exactly 0.85) is a dilute-now, not a crash', () => {
     // Regression: this singularity used to return {odoB: null, odoBNow: false}
@@ -56,6 +72,12 @@ describe('computeThresholds', () => {
     const t = computeThresholds(30, 0.7, 50, 77, 5, 0.1, 7.9, 10000)
     expect(t.odoA).toBeGreaterThan(10000)
     expect(t.odoBNow || (t.odoB !== null && t.odoB > 10000)).toBe(true)
+  })
+
+  it('does not recommend dilution when winter E85 is below the maximum target', () => {
+    const t = computeThresholds(30, 0.7, 50, 77, 5, 0.1, 7.9, 10000, 0.75)
+    expect(t.pureE85AlwaysSafe).toBe(true)
+    expect(t.odoBNow).toBe(false)
   })
 })
 
@@ -103,25 +125,34 @@ describe('computeAvgConsumption', () => {
 
 describe('computeTankState', () => {
   it('merges same-stop entries into one composition', () => {
-    // 50 L tank, first stop: 40 L E85 (full) + 10 L essence (partial booster)
+    // Summer fill: 40 L E85 (85%) + 10 L E10 (10%).
     const entries = [
-      entry({ odometer_reading: 1000, liters: 40, fueling_date: '2026-01-02', is_full_tank: true, fuel_type: 'e85' }),
-      entry({ odometer_reading: 1000, liters: 10, fueling_date: '2026-01-02', is_full_tank: false, fuel_type: 'essence' }),
+      entry({ odometer_reading: 1000, liters: 40, fueling_date: '2026-07-02', is_full_tank: true, fuel_type: 'e85' }),
+      entry({ odometer_reading: 1000, liters: 10, fueling_date: '2026-07-02', is_full_tank: false, fuel_type: 'essence' }),
     ]
     const state = computeTankState(entries, CONVERSION, 50)
-    // (40×0.85 + 10×0.10) / 50 = 0.70
     expect(state.litersInTank).toBe(50)
     expect(state.ethanolLiters).toBeCloseTo(35, 5)
     expect(state.lastOdo).toBe(1000)
   })
 
+  it('uses winter E85 and SP98 composition automatically', () => {
+    const entries = [
+      entry({ odometer_reading: 1000, liters: 40, fueling_date: '2026-01-02', is_full_tank: true, fuel_type: 'e85' }),
+      entry({ odometer_reading: 1000, liters: 10, fueling_date: '2026-01-02', is_full_tank: false, fuel_type: 'sp98' }),
+    ]
+    const state = computeTankState(entries, CONVERSION, 50)
+    // 40×0.75 + 10×0.05 = 30.5 L ethanol.
+    expect(state.ethanolLiters).toBeCloseTo(30.5, 5)
+  })
+
   it('mixes remaining old fuel with the new fill on later stops', () => {
     const entries = [
       // Stop 1: tank at 70% ethanol (see previous test)
-      entry({ odometer_reading: 1000, liters: 40, fueling_date: '2026-01-02', is_full_tank: true, fuel_type: 'e85' }),
-      entry({ odometer_reading: 1000, liters: 10, fueling_date: '2026-01-02', is_full_tank: false, fuel_type: 'essence' }),
+      entry({ odometer_reading: 1000, liters: 40, fueling_date: '2026-07-02', is_full_tank: true, fuel_type: 'e85' }),
+      entry({ odometer_reading: 1000, liters: 10, fueling_date: '2026-07-02', is_full_tank: false, fuel_type: 'essence' }),
       // Stop 2: 14 L E85 tops the tank back up → 36 L of old 70% fuel remain
-      entry({ odometer_reading: 1500, liters: 14, fueling_date: '2026-01-15', is_full_tank: true, fuel_type: 'e85' }),
+      entry({ odometer_reading: 1500, liters: 14, fueling_date: '2026-07-15', is_full_tank: true, fuel_type: 'e85' }),
     ]
     const state = computeTankState(entries, CONVERSION, 50)
     // 0.70 × 36 + 14 × 0.85 = 25.2 + 11.9 = 37.1 L ethanol
@@ -131,10 +162,10 @@ describe('computeTankState', () => {
 
   it('assumes full displacement when more than a tank was added between fulls', () => {
     const entries = [
-      entry({ odometer_reading: 1000, liters: 45, fueling_date: '2026-01-02', is_full_tank: true, fuel_type: 'essence' }),
+      entry({ odometer_reading: 1000, liters: 45, fueling_date: '2026-07-02', is_full_tank: true, fuel_type: 'essence' }),
       // 52 L pumped since the last Plein (> 50 L capacity) → old fuel gone
-      entry({ odometer_reading: 1800, liters: 30, fueling_date: '2026-01-10', is_full_tank: false, fuel_type: 'e85' }),
-      entry({ odometer_reading: 2600, liters: 22, fueling_date: '2026-01-20', is_full_tank: true, fuel_type: 'e85' }),
+      entry({ odometer_reading: 1800, liters: 30, fueling_date: '2026-07-10', is_full_tank: false, fuel_type: 'e85' }),
+      entry({ odometer_reading: 2600, liters: 22, fueling_date: '2026-07-20', is_full_tank: true, fuel_type: 'e85' }),
     ]
     const state = computeTankState(entries, CONVERSION, 50)
     // Composition = added composition: pure E85 → 0.85 × 50
@@ -174,6 +205,12 @@ describe('computeWinterRec', () => {
     // Nearly empty tank at low ethanol → a full E85 fill lands ≤ 82%
     const rec = computeWinterRec(5, 1, 50, 77, 5, 0.1, 7.9, 10000)
     expect(rec.type).toBe('pure_e85')
+  })
+
+  it('uses winter-grade E85 for the recommendation', () => {
+    const rec = computeWinterRec(20, 14, 50, 77, 5, 0.1, 7.9, 10000, 0.75)
+    expect(rec.type).toBe('pure_e85')
+    if (rec.type === 'pure_e85') expect(rec.resultPct).toBeLessThanOrEqual(75)
   })
 
   it('says tank_full when less than the pump minimum fits', () => {

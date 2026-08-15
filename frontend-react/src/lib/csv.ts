@@ -1,4 +1,4 @@
-import { FUEL_TYPE_LABELS } from '@/lib/constants'
+import { FUEL_ENTRY_TYPE_LABELS } from '@/lib/constants'
 import type { FuelEntry, Maintenance, Vehicle } from '@/types'
 
 const BOM = '\uFEFF'
@@ -53,7 +53,7 @@ export function exportFuelEntriesCSV(entries: FuelEntry[], vehicle: Vehicle) {
         e.liters.toFixed(2),
         e.price_per_liter.toFixed(3),
         (e.liters * e.price_per_liter).toFixed(2),
-        FUEL_TYPE_LABELS[e.fuel_type],
+        FUEL_ENTRY_TYPE_LABELS[e.fuel_type],
         e.is_full_tank ? 'Oui' : 'Non',
         e.station_name,
         e.location,

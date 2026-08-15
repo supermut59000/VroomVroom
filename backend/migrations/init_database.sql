@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `fuel_entries` (
     `vehicle_id` INT NOT NULL,
 
     -- Fuel details
-    `fuel_type` ENUM('GASOLINE','DIESEL','ELECTRIC','HYBRID','LPG','E85') NOT NULL,
+    `fuel_type` ENUM('GASOLINE','DIESEL','ELECTRIC','HYBRID','LPG','E85','SP98') NOT NULL,
     `liters` FLOAT NOT NULL,
     `price_per_liter` FLOAT NOT NULL,
     `total_cost` FLOAT NOT NULL,

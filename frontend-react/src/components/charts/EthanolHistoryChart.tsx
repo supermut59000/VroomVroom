@@ -10,16 +10,8 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { fuelEthanolFraction } from '@/lib/blend-math'
 import type { FlexfuelConversion, Vehicle, FuelEntry } from '@/types'
-
-const ETHANOL_FRACTION: Record<string, number> = {
-  e85: 0.85,
-  essence: 0.10,
-  diesel: 0.0,
-  gpl: 0.0,
-  electrique: 0.0,
-  hybride: 0.0,
-}
 
 interface EthanolHistoryChartProps {
   conversion: FlexfuelConversion
@@ -71,7 +63,7 @@ export function EthanolHistoryChart({ conversion, vehicle, entries }: EthanolHis
         sorted[i].odometer_reading === stopOdo
       ) {
         const e = sorted[i]
-        const fillEthFraction = ETHANOL_FRACTION[e.fuel_type] ?? 0
+        const fillEthFraction = fuelEthanolFraction(e.fuel_type, e.fueling_date)
         accLiters += e.liters
         accEthLiters += e.liters * fillEthFraction
         if (e.is_full_tank) stopIsFull = true

@@ -1,8 +1,17 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-08-10
+Last updated: 2026-08-15
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — full endpoint/schema/service reference | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## 2026-08-15 — SP98 and seasonal ethanol
+
+- Fuel entries distinguish SP95-E10 from SP98-E5 while grouping both under Essence.
+- Ethanol history and blend recommendations use E10=10%, SP98=5%, and conservative E85 seasonal maxima: 75% during 31 October–15 March, 85% otherwise.
+- Nearby-station selection uses the matching E10 or SP98 government price field.
+- Deploy migration: `alembic upgrade head`. Tests: 120 backend, 32 frontend; production build passes.
 
 ---
 
@@ -81,7 +90,7 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
   - Monthly savings bar chart
 - Y axis auto-scales to max(kit cost, total savings) × 1.1
 - `monthly_average_savings` excludes current (incomplete) month — avoids dragging break-even projection too far
-- **BlendCalculator** (in graphs popup): recommends X L dilutant (E10 or SP95) + Y L E85 to maintain `target_ethanol_pct` in tank. French pump minimum 5L enforced. Configured on conversion record (`target_ethanol_pct`, `ethanol_tolerance_pct`).
+- **BlendCalculator** (in graphs popup): recommends X L dilutant (E10 or SP98) + Y L E85 to maintain `target_ethanol_pct` in tank. E85 uses the conservative seasonal maximum for the current date. French pump minimum 5L enforced.
 
 **Charts & Analytics (in graphs popup)**
 - Consumption chart (L/100km per fill), price chart (€/L over time)
@@ -145,8 +154,8 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 ### Tests
 - **pytest** + **httpx** TestClient
 - SQLite in-memory database (session-scoped setup, per-test transaction rollback)
-- 119 tests total (as of 2026-08-14): vehicles, fuel entries (incl. distance-weighted average, partial-anchor, idempotency, initial-odometer, and same-stop latest regressions), maintenances, flexfuel, auth, routing
-- Frontend: 27 vitest tests over pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats fallback, offline queue status classification)
+- 120 tests total (as of 2026-08-15): vehicles, fuel entries (incl. SP98, distance-weighted average, partial-anchor, idempotency, initial-odometer, and same-stop latest regressions), maintenances, flexfuel, auth, routing
+- Frontend: 32 vitest tests over pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats fallback, offline queue status classification)
 - Run inside Docker with live source: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`
 
 ---

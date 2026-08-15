@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { usePeriodStats } from '@/hooks/use-vehicles'
-import { FUEL_TYPE_LABELS } from '@/lib/constants'
+import { FUEL_ENTRY_TYPE_LABELS } from '@/lib/constants'
 import type { FuelType } from '@/types'
 
 interface PeriodStatsDialogProps {
@@ -141,7 +141,7 @@ export function PeriodStatsDialog({ vehicleId, open, onOpenChange }: PeriodStats
                 sub={
                   stats.fuel_breakdown.length > 1
                     ? stats.fuel_breakdown
-                        .map((b) => `${FUEL_TYPE_LABELS[b.fuel_type as FuelType] ?? b.fuel_type} ${b.avg_price_per_liter.toFixed(3)}`)
+                        .map((b) => `${FUEL_ENTRY_TYPE_LABELS[b.fuel_type as FuelType] ?? b.fuel_type} ${b.avg_price_per_liter.toFixed(3)}`)
                         .join(' · ')
                     : undefined
                 }

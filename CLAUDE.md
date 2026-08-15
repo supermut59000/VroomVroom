@@ -16,7 +16,7 @@ VroomVroom is a **vehicle management web application** for tracking vehicles, fu
 - Backend: Python 3.11+, FastAPI, SQLAlchemy 2.0, Pydantic 2.x, MariaDB/MySQL, Alembic (migrations)
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS v4, shadcn/ui, TanStack React Query, Recharts
 - Infrastructure: Docker Compose, Uvicorn ASGI server
-- Tests: pytest + httpx (SQLite in-memory, 119 tests) + vitest (27 frontend tests)
+- Tests: pytest + httpx (SQLite in-memory, 120 tests) + vitest (32 frontend tests)
 
 ## Quick Start
 
@@ -413,15 +413,15 @@ cd frontend-react && npm run test
 
 ### Implemented ✅
 - Vehicle CRUD with soft delete, archiving, insurance km tracking
-- Fuel entry CRUD with offline queue, GPS capture, station autocomplete
+- Fuel entry CRUD with offline queue, GPS capture, station autocomplete, E10/SP98 distinction
 - Statistics (distance-weighted consumption, costs, seasonal autonomy)
 - Maintenance tracking with reminders (date + km)
-- FlexFuel E85: conversion record, rentability, BlendCalculator, E10 reference prices
+- FlexFuel E85: conversion record, rentability, seasonal BlendCalculator, E10 reference prices
 - Station price map (data.economie.gouv.fr)
 - Charts: consumption, price, monthly costs, distance, odometer, ethanol %, refueling patterns
 - CSV export (French formatting)
 - API key auth, dark mode, PWA
-- Backend test suite (119 tests) + frontend pure-function tests (27 vitest)
+- Backend test suite (120 tests) + frontend pure-function tests (32 vitest)
 
 ### Not Implemented ❌
 - CI/CD (Forgejo Actions — planned)

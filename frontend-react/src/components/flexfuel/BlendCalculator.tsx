@@ -15,6 +15,7 @@ import {
   computeTankState,
   computeThresholds,
   computeWinterRec,
+  e85EthanolFraction,
   simulateFutureFills,
 } from '@/lib/blend-math'
 import type { DilutantType } from '@/lib/blend-math'
@@ -41,7 +42,8 @@ export function BlendCalculator({
   const [showFutureFills, setShowFutureFills] = useState(false)
 
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
-  const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP95'
+  const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP98'
+  const e85EthFraction = e85EthanolFraction()
   const tankCapacity = vehicle.tank_capacity ?? 50
   const conversionDate = conversion.conversion_date
   const target = conversion.target_ethanol_pct
@@ -75,8 +77,7 @@ export function BlendCalculator({
   // ── Max E85 partial fill — largest amount of E85 you can add right now
   //    without exceeding targetMax ethanol.
   //
-  //    Solve: (ethanolLiters + x × 0.85) / (remaining + x) = targetMax
-  //    → x = (remaining × targetMax − ethanolLiters) / (0.85 − targetMax)
+  //    Solve with today's conservative seasonal E85 fraction.
   //
   //    Capped at (tankCapacity − remaining) — can't overfill the tank.
   //
@@ -84,19 +85,24 @@ export function BlendCalculator({
   //    In the dead zone (past odoA) x < full-tank → actionable partial fill.
   const limitFill = useMemo(() => {
     const targetFrac = (target + tolerance) / 100
-    const denom = 0.85 - targetFrac
-    if (denom <= 0 || remainingLiters <= 0) return null
-    const ethFrac = remainingLiters > 0 ? ethanolLiters / remainingLiters : 0
+    const maxFill = tankCapacity - remainingLiters
+    if (maxFill <= 0 || remainingLiters <= 0) return null
+    if (e85EthFraction <= targetFrac) {
+      const resultPct = ((ethanolLiters + maxFill * e85EthFraction) / tankCapacity) * 100
+      const addedKm = avgConsumption ? Math.round(maxFill * 100 / avgConsumption) : null
+      return { liters: maxFill, resultPct, addedKm, isFull: true }
+    }
+    const denom = e85EthFraction - targetFrac
+    const ethFrac = ethanolLiters / remainingLiters
     if (ethFrac >= targetFrac) return null // already above limit, no E85 makes it better
     const x = (remainingLiters * targetFrac - ethanolLiters) / denom
     if (x <= 0) return null
-    const maxFill = tankCapacity - remainingLiters
     const liters = Math.min(x, maxFill)
-    const resultPct = ((ethanolLiters + liters * 0.85) / (remainingLiters + liters)) * 100
+    const resultPct = ((ethanolLiters + liters * e85EthFraction) / (remainingLiters + liters)) * 100
     const addedKm = avgConsumption ? Math.round(liters * 100 / avgConsumption) : null
     const isFull = x >= maxFill - 0.5 // x_ideal >= full tank → this IS the full tank
     return { liters, resultPct, addedKm, isFull }
-  }, [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, avgConsumption])
+  }, [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, avgConsumption, e85EthFraction])
 
   const thresholds = useMemo(
     () =>
@@ -109,8 +115,9 @@ export function BlendCalculator({
         dilutantEthFraction,
         avgConsumption ?? 8,
         inputOdo,
+        e85EthFraction,
       ),
-    [remainingLiters, currentEthanolPct, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo],
+    [remainingLiters, currentEthanolPct, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo, e85EthFraction],
   )
 
   const winterRec = useMemo(
@@ -124,8 +131,9 @@ export function BlendCalculator({
         dilutantEthFraction,
         avgConsumption ?? 8,
         inputOdo,
+        e85EthFraction,
       ),
-    [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo],
+    [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo, e85EthFraction],
   )
 
   const intervalKmNum = intervalKm !== '' ? Number(intervalKm) : 300
@@ -143,10 +151,11 @@ export function BlendCalculator({
             target,
             tolerance,
             dilutantEthFraction,
+            e85EthFraction,
           )
         : [],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [remainingLiters, ethanolLiters, inputOdo, JSON.stringify(intervals), tankCapacity, avgConsumption, target, tolerance, dilutantEthFraction],
+    [remainingLiters, ethanolLiters, inputOdo, JSON.stringify(intervals), tankCapacity, avgConsumption, target, tolerance, dilutantEthFraction, e85EthFraction],
   )
 
   if (!avgConsumption) {
@@ -171,14 +180,14 @@ export function BlendCalculator({
   }
 
   // ── Threshold cards ───────────────────────────────────────────────────────
-  const { odoA, odoB, odoBNow } = thresholds
+  const { odoA, odoB, odoBNow, pureE85AlwaysSafe } = thresholds
 
   const thresholdCards = (
     <div className="grid grid-cols-2 gap-2">
       {/* Card A: Pure E85 deadline */}
       <div
         className={`rounded-lg border p-3 ${
-          odoA !== null
+          pureE85AlwaysSafe || odoA !== null
             ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
             : limitFill
               ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/30'
@@ -188,7 +197,19 @@ export function BlendCalculator({
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
           E85 pur
         </p>
-        {odoA !== null ? (
+        {pureE85AlwaysSafe ? (
+          <>
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-tight">
+              Toujours possible
+            </p>
+            <p className="text-base font-bold text-emerald-800 dark:text-emerald-200">
+              Grade du jour {Math.round(e85EthFraction * 100)}%
+            </p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
+              Sous la limite de {target + tolerance}%
+            </p>
+          </>
+        ) : odoA !== null ? (
           <>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-tight">
               Jusqu'au km
@@ -241,7 +262,9 @@ export function BlendCalculator({
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
           Dilution {dilutantLabel}
         </p>
-        {odoBNow ? (
+        {pureE85AlwaysSafe ? (
+          <p className="text-sm font-medium text-muted-foreground">Inutile avec le grade actuel</p>
+        ) : odoBNow ? (
           <>
             <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">Maintenant</p>
             <p className="text-base font-bold text-blue-800 dark:text-blue-200">
@@ -329,7 +352,7 @@ export function BlendCalculator({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="e10">E10</SelectItem>
-            <SelectItem value="sp95">SP95</SelectItem>
+            <SelectItem value="sp98">SP98</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -446,6 +469,7 @@ export function BlendCalculator({
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span>Restant : {remainingLiters.toFixed(1)} L</span>
         <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
+        <span>E85 du jour : {Math.round(e85EthFraction * 100)}%</span>
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 // Enums
-export type FuelType = 'essence' | 'diesel' | 'electrique' | 'hybride' | 'gpl' | 'e85'
+export type FuelType = 'essence' | 'sp98' | 'diesel' | 'electrique' | 'hybride' | 'gpl' | 'e85'
 
 // Preset values — backend now accepts any string (VARCHAR 100)
 export type MaintenanceType = string

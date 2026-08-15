@@ -1,9 +1,21 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-08-14
+Last updated: 2026-08-15
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## Session log — 2026-08-15
+
+### SP98 and conservative seasonal ethanol
+
+- Fuel entries support SP98-E5 separately from SP95-E10 while both remain grouped under the Essence vehicle category.
+- Blend and ethanol-history calculations use E10=10%, SP98=5%, and the conservative seasonal maximum for E85: 75% during the mandatory winter-grade window (31 October–15 March), 85% otherwise.
+- Blend recommendations use the current date automatically; future simulations without dates remain conservative.
+- Deploy migration: `alembic upgrade head` for the MariaDB `fuel_entries.fuel_type` ENUM.
+- Tests: 120 backend + 32 frontend pass; production build passes.
 
 ---
 

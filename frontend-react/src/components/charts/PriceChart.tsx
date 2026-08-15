@@ -15,7 +15,7 @@ import type { FuelEntry } from '@/types'
 
 interface PriceChartProps {
   entries: FuelEntry[]
-  /** When true, plot one line per fuel type (E85 / Essence / …) with per-type averages. */
+  /** When true, plot one line per fuel product (E85 / E10 / SP98 / …). */
   splitByFuelType?: boolean
 }
 
@@ -31,7 +31,8 @@ type Row = {
 // Display label per fuel_type value
 const FUEL_LABEL: Record<string, string> = {
   e85: 'E85',
-  essence: 'Essence',
+  essence: 'E10',
+  sp98: 'SP98',
   diesel: 'Diesel',
   gpl: 'GPL',
   electrique: 'Électrique',
@@ -41,6 +42,7 @@ const FUEL_LABEL: Record<string, string> = {
 const FUEL_COLOR: Record<string, string> = {
   e85: 'hsl(142, 71%, 45%)',
   essence: 'hsl(25, 95%, 53%)',
+  sp98: 'hsl(217, 91%, 60%)',
   diesel: 'hsl(0, 72%, 51%)',
   gpl: 'hsl(280, 70%, 55%)',
   electrique: 'hsl(217, 91%, 60%)',

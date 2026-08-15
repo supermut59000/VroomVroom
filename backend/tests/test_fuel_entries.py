@@ -18,6 +18,13 @@ class TestFuelEntryCRUD:
         expected = round(sample_fuel_entry_data["liters"] * sample_fuel_entry_data["price_per_liter"], 2)
         assert round(data["total_cost"], 2) == expected
 
+    def test_create_sp98_fuel_entry(self, client, sample_fuel_entry_data):
+        sample_fuel_entry_data["fuel_type"] = "sp98"
+        resp = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)
+
+        assert resp.status_code == 201
+        assert resp.json()["fuel_type"] == "sp98"
+
     def test_client_retry_is_idempotent(self, client, sample_fuel_entry_data):
         sample_fuel_entry_data["client_request_id"] = "0d03fe3d-ae3a-4455-83f2-5ef4c72d6077"
         first = client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)

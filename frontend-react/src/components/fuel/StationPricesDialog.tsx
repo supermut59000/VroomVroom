@@ -21,7 +21,9 @@ import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -277,11 +279,18 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {STATION_FUEL_OPTIONS.map((o) => (
-                <SelectItem key={o.key} value={o.key}>
-                  {o.label}
-                </SelectItem>
-              ))}
+              <SelectGroup>
+                <SelectLabel>Essence</SelectLabel>
+                {STATION_FUEL_OPTIONS.filter((o) => ['e10', 'sp95', 'sp98'].includes(o.key)).map((o) => (
+                  <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Autres</SelectLabel>
+                {STATION_FUEL_OPTIONS.filter((o) => !['e10', 'sp95', 'sp98'].includes(o.key)).map((o) => (
+                  <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                ))}
+              </SelectGroup>
             </SelectContent>
           </Select>
 

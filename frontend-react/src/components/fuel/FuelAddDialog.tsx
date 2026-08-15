@@ -19,7 +19,9 @@ import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -38,6 +40,7 @@ import {
 import { useGeolocation } from '@/hooks/use-geolocation'
 import { useOffline } from '@/hooks/use-offline'
 import { ApiError } from '@/lib/api'
+import { isFuelTypeCompatible } from '@/lib/constants'
 import { NearbyStationsList } from './NearbyStationsList'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
 
@@ -46,7 +49,7 @@ const schema = z.object({
   odometer_reading: z.coerce.number().int().min(0, 'Compteur requis'),
   liters: z.coerce.number().positive('Quantité requise'),
   price_per_liter: z.coerce.number().positive('Prix requis'),
-  fuel_type: z.enum(['essence', 'diesel', 'electrique', 'hybride', 'gpl', 'e85']),
+  fuel_type: z.enum(['essence', 'sp98', 'diesel', 'electrique', 'hybride', 'gpl', 'e85']),
   is_full_tank: z.boolean(),
   station_name: z.string().optional().or(z.literal('')),
   location: z.string().optional().or(z.literal('')),
@@ -107,13 +110,11 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const totalCost = liters && pricePerLiter ? (liters * pricePerLiter).toFixed(2) : '0.00'
 
   const selectedFuelType = form.watch('fuel_type')
-  // Hybrids legitimately fill with essence/diesel, so no warning for them.
   const fuelTypeMismatch =
     !isFlexfuel &&
     vehicle?.fuel_type &&
-    vehicle.fuel_type !== 'hybride' &&
     selectedFuelType &&
-    selectedFuelType !== vehicle.fuel_type
+    !isFuelTypeCompatible(vehicle.fuel_type, selectedFuelType)
 
   const onSubmit = async (data: FormData) => {
     if (!vehicleId) return
@@ -293,19 +294,24 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Essence</SelectLabel>
+                  <SelectItem value="essence">SP95-E10</SelectItem>
+                  <SelectItem value="sp98">SP98-E5</SelectItem>
+                </SelectGroup>
                 {isFlexfuel ? (
-                  <>
+                  <SelectGroup>
+                    <SelectLabel>FlexFuel</SelectLabel>
                     <SelectItem value="e85">E85</SelectItem>
-                    <SelectItem value="essence">Essence (E10)</SelectItem>
-                  </>
+                  </SelectGroup>
                 ) : (
-                  <>
-                    <SelectItem value="essence">Essence</SelectItem>
+                  <SelectGroup>
+                    <SelectLabel>Autres</SelectLabel>
                     <SelectItem value="diesel">Diesel</SelectItem>
                     <SelectItem value="gpl">GPL</SelectItem>
                     <SelectItem value="electrique">Électrique</SelectItem>
                     <SelectItem value="hybride">Hybride</SelectItem>
-                  </>
+                  </SelectGroup>
                 )}
               </SelectContent>
             </Select>
