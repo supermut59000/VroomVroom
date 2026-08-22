@@ -41,7 +41,7 @@ class VehicleService:
         if active_only:
             query = query.filter(Vehicle.is_active == True)
         
-        if fuel_type:
+        if fuel_type is not None:
             query = query.filter(Vehicle.fuel_type == fuel_type.value)
         
         # Tri par date de création décroissante
@@ -525,6 +525,10 @@ class VehicleService:
                         continue
                     savings += (e.liters / factor) * ref_price - e.total_cost
             e85_savings = round(savings, 2)
+            # Note: the share's denominator counts ALL period fills, while the
+            # numerator only counts post-conversion E85 fills — when the period
+            # spans the conversion date, pre-conversion liters dilute the share.
+            # Cosmetic (a % label); documented, not a bug to fix.
             e85_share = round(e85_liters / total_liters, 3) if total_liters > 0 else None
 
         total_period_cost = total_cost + maintenance_cost
@@ -583,7 +587,9 @@ class VehicleService:
             last_odometer = float(last_entry.odometer_reading)
 
             if last_entry.fueling_date:
-                days_since_last_entry = (date.today() - last_entry.fueling_date).days
+                # Clamp at 0: a future-dated fill (typo or offline pre-fill)
+                # must not render "il y a -2 jours".
+                days_since_last_entry = max(0, (date.today() - last_entry.fueling_date).days)
 
             # Distance = last odometer - initial odometer
             if last_odometer and vehicle.initial_odometer is not None:

@@ -220,13 +220,17 @@ class TestFlexfuelRentability:
 
         resp = client.get(f"/api/v1/flexfuel/vehicles/{vid}/rentability")
         data = resp.json()
-        # monthly_average_savings is computed from completed months only
-        # If today is not February 2024, the current-month fill is excluded
+        # monthly_average_savings = completed savings / full months since conversion
+        # Feb-2024 fill savings: 40/1.197 × 1.85 − 40×0.85 = 27.82 (asserted exactly)
+        # The current-month fill (dated today) must NOT be in completed_savings.
         import datetime as dt
         today_obj = dt.date.today()
-        if today_obj.strftime("%Y-%m") != "2024-02":
-            # Only the past fill's month should be counted → avg is based on 1 month
-            assert data["monthly_average_savings"] is not None
+        months_elapsed = (today_obj.year - 2024) * 12 + (today_obj.month - 1)
+        assert months_elapsed > 0
+        # Unrounded formula matches the service: (40/1.197×1.85) − 34 = 27.8212…
+        feb_savings = (40 / 1.197) * 1.85 - 34.0
+        expected = round(feb_savings / months_elapsed, 2)
+        assert data["monthly_average_savings"] == expected
 
     def test_soft_deleted_e85_fill_excluded_from_rentability(
         self, client, created_conversion, created_flexfuel_vehicle

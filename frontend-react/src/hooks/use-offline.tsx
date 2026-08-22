@@ -3,26 +3,25 @@ import type { ReactNode } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
-import { isPermanentQueueStatus } from '@/lib/offline'
-import type { FuelEntryCreate, FuelEntry } from '@/types'
+import {
+  isPermanentQueueStatus,
+  itemKey,
+  migrateItem,
+} from '@/lib/offline'
+import type {
+  QueueItem,
+  QueuedPayload,
+} from '@/lib/offline'
+import type { FuelEntry } from '@/types'
 
 const QUEUE_KEY = 'vv_offline_queue'
 const RETRY_DELAY_MS = 60_000
-
-/** Queued payload — allowOdometerDecrease is a client-side flag mapped to the
- * backend's query parameter at sync time. client_request_id makes retries
- * idempotent without conflating legitimate same-odometer blend fills. */
-export type QueuedFuelEntry = FuelEntryCreate & { allowOdometerDecrease?: boolean }
-
-interface QueueItem {
-  id: number
-  data: QueuedFuelEntry
-}
+const ESCALATION_THRESHOLD = 3
 
 interface OfflineContextValue {
   isOnline: boolean
   queue: QueueItem[]
-  addToQueue: (data: QueuedFuelEntry) => void
+  addToQueue: (payload: QueuedPayload) => void
   syncQueue: () => Promise<{ synced: number; failed: number; rejected: number }>
 }
 
@@ -30,16 +29,46 @@ const OfflineContext = createContext<OfflineContextValue | null>(null)
 
 function loadQueue(): QueueItem[] {
   try {
-    const parsed = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]') as QueueItem[]
-    return parsed.map((item) => ({
-      ...item,
-      data: {
-        ...item.data,
-        client_request_id: item.data.client_request_id ?? crypto.randomUUID(),
-      },
-    }))
+    const parsed = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]') as unknown[]
+    return parsed.map((item) => {
+      const migrated = migrateItem(item as { id: number; data: unknown })
+      if (migrated.payload.kind === 'fuel-create') {
+        migrated.payload.data.client_request_id =
+          migrated.payload.data.client_request_id ?? crypto.randomUUID()
+      }
+      return migrated
+    })
   } catch {
     return []
+  }
+}
+
+function describeItem(item: QueueItem): string {
+  const p = item.payload
+  switch (p.kind) {
+    case 'fuel-create':
+      return `Plein rejeté (${p.data.liters} L du ${p.data.fueling_date})`
+    case 'fuel-update':
+      return 'Modification de plein rejetée'
+    case 'maintenance-create':
+      return `Maintenance rejetée (${p.data.maintenance_type} du ${p.data.maintenance_date})`
+    case 'maintenance-update':
+      return 'Modification de maintenance rejetée'
+  }
+}
+
+/** Record the E10 reference price captured at the pump, deduped by date. */
+async function captureE10Price(e10Price: number, fuelingDate: string): Promise<void> {
+  try {
+    const existing = await api.get<{ reference_date: string }[]>('/flexfuel/e10-prices')
+    if (existing.some((p) => p.reference_date === fuelingDate)) return
+    await api.post('/flexfuel/e10-prices', {
+      reference_date: fuelingDate,
+      price_per_liter: e10Price,
+      notes: 'Auto (hors-ligne)',
+    })
+  } catch {
+    // reference price is a bonus — never block the sync
   }
 }
 
@@ -50,6 +79,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
   const isSyncing = useRef(false)
   const initialSyncDone = useRef(false)
   const wasOnline = useRef(isOnline)
+  const consecutiveFailures = useRef(0)
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true)
@@ -66,12 +96,11 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
   }, [queue])
 
-  const addToQueue = useCallback((data: QueuedFuelEntry) => {
-    const queued = {
-      ...data,
-      client_request_id: data.client_request_id ?? crypto.randomUUID(),
+  const addToQueue = useCallback((payload: QueuedPayload) => {
+    if (payload.kind === 'fuel-create') {
+      payload.data.client_request_id = payload.data.client_request_id ?? crypto.randomUUID()
     }
-    setQueue((prev) => [...prev, { id: Date.now(), data: queued }])
+    setQueue((prev) => [...prev, { id: Date.now(), payload }])
   }, [])
 
   const syncQueue = useCallback(async () => {
@@ -84,38 +113,67 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
 
     try {
       for (const item of queue) {
-        const { allowOdometerDecrease, ...body } = item.data
+        const p = item.payload
         try {
-          await api.post<FuelEntry>(
-            `/fuel-entries/${allowOdometerDecrease ? '?allow_odometer_decrease=true' : ''}`,
-            body,
-          )
+          switch (p.kind) {
+            case 'fuel-create': {
+              const { allowOdometerDecrease, e10Price, ...body } = p.data
+              await api.post<FuelEntry>(
+                `/fuel-entries/${allowOdometerDecrease ? '?allow_odometer_decrease=true' : ''}`,
+                body,
+              )
+              if (e10Price != null) await captureE10Price(e10Price, p.data.fueling_date)
+              break
+            }
+            case 'fuel-update': {
+              const { allowOdometerDecrease, ...body } = p.data
+              await api.put<FuelEntry>(
+                `/fuel-entries/${p.id}${allowOdometerDecrease ? '?allow_odometer_decrease=true' : ''}`,
+                body,
+              )
+              break
+            }
+            case 'maintenance-create':
+              await api.post('/maintenances/', p.data)
+              break
+            case 'maintenance-update':
+              await api.put(`/maintenances/${p.id}`, p.data)
+              break
+          }
           synced++
         } catch (e) {
           if (e instanceof ApiError && isPermanentQueueStatus(e.status)) {
             rejected++
-            toast.error(
-              `Plein rejeté (${item.data.liters} L du ${item.data.fueling_date}) : ${e.message}`,
-              { duration: 10000 },
-            )
+            toast.error(`${describeItem(item)} : ${e.message}`, { duration: 10000 })
           } else {
             transientFailures.push(item)
           }
         }
       }
 
-      const attempted = new Set(queue.map((item) => item.data.client_request_id))
-      const keep = new Set(transientFailures.map((item) => item.data.client_request_id))
-      setQueue((current) => current.filter(
-        (item) => !attempted.has(item.data.client_request_id) || keep.has(item.data.client_request_id),
-      ))
+      const attempted = new Set(queue.map(itemKey))
+      const keep = new Set(transientFailures.map(itemKey))
+      setQueue((current) => current.filter((item) => !attempted.has(itemKey(item)) || keep.has(itemKey(item))))
       if (synced > 0) {
-        toast.success(`${synced} plein${synced > 1 ? 's' : ''} synchronisé${synced > 1 ? 's' : ''}`)
+        consecutiveFailures.current = 0
+        toast.success(`${synced} élément${synced > 1 ? 's' : ''} synchronisé${synced > 1 ? 's' : ''}`)
         for (const key of [
           'fuelEntries', 'allFuelEntries', 'latestFuelEntry', 'fuelStats',
           'consumptionHistory', 'vehicleStats', 'vehicleCostStats',
+          'maintenances', 'maintenanceStats', 'e10ReferencePrices', 'flexfuelRentability',
         ]) {
           queryClient.invalidateQueries({ queryKey: [key] })
+        }
+      } else if (transientFailures.length > 0) {
+        consecutiveFailures.current += 1
+        // Escalation, not a behavior change: 401/403/429 stay retryable (deliberate
+        // decision, 2026-08-14), but after N silent failures the user is told —
+        // otherwise a rotated API key or dead server retries forever invisibly.
+        if (consecutiveFailures.current === ESCALATION_THRESHOLD) {
+          toast.error(
+            `${transientFailures.length} élément${transientFailures.length > 1 ? 's' : ''} toujours en attente après ${ESCALATION_THRESHOLD} tentatives — vérifiez le serveur ou la clé API. La synchronisation continue automatiquement.`,
+            { duration: 15000 },
+          )
         }
       }
       return { synced, failed: transientFailures.length, rejected }

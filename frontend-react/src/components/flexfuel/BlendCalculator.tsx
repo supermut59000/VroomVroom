@@ -44,7 +44,31 @@ export function BlendCalculator({
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP98'
   const e85EthFraction = e85EthanolFraction()
-  const tankCapacity = vehicle.tank_capacity ?? 50
+  const tankCapacity = vehicle.tank_capacity
+
+  // The whole blend/tank math needs a real tank size; a silent 50 L default
+  // produces precise-looking but wrong percentages (backend stats also refuse
+  // range_km without tank_capacity). Ask for the field instead.
+  if (tankCapacity == null) {
+    const hint = (
+      <p className="text-sm text-muted-foreground">
+        Renseignez la capacité du réservoir dans les infos du véhicule pour utiliser le
+        calculateur de mélange.
+      </p>
+    )
+    if (embedded) return hint
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FlaskConical className="h-4 w-4 text-emerald-600" />
+            Calculateur de mélange E85
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{hint}</CardContent>
+      </Card>
+    )
+  }
   const conversionDate = conversion.conversion_date
   const target = conversion.target_ethanol_pct
   const tolerance = conversion.ethanol_tolerance_pct

@@ -15,6 +15,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useVehicle } from '@/hooks/use-vehicles'
 import { useCreateMaintenance, useMaintenanceTypeOptions } from '@/hooks/use-maintenances'
+import { useOffline } from '@/hooks/use-offline'
+import { ApiError } from '@/lib/api'
 
 const schema = z.object({
   maintenance_date: z.string().min(1, 'Date requise'),
@@ -38,6 +40,7 @@ interface MaintenanceAddDialogProps {
 
 export function MaintenanceAddDialog({ vehicleId, onClose }: MaintenanceAddDialogProps) {
   const { data: vehicle } = useVehicle(vehicleId)
+  const { addToQueue } = useOffline()
   const createMaintenance = useCreateMaintenance()
   const typeOptions = useMaintenanceTypeOptions(vehicleId)
 
@@ -59,27 +62,37 @@ export function MaintenanceAddDialog({ vehicleId, onClose }: MaintenanceAddDialo
 
   const onSubmit = async (data: FormData) => {
     if (!vehicleId) return
+    const payload = {
+      vehicle_id: vehicleId,
+      maintenance_type: data.maintenance_type,
+      description: data.description || null,
+      odometer_reading: data.odometer_reading,
+      cost: data.cost,
+      service_provider: data.service_provider || null,
+      location: data.location || null,
+      maintenance_date: data.maintenance_date,
+      notes: data.notes || null,
+      next_maintenance_date: data.next_maintenance_date || null,
+      next_maintenance_odometer: data.next_maintenance_odometer
+        ? Number(data.next_maintenance_odometer)
+        : null,
+    }
     try {
-      await createMaintenance.mutateAsync({
-        vehicle_id: vehicleId,
-        maintenance_type: data.maintenance_type,
-        description: data.description || null,
-        odometer_reading: data.odometer_reading,
-        cost: data.cost,
-        service_provider: data.service_provider || null,
-        location: data.location || null,
-        maintenance_date: data.maintenance_date,
-        notes: data.notes || null,
-        next_maintenance_date: data.next_maintenance_date || null,
-        next_maintenance_odometer: data.next_maintenance_odometer
-          ? Number(data.next_maintenance_odometer)
-          : null,
-      })
+      await createMaintenance.mutateAsync(payload)
       toast.success('Maintenance ajoutée')
       form.reset()
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur lors de l'ajout")
+      // ApiError = server rejected — show why. Anything else = server
+      // unreachable: queue it so an offline add isn't lost.
+      if (e instanceof ApiError) {
+        toast.error(e.message)
+      } else {
+        addToQueue({ kind: 'maintenance-create', data: payload })
+        toast.info('Serveur injoignable — maintenance mise en file d\'attente, synchronisation automatique')
+        form.reset()
+        onClose()
+      }
     }
   }
 

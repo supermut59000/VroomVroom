@@ -1,18 +1,22 @@
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 
 from app.core.database import Base
 from app.api.deps import get_db
 from app.core.config import settings
 
-# In-memory SQLite for tests (fast, no external deps)
-SQLALCHEMY_TEST_URL = "sqlite:///./test.db"
+# In-memory SQLite for tests (fast, no external deps). StaticPool keeps a
+# single shared connection so the session-scoped schema survives per-test
+# rollbacks; a file-backed DB left a stray test.db in the repo.
+SQLALCHEMY_TEST_URL = "sqlite:///:memory:"
 
 engine = create_engine(
     SQLALCHEMY_TEST_URL,
     connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

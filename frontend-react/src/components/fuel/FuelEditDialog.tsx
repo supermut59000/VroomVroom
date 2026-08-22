@@ -28,6 +28,8 @@ import { useUpdateFuelEntry, useStationSuggestions } from '@/hooks/use-fuel-entr
 import { useVehicle } from '@/hooks/use-vehicles'
 import { useFlexfuelConversion } from '@/hooks/use-flexfuel'
 import { useGeolocation } from '@/hooks/use-geolocation'
+import { useOffline } from '@/hooks/use-offline'
+import { ApiError } from '@/lib/api'
 import { isFuelTypeCompatible } from '@/lib/constants'
 import { NearbyStationsList } from './NearbyStationsList'
 import type { FuelEntry } from '@/types'
@@ -52,6 +54,7 @@ interface FuelEditDialogProps {
 }
 
 export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProps) {
+  const { addToQueue } = useOffline()
   const { data: vehicle } = useVehicle(vehicleId)
   const { data: flexfuelConversion } = useFlexfuelConversion(vehicleId)
   const isFlexfuel = !!flexfuelConversion
@@ -117,7 +120,33 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
       toast.success('Plein mis à jour')
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur lors de la mise à jour')
+      // ApiError = server rejected the update — show why. Anything else
+      // (timeout, DNS, refused) = server unreachable: queue the update
+      // (idempotent: it targets entry.id) instead of losing the correction.
+      if (e instanceof ApiError) {
+        toast.error(e.message)
+      } else {
+        addToQueue({
+          kind: 'fuel-update',
+          id: entry.id,
+          vehicleId,
+          data: {
+            fueling_date: data.fueling_date,
+            odometer_reading: data.odometer_reading,
+            liters: data.liters,
+            price_per_liter: data.price_per_liter,
+            fuel_type: data.fuel_type,
+            is_full_tank: data.is_full_tank,
+            station_name: data.station_name || null,
+            location: data.location || null,
+            latitude: geo.latitude ?? entry.latitude,
+            longitude: geo.longitude ?? entry.longitude,
+            allowOdometerDecrease,
+          },
+        })
+        toast.info('Serveur injoignable — modification mise en file d\'attente, synchronisation automatique')
+        onClose()
+      }
     }
   }
 

@@ -86,7 +86,7 @@ All routes prefix with `/api/v1` and use optional `X-API-Key` auth (configured a
 | model | str (1-50) | Yes | auto-titlecased |
 | year | int (1900-2030) | Yes | |
 | license_plate | str (2-20) | Yes | auto-uppercased |
-| fuel_type | FuelType enum | Yes | |
+| fuel_type | str (essence, diesel, electrique, hybride, gpl, e85) | Yes | ORM stores a plain String(20); the Pydantic layer validates against FuelType |
 | initial_odometer | float (>=0) | No (default 0.0) | |
 | tank_capacity | float (>0) | Optional | |
 | acquisition_date | date | Optional | |
@@ -153,7 +153,7 @@ All routes prefix with `/api/v1` and use optional `X-API-Key` auth (configured a
 | Field | Type | Required | Notes |
 |-------|------|----------|-------|
 | vehicle_id | int (>=1) | Yes | |
-| fuel_type | FuelType enum | Yes | |
+| fuel_type | FuelType enum (validated) | Yes | ORM column is String(20) |
 | liters | float (>0, <=200) | Yes | |
 | price_per_liter | float (>0, <=10) | Yes | |
 | odometer_reading | int (>=0, <=9999999) | Yes | |

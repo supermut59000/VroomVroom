@@ -287,3 +287,124 @@ class TestPeriodStats:
         assert data["fill_count"] == 0
         assert data["distance_km"] == 0
         assert data["avg_consumption"] is None
+
+
+class TestSeasonalAutonomy:
+    """Regression tests for _compute_seasonal_consumption (2026-07-05 debug
+    session fixed real bugs here and left no tests behind)."""
+
+    def _fill(self, client, vid, odo, liters, fdate, fuel="essence", full=True, price=1.80):
+        resp = client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": fuel, "liters": liters,
+            "price_per_liter": price, "odometer_reading": odo,
+            "fueling_date": fdate, "is_full_tank": full,
+        })
+        assert resp.status_code == 201
+
+    def test_range_formula_with_cushion(self, client, created_vehicle):
+        """range_km = (tank - 5 L) × 100 / avg_consumption, overall and per-season."""
+        vid = created_vehicle["id"]  # tank_capacity 50
+        self._fill(client, vid, 10000, 40.0, "2025-06-01")
+        self._fill(client, vid, 10500, 35.0, "2025-06-10")
+        self._fill(client, vid, 11000, 35.0, "2025-06-20")
+
+        data = client.get(f"/api/v1/vehicles/{vid}/stats").json()
+        # Two segments of 35 L / 500 km → avg 7.0; (50−5)×100/7.0 = 642.86 → 643
+        assert data["average_consumption"] == 7.0
+        assert data["range_km"] == 643.0
+        assert data["summer"]["avg_consumption"] == 7.0
+        assert data["summer"]["range_km"] == 643.0
+        assert data["summer"]["fill_count"] == 2
+
+    def test_leading_partial_after_from_date_not_an_anchor(self, client, created_flexfuel_vehicle, sample_conversion_data):
+        """FlexFuel: drop entries until the first FULL tank on/after the conversion
+        date — a leading partial must not anchor a bogus 15 L/100 km segment."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json={
+            **sample_conversion_data, "conversion_date": "2025-05-20"})
+
+        self._fill(client, vid, 50000, 40.0, "2025-05-10")                     # before conversion — excluded
+        self._fill(client, vid, 50200, 15.0, "2025-06-01", full=False)          # first after from_date: partial
+        self._fill(client, vid, 50400, 30.0, "2025-06-05")                      # anchor
+        self._fill(client, vid, 50900, 35.0, "2025-06-20")
+
+        data = client.get(f"/api/v1/vehicles/{vid}/stats").json()
+        # Only one valid segment: 35 L / 500 km = 7.0. If the partial anchored,
+        # the bogus segment would be 30 L / 200 km = 15 L/100 km.
+        assert data["summer"]["avg_consumption"] == 7.0
+        assert data["summer"]["fill_count"] == 1
+
+    def test_pre_conversion_fills_excluded_from_season_bucket(self, client, created_flexfuel_vehicle, sample_conversion_data):
+        """The season's E85 share must not be diluted by pre-conversion Essence segments."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json={
+            **sample_conversion_data, "conversion_date": "2025-06-10"})
+
+        # Pre-conversion summer fills (essence)
+        self._fill(client, vid, 50000, 40.0, "2025-06-01")
+        self._fill(client, vid, 50500, 36.0, "2025-06-05")
+        # Post-conversion summer fills (E85)
+        self._fill(client, vid, 51000, 40.0, "2025-06-15", fuel="e85")
+        self._fill(client, vid, 51400, 35.0, "2025-06-25", fuel="e85")
+
+        data = client.get(f"/api/v1/vehicles/{vid}/stats").json()
+        # Only the post-conversion segment 11000→11400 counts: 35 L / 400 km = 8.75, 100% E85
+        assert data["summer"]["avg_consumption"] == 8.75
+        assert data["summer"]["e85_fraction"] == 1.0
+        assert data["summer"]["fill_count"] == 1
+
+    def test_per_segment_normalisation_distance_weighted(self, client, created_flexfuel_vehicle, sample_conversion_data):
+        """Worked example from CONTEXT.md: segments 7.2/7.5/8.1 L/100km with burned
+        E85 fractions 0.0/0.5/1.0 over equal distances → e10 6.93, e85 8.30."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json={
+            **sample_conversion_data, "conversion_date": "2024-11-01"})
+
+        self._fill(client, vid, 50000, 40.0, "2024-12-01", fuel="essence")       # anchor, prev E85 frac 0.0
+        # Stop at 50500: 18 L essence booster + 18 L E85 full (same date/odo → 50% E85 added)
+        self._fill(client, vid, 50500, 18.0, "2024-12-05", fuel="essence", full=False)
+        self._fill(client, vid, 50500, 18.0, "2024-12-05", fuel="e85")
+        self._fill(client, vid, 51000, 37.5, "2024-12-12", fuel="e85")
+        self._fill(client, vid, 51500, 40.5, "2024-12-20", fuel="e85")
+
+        data = client.get(f"/api/v1/vehicles/{vid}/stats").json()
+        winter = data["winter"]
+        # Segments: (7.2, frac 0.0) → (7.5, frac 0.5) → (8.1, frac 1.0)
+        assert winter["avg_consumption"] == 7.6
+        assert winter["e10_consumption"] == 6.93
+        assert winter["e85_consumption"] == 8.30
+        assert winter["e85_fraction"] == 0.52
+        assert winter["fill_count"] == 3
+
+
+class TestStatsBatchAndTimeline:
+    def test_stats_batch_returns_active_vehicles_only(self, client, created_vehicle, sample_vehicle_data):
+        sample_vehicle_data["license_plate"] = "ZZ-999-ZZ"
+        v2 = client.post("/api/v1/vehicles/", json=sample_vehicle_data).json()
+        client.post(f"/api/v1/vehicles/{created_vehicle['id']}/archive")
+
+        resp = client.get("/api/v1/vehicles/stats/batch")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert str(v2["id"]) in data
+        assert str(created_vehicle["id"]) not in data  # archived → excluded
+
+    def test_timeline_merges_fuel_and_maintenance_desc(self, client, created_vehicle, sample_maintenance_data):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "essence", "liters": 40.0,
+            "price_per_liter": 1.80, "odometer_reading": 10500,
+            "fueling_date": "2025-06-01", "is_full_tank": True})
+        client.post("/api/v1/maintenances/", json={
+            **sample_maintenance_data, "maintenance_date": "2025-07-01"})
+
+        resp = client.get(f"/api/v1/vehicles/{vid}/timeline")
+        assert resp.status_code == 200
+        events = resp.json()["events"]
+        assert [e["event_type"] for e in events] == ["maintenance", "fuel"]
+
+        # Soft-deleted fuel entry must disappear from the timeline
+        fuel_id = events[1]["event_id"]
+        client.delete(f"/api/v1/fuel-entries/{fuel_id}")
+        events = client.get(f"/api/v1/vehicles/{vid}/timeline").json()["events"]
+        assert len(events) == 1 and events[0]["event_type"] == "maintenance"

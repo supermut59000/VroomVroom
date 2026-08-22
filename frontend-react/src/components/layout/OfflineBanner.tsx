@@ -16,7 +16,7 @@ export function OfflineBanner() {
       )}
       {queue.length > 0 && (
         <div className="flex items-center justify-center gap-2 bg-purple-600 px-4 py-2 text-sm font-medium text-white">
-          {queue.length} plein{queue.length > 1 ? 's' : ''} en attente de synchronisation
+          {queue.length} élément{queue.length > 1 ? 's' : ''} en attente de synchronisation
         </div>
       )}
     </div>

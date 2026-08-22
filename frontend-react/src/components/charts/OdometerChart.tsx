@@ -11,6 +11,7 @@ import {
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { avgKmPerMonth } from '@/lib/vehicle-stats'
 import { useVehicleStats } from '@/hooks/use-vehicles'
 import type { FuelEntry, Vehicle } from '@/types'
 
@@ -27,11 +28,6 @@ type ChartPoint = {
 
 export function OdometerChart({ vehicle, entries }: OdometerChartProps) {
   const { data: stats } = useVehicleStats(vehicle.id)
-
-  const currentMonthKey = useMemo(() => {
-    const now = new Date()
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  }, [])
 
   const result = useMemo(() => {
     if (entries.length === 0) return null
@@ -58,19 +54,9 @@ export function OdometerChart({ vehicle, entries }: OdometerChartProps) {
     const lastKey = sortedMonths[sortedMonths.length - 1][0]
     const [ly, lm] = lastKey.split('-').map(Number)
 
-    // Consecutive month diffs — same method as DistanceChart
-    const allDiffs: { monthKey: string; diff: number }[] = []
-    for (let i = 1; i < sortedMonths.length; i++) {
-      const diff = sortedMonths[i][1] - sortedMonths[i - 1][1]
-      if (diff > 0) allDiffs.push({ monthKey: sortedMonths[i][0], diff })
-    }
-
-    // Avg from last 3 completed months only (exclude current partial month)
-    const completedDiffs = allDiffs.filter((d) => d.monthKey < currentMonthKey)
-    const base = completedDiffs.length > 0 ? completedDiffs : allDiffs
-    const last3 = base.slice(-Math.min(3, base.length))
-    const avgMonthlyKm =
-      last3.length > 0 ? last3.reduce((s, d) => s + d.diff, 0) / last3.length : 0
+    // Avg from last 3 completed months — shared implementation with
+    // DistanceChart/MonthlyCostChart (gap months spread, current month excluded).
+    const avgMonthlyKm = avgKmPerMonth(entries, { lastMonths: 3 }) ?? 0
 
     // Insurance limit (authoritative from backend stats, skipped when unlimited)
     const limit =
@@ -127,7 +113,7 @@ export function OdometerChart({ vehicle, entries }: OdometerChartProps) {
       yMin,
       yMax,
     }
-  }, [entries, currentMonthKey, vehicle, stats])
+  }, [entries, vehicle, stats])
 
   if (!result) return null
   const { chartData, projectedAnnualKm, limit, remaining, isExceeded, monthsUntilLimit, yMin, yMax } = result

@@ -11,6 +11,7 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { avgKmPerMonth } from '@/lib/vehicle-stats'
 import type { FuelEntry, Maintenance } from '@/types'
 import type { TooltipProps } from 'recharts'
 
@@ -22,8 +23,8 @@ interface MonthlyCostChartProps {
 type ChartPoint = {
   month: string
   monthKey: string
-  Carburant?: number
-  Maintenance?: number
+  Carburant?: number | null
+  Maintenance?: number | null
   CarburantProj?: number
   MaintenanceProj?: number
 }
@@ -36,30 +37,12 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   }, [])
 
-  // Average km/month — same method as DistanceChart:
-  // group by month (max odo), diff between consecutive months, then average
-  const avgKmPerMonth = useMemo(() => {
-    if (entries.length < 2) return null
-    const sorted = [...entries].sort((a, b) => a.fueling_date.localeCompare(b.fueling_date))
-
-    const monthMap = new Map<string, number>()
-    for (const e of sorted) {
-      const month = e.fueling_date.slice(0, 7)
-      const cur = monthMap.get(month) ?? 0
-      if (e.odometer_reading > cur) monthMap.set(month, e.odometer_reading)
-    }
-
-    const months = Array.from(monthMap.entries()).sort(([a], [b]) => a.localeCompare(b))
-    const monthlyKms: number[] = []
-    for (let i = 1; i < months.length; i++) {
-      const km = months[i][1] - months[i - 1][1]
-      if (km > 0) monthlyKms.push(km)
-    }
-
-    return monthlyKms.length > 0
-      ? monthlyKms.reduce((s, v) => s + v, 0) / monthlyKms.length
-      : null
-  }, [entries])
+  // Average km/month — shared implementation with DistanceChart/OdometerChart
+  // (src/lib/vehicle-stats.ts): gap months spread, current month excluded.
+  const avgKmPerMonthValue = useMemo(
+    () => avgKmPerMonth(entries),
+    [entries],
+  )
 
   // Spread every maintenance cost across monthly buckets.
   // Priority: next_maintenance_date > next_maintenance_odometer (km→months via avgKmPerMonth) > 12-month fallback
@@ -72,9 +55,10 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
 
       if (m.next_maintenance_date) {
         end = new Date(m.next_maintenance_date)
-      } else if (m.next_maintenance_odometer && avgKmPerMonth && avgKmPerMonth > 0) {
+      } else if (m.next_maintenance_odometer && avgKmPerMonthValue && avgKmPerMonthValue > 0) {
         const kmRemaining = m.next_maintenance_odometer - m.odometer_reading
-        const monthsAhead = kmRemaining > 0 ? Math.round(kmRemaining / avgKmPerMonth) : 12
+        // Already-due service (kmRemaining ≤ 0) lands in the current month, not a 12-month future projection.
+        const monthsAhead = Math.max(1, Math.round(kmRemaining / avgKmPerMonthValue))
         end = new Date(start.getFullYear(), start.getMonth() + monthsAhead, start.getDate())
       } else {
         end = new Date(start.getFullYear(), start.getMonth() + 12, start.getDate())
@@ -104,7 +88,7 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
     }
 
     return result
-  }, [maintenances, avgKmPerMonth])
+  }, [maintenances, avgKmPerMonthValue])
 
   // Monthly absolute costs (€) — maintenance spread across months
   const eurosData = useMemo((): ChartPoint[] => {
@@ -174,19 +158,23 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
       monthlyFuelCost.set(key, (monthlyFuelCost.get(key) || 0) + sorted[i].liters * sorted[i].price_per_liter)
     }
 
-    const data = Array.from(monthlyDistance.keys())
+    // Union of cost and distance months: a month with cost but no distance
+    // (a lone first fill, or a booster-only month) still appears — its bars are
+    // null because €/100km is undefined without a denominator. The weighted
+    // header average keeps skipping distance-0 months via its `dist <= 0` guard.
+    const data = Array.from(new Set([...monthlyDistance.keys(), ...monthlyFuelCost.keys()]))
       .sort()
       .filter((month) => month <= currentMonthKey)
       .map((month) => {
-        const dist = monthlyDistance.get(month) || 1
+        const dist = monthlyDistance.get(month) || 0
         const fuelCost = monthlyFuelCost.get(month) || 0
         const maintCost = spreadMaintenanceCosts.get(month) || 0
         const [y, m] = month.split('-')
         return {
           month: `${m}/${y.slice(2)}`,
           monthKey: month,
-          Carburant: Math.round((fuelCost / dist) * 100 * 100) / 100,
-          Maintenance: Math.round((maintCost / dist) * 100 * 100) / 100,
+          Carburant: dist > 0 ? Math.round((fuelCost / dist) * 100 * 100) / 100 : null,
+          Maintenance: dist > 0 ? Math.round((maintCost / dist) * 100 * 100) / 100 : null,
         }
       })
 
@@ -240,8 +228,8 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
       const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
       const maintCost = spreadMaintenanceCosts.get(monthKey) || 0
       const maintPer100 =
-        avgKmPerMonth && avgKmPerMonth > 0
-          ? Math.round((maintCost / avgKmPerMonth) * 100 * 100) / 100
+        avgKmPerMonthValue && avgKmPerMonthValue > 0
+          ? Math.round((maintCost / avgKmPerMonthValue) * 100 * 100) / 100
           : 0
       if (offset > 3 && maintCost === 0) break
       projected.push({

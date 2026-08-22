@@ -1,9 +1,39 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-08-15
+Last updated: 2026-08-22
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## Session log — 2026-08-22
+
+### 3× app audit fixes + simplification (report-only audit in `tmp/app-audit-3passes.md`)
+
+**Bugs fixed:**
+- Unified the three drift-prone monthly-km implementations into one shared `monthlyKmSeries`/`avgKmPerMonth` in `src/lib/vehicle-stats.ts` (DistanceChart spread months, MonthlyCostChart + OdometerChart did raw diffs while claiming "same method" — after a logging gap the two disagreed by ~67%). Gap months now spread everywhere; `lastMonths` option keeps OdometerChart's last-3 projection. `avgKmPerMonth` returns `null` when unusable.
+- `MonthlyCostChart` €/100km: data now built from the union of cost and distance months — a lone first fill's month shows a (null-bar) point instead of silently vanishing; `dist > 0` guards divide-by-zero instead of the old `|| 1` bogus €/km.
+- Already-due maintenance (`kmRemaining ≤ 0`) spreads over the current month (`max(1, …)`) instead of a 12-month future projection.
+- `BlendCalculator` + `EthanolHistoryChart`: no more silent `tank_capacity ?? 50` — when the tank size is unset they show "Renseignez la capacité du réservoir" (backend stats already refuse range_km without it).
+- Backend `days_since_last_entry` clamped at 0 (future-dated fills no longer render "il y a -2 jours").
+- Falsy filter guards (`if vehicle_id:` → `is not None`) across fuel/maintenance/vehicle services — `vehicle_id=0` no longer silently disables filtering.
+- Doc/comment notes for known approximations: period-stats `e85_share_liters` denominator (counts pre-conversion fills when the period spans the conversion), rentability conversion-month-as-full-month.
+
+**Flows fixed:**
+- Offline queue generalized to a discriminated payload (`kind: fuel-create | fuel-update | maintenance-create | maintenance-update`; helpers in `src/lib/offline.ts`, provider in `use-offline.tsx`). Fuel **edit** and maintenance add/edit now fall back to the queue on any transport failure (timeout/DNS/refused) instead of a raw English error + lost input. Updates are idempotent (target `entry_id`). Legacy queued items (no `kind`) auto-migrate to fuel-create.
+- E10 reference price seen at the pump is now stashed in the queued fuel-create payload and recorded at sync time (deduped by date) — offline E85 fills no longer lose the reference point.
+- Sync escalation: after 3 consecutive all-transient failures the user gets a 15 s alert toast (server or API key likely down). Statuses unchanged: 401/403/429 stay retryable (deliberate, 2026-08-14), 400/404/409/422 park.
+- `sw.js` DATA_CACHE bounded to the 300 most recent entries (was unbounded — GPS/prices cached forever).
+- Query invalidation after sync now also covers `maintenances`, `maintenanceStats`, `e10ReferencePrices`, `flexfuelRentability`.
+
+**Security:**
+- `nginx.conf` ships CSP + `nosniff` + `X-Frame-Options: DENY` + Referrer-Policy. HSTS is owned by the reverse proxy (documented in the conf).
+- API key auth (S1 in the audit) is **still off in the deployed config** — the user reports activating it breaks the app (frontend has no way to send the key: `VITE_API_KEY` is never wired through the Docker build). Left as-is deliberately. Fix requires: real `API_KEY` in `.env.docker`, `ARG VITE_API_KEY`/`ENV` in `frontend-react/Dockerfile`, `build.args` in compose, restart.
+
+**Tests:** 131 backend (+11) + 39 frontend vitest (+7). New backend coverage: seasonal autonomy (`_compute_seasonal_consumption`: range formula, leading-partial-after-`from_date` not anchoring, pre-conversion exclusion, per-segment normalisation vs the CONTEXT worked example), odometer-decrease override success paths, same-stop booster tiebreaker (consumption-history 9.0/3.5), `/stats/batch` active-only, `/timeline` merge + soft-delete, pagination beyond last page, zero-distance segment, exact (not date-dependent) rentability monthly average. Frontend: `monthlyKmSeries`/`avgKmPerMonth` gap-spreading + dedup semantics, `migrateItem` backward compat. `conftest.py` now uses in-memory SQLite (StaticPool) — no more stray `test.db`.
+
+**Simplification:** 3 haversine copies + 3 monthly-km copies consolidated to single implementations; queue pure helpers extracted to `src/lib/offline.ts` (testable without React/window); `docs/architecture.md` corrected (`vehicles.fuel_type` is `String(20)` in the ORM, not an enum column).
 
 ---
 

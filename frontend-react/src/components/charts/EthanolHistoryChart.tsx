@@ -20,7 +20,26 @@ interface EthanolHistoryChartProps {
 }
 
 export function EthanolHistoryChart({ conversion, vehicle, entries }: EthanolHistoryChartProps) {
-  const tankCapacity = vehicle.tank_capacity ?? 50
+  const tankCapacity = vehicle.tank_capacity
+
+  // Same rule as the BlendCalculator: the tank-ethanol % math needs a real
+  // capacity (a silent 50 L default would render precise-looking wrong values).
+  if (tankCapacity == null) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Taux éthanol dans le réservoir</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            Renseignez la capacité du réservoir dans les infos du véhicule pour afficher
+            ce graphique.
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   const conversionDate = conversion.conversion_date
   const target = conversion.target_ethanol_pct
   const tolerance = conversion.ethanol_tolerance_pct

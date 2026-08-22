@@ -215,6 +215,10 @@ class FlexfuelService:
         # (current partial month excluded). Months without any E85 fill count
         # as zero — averaging only months-with-fills would inflate the rate and
         # pull the projected break-even date too close.
+        # Approximation: the conversion month counts as a full month even when
+        # the conversion happened mid-month (May 20 -> May = 1.0), understating
+        # the monthly average by up to one partial month. Acceptable for a
+        # personal tool; documented, not a bug to fix.
         today = date.today()
         current_month = today.strftime("%Y-%m")
         completed_savings = sum(m["savings"] for m in monthly_savings if m["month"] < current_month)

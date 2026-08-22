@@ -67,16 +67,16 @@ class MaintenanceService:
         query = self.db.query(Maintenance).filter(Maintenance.is_active == True)
 
         # Apply filters
-        if vehicle_id:
+        if vehicle_id is not None:
             query = query.filter(Maintenance.vehicle_id == vehicle_id)
 
-        if maintenance_type:
+        if maintenance_type is not None:
             query = query.filter(Maintenance.maintenance_type == maintenance_type)
 
-        if start_date:
+        if start_date is not None:
             query = query.filter(Maintenance.maintenance_date >= start_date)
 
-        if end_date:
+        if end_date is not None:
             query = query.filter(Maintenance.maintenance_date <= end_date)
 
         # Apply ordering
@@ -159,16 +159,16 @@ class MaintenanceService:
         """Get count of maintenance entries with filters"""
         query = self.db.query(Maintenance).filter(Maintenance.is_active == True)
 
-        if vehicle_id:
+        if vehicle_id is not None:
             query = query.filter(Maintenance.vehicle_id == vehicle_id)
 
-        if maintenance_type:
+        if maintenance_type is not None:
             query = query.filter(Maintenance.maintenance_type == maintenance_type)
 
-        if start_date:
+        if start_date is not None:
             query = query.filter(Maintenance.maintenance_date >= start_date)
 
-        if end_date:
+        if end_date is not None:
             query = query.filter(Maintenance.maintenance_date <= end_date)
 
         return query.count()

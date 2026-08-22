@@ -344,3 +344,93 @@ class TestPartialFillConsumption:
         data = resp.json()
         # Consumption = (20 partial + 20 full) / 500km * 100 = 8.0
         assert data["average_consumption"] == 8.0
+
+
+class TestOdometerDecreaseOverride:
+    """Success paths for the confirmed historical-correction override (2026-08-14 feature)."""
+
+    def test_create_below_latest_with_override(self, client, created_vehicle):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "essence", "liters": 40.0,
+            "price_per_liter": 1.80, "odometer_reading": 10500,
+            "fueling_date": "2025-06-01", "is_full_tank": True})
+
+        resp = client.post("/api/v1/fuel-entries/?allow_odometer_decrease=true", json={
+            "vehicle_id": vid, "fuel_type": "essence", "liters": 20.0,
+            "price_per_liter": 1.80, "odometer_reading": 10300,
+            "fueling_date": "2025-05-20", "is_full_tank": False})
+        assert resp.status_code == 201
+        assert resp.json()["odometer_reading"] == 10300
+
+    def test_update_below_latest_with_override(self, client, created_vehicle):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "essence", "liters": 40.0,
+            "price_per_liter": 1.80, "odometer_reading": 10500,
+            "fueling_date": "2025-06-01", "is_full_tank": True})
+        e2 = client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "essence", "liters": 35.0,
+            "price_per_liter": 1.80, "odometer_reading": 11000,
+            "fueling_date": "2025-07-01", "is_full_tank": True}).json()
+
+        resp = client.put(f"/api/v1/fuel-entries/{e2['id']}?allow_odometer_decrease=true", json={
+            "odometer_reading": 10600, "fueling_date": "2025-06-25"})
+        assert resp.status_code == 200
+        assert resp.json()["odometer_reading"] == 10600
+
+
+class TestSameStopTiebreaker:
+    def test_booster_folds_into_closing_full(self, client, created_vehicle):
+        """Backend Bug 3 (2026-05-27): the (date, odometer, is_full_tank ASC, id)
+        sort must feed a same-stop booster into the closing full's segment."""
+        vid = created_vehicle["id"]
+        entries = [
+            {"odometer_reading": 10000, "liters": 40.0, "is_full_tank": True, "fueling_date": "2025-06-01"},
+            {"odometer_reading": 10500, "liters": 5.0, "is_full_tank": False, "fueling_date": "2025-06-10"},
+            {"odometer_reading": 10500, "liters": 40.0, "is_full_tank": True, "fueling_date": "2025-06-10"},
+            {"odometer_reading": 11500, "liters": 35.0, "is_full_tank": True, "fueling_date": "2025-06-20"},
+        ]
+        for e in entries:
+            client.post("/api/v1/fuel-entries/", json={
+                "vehicle_id": vid, "fuel_type": "essence",
+                "price_per_liter": 1.80, **e})
+
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/consumption-history")
+        data = resp.json()["data_points"]
+        # Index 0 = anchor (None), 1 = display-only partial (None), 2 = the full's
+        # segment, 3 = next full's segment. Booster folded in: 45 L / 500 km = 9.0
+        # (a leaked booster would give 8.0).
+        assert data[1]["consumption"] is None
+        assert data[2]["consumption"] == 9.0
+        assert data[3]["consumption"] == 3.5
+
+
+class TestBoundaryInputs:
+    def test_pagination_beyond_last_page_returns_empty(self, client, sample_fuel_entry_data):
+        for i in range(6):
+            sample_fuel_entry_data["odometer_reading"] = 10500 + i
+            client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)
+
+        resp = client.get("/api/v1/fuel-entries/?page=4&per_page=2")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["entries"] == []
+        assert body["pages"] == 3
+
+    def test_zero_distance_segment_does_not_crash(self, client, created_vehicle):
+        """Two fulls at the same odometer: distance 0 → segment skipped, no div-by-zero."""
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "essence", "liters": 40.0,
+            "price_per_liter": 1.80, "odometer_reading": 10000,
+            "fueling_date": "2025-06-01", "is_full_tank": True})
+        client.post("/api/v1/fuel-entries/", json={
+            "vehicle_id": vid, "fuel_type": "essence", "liters": 35.0,
+            "price_per_liter": 1.80, "odometer_reading": 10000,
+            "fueling_date": "2025-06-10", "is_full_tank": True})
+
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/statistics")
+        assert resp.status_code == 200
+        # Only the anchor exists → no valid segment → None, not a crash or a bogus number
+        assert resp.json()["average_consumption"] is None

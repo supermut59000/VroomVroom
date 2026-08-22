@@ -146,10 +146,13 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       notes: data.notes || null,
       client_request_id: crypto.randomUUID(),
       allowOdometerDecrease,
+      // Stash the E10 reference price seen at the pump: the online-only
+      // capture branch can't run for queued fills, so sync records it.
+      e10Price: isFlexfuel && data.fuel_type === 'e85' ? stationE10PriceRef.current : null,
     }
 
     if (!isOnline) {
-      addToQueue(payload)
+      addToQueue({ kind: 'fuel-create', data: payload })
       toast.info('Plein enregistré hors-ligne — sera synchronisé au retour de la connexion')
       form.reset()
       geo.reset()
@@ -196,7 +199,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
       if (e instanceof ApiError) {
         toast.error(e.message)
       } else {
-        addToQueue(payload)
+        addToQueue({ kind: 'fuel-create', data: payload })
         toast.info('Serveur injoignable — plein mis en file d\'attente, synchronisation automatique')
         form.reset()
         geo.reset()

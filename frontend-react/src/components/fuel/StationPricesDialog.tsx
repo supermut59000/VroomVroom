@@ -41,6 +41,7 @@ import type { StationSortKeys, StationSortMode } from '@/lib/station-sort'
 import { StationsMapView } from './StationsMapView'
 import type { MappedStation } from './StationsMapView'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
+import { haversineM } from '@/lib/geo'
 
 interface Commune {
   nom: string
@@ -71,16 +72,6 @@ const SORT_LABELS: Record<SortMode, string> = {
 
 const GEO_API = 'https://geo.api.gouv.fr/communes'
 
-function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000
-  const toRad = (d: number) => (d * Math.PI) / 180
-  const dLat = toRad(lat2 - lat1)
-  const dLon = toRad(lon2 - lon1)
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 function communeLabel(c: Commune): string {
   const cp = c.codesPostaux[0] ?? ''

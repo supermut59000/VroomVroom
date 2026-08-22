@@ -106,16 +106,16 @@ class FuelService:
         query = self.db.query(FuelEntry).filter(FuelEntry.is_active == True)
 
         # Apply filters
-        if vehicle_id:
+        if vehicle_id is not None:
             query = query.filter(FuelEntry.vehicle_id == vehicle_id)
         
-        if fuel_type:
+        if fuel_type is not None:
             query = query.filter(FuelEntry.fuel_type == fuel_type)
         
-        if start_date:
+        if start_date is not None:
             query = query.filter(FuelEntry.fueling_date >= start_date)
         
-        if end_date:
+        if end_date is not None:
             query = query.filter(FuelEntry.fueling_date <= end_date)
         
         # Apply ordering
@@ -222,7 +222,7 @@ class FuelService:
     def get_distinct_station_names(self, vehicle_id: Optional[int] = None) -> List[str]:
         """Get distinct station names, optionally filtered by vehicle"""
         query = self.db.query(FuelEntry.station_name).filter(FuelEntry.station_name.isnot(None), FuelEntry.is_active == True)
-        if vehicle_id:
+        if vehicle_id is not None:
             query = query.filter(FuelEntry.vehicle_id == vehicle_id)
         results = query.distinct().order_by(FuelEntry.station_name).all()
         return [r.station_name for r in results]
@@ -272,16 +272,16 @@ class FuelService:
         """Get count of fuel entries with filters"""
         query = self.db.query(FuelEntry).filter(FuelEntry.is_active == True)
 
-        if vehicle_id:
+        if vehicle_id is not None:
             query = query.filter(FuelEntry.vehicle_id == vehicle_id)
 
-        if fuel_type:
+        if fuel_type is not None:
             query = query.filter(FuelEntry.fuel_type == fuel_type)
 
-        if start_date:
+        if start_date is not None:
             query = query.filter(FuelEntry.fueling_date >= start_date)
 
-        if end_date:
+        if end_date is not None:
             query = query.filter(FuelEntry.fueling_date <= end_date)
 
         return query.count()

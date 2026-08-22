@@ -1,5 +1,18 @@
 const CACHE_NAME = 'vroomvroom-react-v1';
 const DATA_CACHE = 'vroomvroom-data-v1';
+// Bound the personal-data cache: fuel entries carry GPS/prices and are stored
+// unbounded otherwise — caches.keys() returns oldest-first, so dropping the
+// front entries keeps only the most recent API responses.
+const MAX_DATA_ENTRIES = 300;
+
+async function putBounded(cacheName, request, response, maxEntries) {
+  const cache = await caches.open(cacheName);
+  await cache.put(request, response);
+  const keys = await cache.keys();
+  if (keys.length > maxEntries) {
+    await cache.delete(keys[0]);
+  }
+}
 
 // Install: activate immediately (Vite hashes assets, so we cache on fetch)
 self.addEventListener('install', () => {
@@ -33,7 +46,7 @@ self.addEventListener('fetch', (event) => {
         fetch(event.request.clone()).then((response) => {
           if (response.ok) {
             const clone = response.clone();
-            caches.open(DATA_CACHE).then((cache) => cache.put(event.request, clone));
+            putBounded(DATA_CACHE, event.request, clone, MAX_DATA_ENTRIES);
           }
           return response;
         }),

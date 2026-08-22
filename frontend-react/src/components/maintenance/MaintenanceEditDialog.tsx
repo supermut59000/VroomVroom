@@ -16,6 +16,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useUpdateMaintenance } from '@/hooks/use-maintenances'
 import { useMaintenanceTypeOptions } from '@/hooks/use-maintenances'
+import { useOffline } from '@/hooks/use-offline'
+import { ApiError } from '@/lib/api'
 import type { Maintenance } from '@/types'
 
 const schema = z.object({
@@ -40,6 +42,7 @@ interface MaintenanceEditDialogProps {
 }
 
 export function MaintenanceEditDialog({ entry, vehicleId, onClose }: MaintenanceEditDialogProps) {
+  const { addToQueue } = useOffline()
   const updateMaintenance = useUpdateMaintenance(vehicleId)
   const typeOptions = useMaintenanceTypeOptions(vehicleId)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,7 +88,33 @@ export function MaintenanceEditDialog({ entry, vehicleId, onClose }: Maintenance
       toast.success('Maintenance mise à jour')
       onClose()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erreur lors de la mise à jour')
+      // ApiError = server rejected — show why. Anything else = server
+      // unreachable: queue the update (idempotent: targets entry.id).
+      if (e instanceof ApiError) {
+        toast.error(e.message)
+      } else {
+        addToQueue({
+          kind: 'maintenance-update',
+          id: entry.id,
+          vehicleId,
+          data: {
+            maintenance_date: data.maintenance_date,
+            maintenance_type: data.maintenance_type,
+            description: data.description || null,
+            odometer_reading: data.odometer_reading,
+            cost: data.cost,
+            service_provider: data.service_provider || null,
+            location: data.location || null,
+            notes: data.notes || null,
+            next_maintenance_date: data.next_maintenance_date || null,
+            next_maintenance_odometer: data.next_maintenance_odometer
+              ? Number(data.next_maintenance_odometer)
+              : null,
+          },
+        })
+        toast.info('Serveur injoignable — modification mise en file d\'attente, synchronisation automatique')
+        onClose()
+      }
     }
   }
 

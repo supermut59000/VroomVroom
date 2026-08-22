@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import type { FuelType } from '@/types'
+import { haversineM } from '@/lib/geo'
 
 export interface StationPrices {
   e10: number | null
@@ -52,16 +53,6 @@ const PAGE_SIZE = 100
 /** Enough for a 50 km radius anywhere in France; also the routing cap. */
 const MAX_STATIONS = 300
 
-function haversineM(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371000
-  const toRad = (d: number) => (d * Math.PI) / 180
-  const dLat = toRad(lat2 - lat1)
-  const dLon = toRad(lon2 - lon1)
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-}
 
 function parsePrice(raw: unknown): number | null {
   if (raw == null) return null
