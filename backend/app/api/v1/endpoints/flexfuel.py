@@ -1,6 +1,7 @@
 import logging
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
@@ -98,7 +99,14 @@ def create_e10_price(
 ):
     """Add a global E10 reference price."""
     service = FlexfuelService(db)
-    return service.create_e10_price(data)
+    try:
+        return service.create_e10_price(data)
+    except IntegrityError:
+        # Session.commit() already rolled the transaction back
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Un prix de référence existe déjà pour cette date",
+        )
 
 
 @router.get(

@@ -88,6 +88,13 @@ class TestE10ReferencePriceCRUD:
         assert data["price_per_liter"] == 1.85
         assert data["reference_date"] == "2024-06-01"
 
+    def test_create_e10_price_duplicate_date_returns_409(self, client, sample_e10_price_data):
+        assert client.post("/api/v1/flexfuel/e10-prices", json=sample_e10_price_data).status_code == 201
+        dup = dict(sample_e10_price_data)
+        dup["price_per_liter"] = 1.99
+        resp = client.post("/api/v1/flexfuel/e10-prices", json=dup)
+        assert resp.status_code == 409
+
     def test_list_e10_prices(self, client, sample_e10_price_data):
         client.post("/api/v1/flexfuel/e10-prices", json=sample_e10_price_data)
         resp = client.get("/api/v1/flexfuel/e10-prices")

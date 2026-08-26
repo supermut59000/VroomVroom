@@ -441,9 +441,14 @@ class VehicleService:
         total_liters = sum(e.liters for e in entries)
         total_cost = sum(e.total_cost for e in entries)
 
-        # Observed distance: odometer span across entries in the period
+        # Observed distance: odometer span across entries in the period.
+        # Clamped at 0: a historical correction (allow_odometer_decrease) can
+        # leave the newest entry below the oldest inside the window.
         distance_km = (
-            float(entries[-1].odometer_reading - entries[0].odometer_reading)
+            max(
+                0.0,
+                float(entries[-1].odometer_reading - entries[0].odometer_reading),
+            )
             if len(entries) > 1
             else 0.0
         )

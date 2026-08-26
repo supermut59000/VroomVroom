@@ -186,6 +186,31 @@ class TestVehicleFilters:
 
 
 class TestPeriodStats:
+    def test_period_stats_clamps_distance_after_correction(self, client, created_vehicle):
+        """A historical correction (allow_odometer_decrease) can leave the newest
+        entry below the oldest inside the window — distance must clamp to 0,
+        not report -500 km / -16.1 km/day."""
+        vid = created_vehicle["id"]
+        self._fill(client, vid, 10500, 40.0, 1.80, "2025-06-01")
+        resp = client.post(
+            "/api/v1/fuel-entries/?allow_odometer_decrease=true",
+            json={
+                "vehicle_id": vid, "fuel_type": "essence", "liters": 35.0,
+                "price_per_liter": 1.80, "odometer_reading": 10000,
+                "fueling_date": "2025-06-15", "is_full_tank": True,
+            },
+        )
+        assert resp.status_code == 201
+
+        resp = client.get(
+            f"/api/v1/vehicles/{vid}/period-stats?start_date=2025-06-01&end_date=2025-06-30"
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["distance_km"] == 0.0
+        assert data["km_per_day"] == 0.0
+        assert data["fuel_cost_per_100km"] is None
+
     def _fill(self, client, vid, odo, liters, price, fdate, fuel="essence", full=True):
         resp = client.post("/api/v1/fuel-entries/", json={
             "vehicle_id": vid,
