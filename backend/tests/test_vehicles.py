@@ -433,3 +433,24 @@ class TestStatsBatchAndTimeline:
         client.delete(f"/api/v1/fuel-entries/{fuel_id}")
         events = client.get(f"/api/v1/vehicles/{vid}/timeline").json()["events"]
         assert len(events) == 1 and events[0]["event_type"] == "maintenance"
+
+
+class TestDeleteVehicle:
+    """Soft delete (default) vs force delete (?force=true) — force was untested."""
+
+    def test_soft_delete_is_default_and_keeps_row(self, client, created_vehicle):
+        vid = created_vehicle["id"]
+        assert client.delete(f"/api/v1/vehicles/{vid}").status_code == 204
+        # hidden from the default (active-only) list, still fetchable by id
+        assert all(v["id"] != vid for v in client.get("/api/v1/vehicles/").json())
+        assert client.get(f"/api/v1/vehicles/{vid}").status_code == 200
+
+    def test_force_delete_removes_vehicle_and_cascades(self, client, created_vehicle, sample_fuel_entry_data):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json=sample_fuel_entry_data)
+        assert client.delete(f"/api/v1/vehicles/{vid}?force=true").status_code == 204
+        assert client.get(f"/api/v1/vehicles/{vid}").status_code == 404
+        assert client.get(f"/api/v1/fuel-entries/vehicle/{vid}").json() == []
+
+    def test_delete_unknown_vehicle_404(self, client):
+        assert client.delete("/api/v1/vehicles/99999").status_code == 404

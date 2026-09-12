@@ -434,3 +434,88 @@ class TestBoundaryInputs:
         assert resp.status_code == 200
         # Only the anchor exists → no valid segment → None, not a crash or a bogus number
         assert resp.json()["average_consumption"] is None
+
+
+class TestStationLookup:
+    """Station autocomplete (/stations) + GPS nearest-station — were untested."""
+
+    def test_station_names_distinct_sorted_nulls_excluded(self, client, created_vehicle, sample_fuel_entry_data):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={**sample_fuel_entry_data, "station_name": "TotalEnergies", "odometer_reading": 10500, "fueling_date": "2025-06-15"})
+        client.post("/api/v1/fuel-entries/", json={**sample_fuel_entry_data, "station_name": "Zebra", "odometer_reading": 10600, "fueling_date": "2025-07-01"})
+        client.post("/api/v1/fuel-entries/", json={**sample_fuel_entry_data, "station_name": "Zebra", "odometer_reading": 10700, "fueling_date": "2025-07-02"})
+        client.post("/api/v1/fuel-entries/", json={**sample_fuel_entry_data, "station_name": None, "odometer_reading": 10800, "fueling_date": "2025-07-03"})
+
+        resp = client.get("/api/v1/fuel-entries/stations")
+        assert resp.status_code == 200
+        assert resp.json() == ["TotalEnergies", "Zebra"]
+
+    def test_station_names_filtered_by_vehicle(self, client, created_vehicle, sample_fuel_entry_data, sample_vehicle_data):
+        vid = created_vehicle["id"]
+        other = client.post("/api/v1/vehicles/", json={**sample_vehicle_data, "license_plate": "ZZ-999-AA"}).json()
+        client.post("/api/v1/fuel-entries/", json={**sample_fuel_entry_data, "station_name": "StationA"})
+        client.post("/api/v1/fuel-entries/", json={**sample_fuel_entry_data, "vehicle_id": other["id"], "station_name": "StationB", "odometer_reading": 10600, "fueling_date": "2025-07-01"})
+
+        assert client.get("/api/v1/fuel-entries/stations").json() == ["StationA", "StationB"]
+        assert client.get(f"/api/v1/fuel-entries/stations?vehicle_id={vid}").json() == ["StationA"]
+
+    def test_station_names_empty_without_entries(self, client, created_vehicle):
+        assert client.get("/api/v1/fuel-entries/stations").json() == []
+
+    def test_nearest_station_within_radius(self, client, created_vehicle, sample_fuel_entry_data):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "station_name": "StationGps",
+            "location": "Testville",
+            "latitude": 50.0,
+            "longitude": 1.5,
+        })
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/nearest-station?lat=50.0005&lon=1.5")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["station_name"] == "StationGps"
+        assert body["location"] == "Testville"
+        assert body["distance_m"] < 100  # 55 m away
+
+    def test_nearest_station_outside_radius_404(self, client, created_vehicle, sample_fuel_entry_data):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "station_name": "StationLointaine",
+            "latitude": 50.02,  # ~2.2 km away
+            "longitude": 1.5,
+        })
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/nearest-station?lat=50.0&lon=1.5")
+        assert resp.status_code == 404
+        assert resp.json()["detail"] == "Aucune station connue à proximité"
+
+    def test_nearest_station_ignores_entries_without_gps(self, client, created_vehicle, sample_fuel_entry_data):
+        vid = created_vehicle["id"]
+        client.post("/api/v1/fuel-entries/", json={**sample_fuel_entry_data, "station_name": "SansGps"})
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/nearest-station?lat=50.0&lon=1.5")
+        assert resp.status_code == 404
+
+    def test_nearest_station_prefers_most_recent_within_radius(self, client, created_vehicle, sample_fuel_entry_data):
+        vid = created_vehicle["id"]
+        # Older fill 100 m away, newer fill 200 m away — both inside the 250 m
+        # radius, and the endpoint walks date DESC: the newer one must win.
+        client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "station_name": "StationAncienne",
+            "latitude": 50.0009,
+            "longitude": 1.5,
+            "odometer_reading": 10600,
+            "fueling_date": "2025-06-10",
+        })
+        client.post("/api/v1/fuel-entries/", json={
+            **sample_fuel_entry_data,
+            "station_name": "StationRecente",
+            "latitude": 50.0018,
+            "longitude": 1.5,
+            "odometer_reading": 10700,
+            "fueling_date": "2025-06-15",
+        })
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/nearest-station?lat=50.0&lon=1.5")
+        assert resp.status_code == 200
+        assert resp.json()["station_name"] == "StationRecente"

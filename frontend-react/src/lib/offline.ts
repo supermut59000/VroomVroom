@@ -51,12 +51,52 @@ export function itemKey(item: QueueItem): string {
     : `k${item.id}`
 }
 
-/** Items queued before the discriminated-payload format had no `kind` and were
- * fuel creates — migrate them rather than dropping a user's offline fills. */
-export function migrateItem(item: { id: number; data: unknown }): QueueItem {
-  const data = item.data as QueuedPayload | QueuedFuelCreate
+/** Item as stored in localStorage: current format `{id, payload}`, or the
+ * legacy pre-discriminated format `{id, data}` (data = fuel-create fields). */
+export interface StoredQueueItem {
+  id: number
+  payload?: unknown
+  data?: unknown
+}
+
+/** Items queued before the discriminated-payload format had no `kind` (and
+ * were stored as `{id, data}`) — migrate them rather than dropping a user's
+ * offline fills. Must accept BOTH stored shapes: passing a current-format
+ * item through the legacy-only read used to wipe the whole queue on refresh
+ * (payload.data === undefined → TypeError → empty queue persisted back). */
+export function migrateItem(item: StoredQueueItem): QueueItem {
+  const data = item.payload !== undefined ? item.payload : item.data
   if (typeof data === 'object' && data !== null && 'kind' in data) {
     return { id: item.id, payload: data as QueuedPayload }
   }
   return { id: item.id, payload: { kind: 'fuel-create', data: data as QueuedFuelCreate } }
+}
+
+export const QUEUE_KEY = 'vv_offline_queue'
+
+/** Read the persisted queue. One corrupt entry must never drop the rest —
+ * the old all-or-nothing catch wiped every queued fill on a single bad item. */
+export function loadQueue(): QueueItem[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]')
+  } catch {
+    return []
+  }
+  if (!Array.isArray(parsed)) return []
+  return parsed.flatMap((item) => {
+    try {
+      const it = item as StoredQueueItem
+      if (typeof it?.id !== 'number') return []
+      const migrated = migrateItem(it)
+      if (migrated.payload.kind === 'fuel-create') {
+        if (migrated.payload.data == null) return []
+        migrated.payload.data.client_request_id =
+          migrated.payload.data.client_request_id ?? crypto.randomUUID()
+      }
+      return [migrated]
+    } catch {
+      return []
+    }
+  })
 }

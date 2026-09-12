@@ -1,8 +1,19 @@
 # VroomVroom — App Summary & Session History
 
-Last updated: 2026-08-15
+Last updated: 2026-09-12
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — full endpoint/schema/service reference | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## 2026-09-12 — Offline-queue data-loss fix + test suite expansion
+
+- **Fixed data loss:** offline fuel fills vanished after a server reboot + PWA refresh. The persisted queue was only read once at provider init, so a refresh lost it; a single corrupted item could also drop the whole queue. `loadQueue()` now lives in `src/lib/offline.ts` (per-item hardening, legacy `{id,data}` migration) and `OfflineProvider` rehydrates on mount. 17 regression tests.
+- **Frontend tests 39 → 150 (16 files):** added jsdom + Testing Library infra (`src/test/`: fetch router, providers, Radix/ResizeObserver polyfills). New component/hook/PWA coverage: vehicle, fuel (incl. E10 auto-capture online/offline), maintenance, FlexFuel dialogs, station prices, dashboard, header/theme, all 8 charts, `api.ts`, `csv.ts`, service worker (run in a Node `vm` sandbox).
+- **Backend tests 133 → 149:** closed the three real coverage gaps (`/fuel-entries/stations`, `/fuel-entries/vehicle/{id}/nearest-station`, `DELETE /vehicles/{id}` soft vs `?force=true`), plus 6 **cross-process HTTP integration tests** (`test_integration_http.py`: real subprocess server, real httpx — vehicle lifecycle, idempotent offline-sync retry, 409 cross-vehicle `client_request_id`, 422 odometer decrease). `conftest.py` now points the app's `SessionLocal` at the test engine so `/health` needs no live MariaDB — suite green anywhere.
+- **Playwright e2e (6 tests, `npm run test:e2e`):** real system Chromium + real built app (SW active) + real FastAPI/SQLite backend; only third parties stubbed. Covers PWA/SW activation, online add, **the reported bug end-to-end** (server down → queued → refresh → queue survives → server back → auto-resync → 201), offline capture + `online`-event resync, theme persistence, station dialog.
+- Temporary behavior spec (actions → expected results) in `tmp/TEST-BEHAVIOR.md` — delete or promote after review.
+- Totals: 150 frontend unit/component + 6 e2e + 149 backend, all green; production build green. No deploy migration.
 
 ---
 
@@ -153,10 +164,11 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 
 ### Tests
 - **pytest** + **httpx** TestClient
-- SQLite in-memory database (session-scoped setup, per-test transaction rollback)
-- 120 tests total (as of 2026-08-15): vehicles, fuel entries (incl. SP98, distance-weighted average, partial-anchor, idempotency, initial-odometer, and same-stop latest regressions), maintenances, flexfuel, auth, routing
-- Frontend: 32 vitest tests over pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats fallback, offline queue status classification)
-- Run inside Docker with live source: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`
+- SQLite in-memory database (session-scoped setup, per-test transaction rollback); `conftest.py` points the app's own `SessionLocal` at the test engine so `/health` needs no live MariaDB
+- 149 tests (as of 2026-09-12): vehicles (incl. soft vs force delete), fuel entries (incl. SP98, distance-weighted average, partial-anchor, idempotency, initial-odometer, same-stop latest, station autocomplete + nearest-station GPS), maintenances, flexfuel, auth, routing + 6 cross-process HTTP integration tests (`test_integration_http.py`, real subprocess server + httpx)
+- Frontend: 150 vitest tests (as of 2026-09-12) — pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats, offline queue, csv, service worker via Node `vm` sandbox) + jsdom/Testing Library component tests (vehicle/fuel/maintenance dialogs, FlexFuel dialogs, station prices, dashboard, header/theme, all 8 charts, `api.ts`)
+- E2E: 6 Playwright tests (`frontend-react/e2e/smoke.spec.ts`, `npm run test:e2e`) — real system Chromium + real built app + real backend subprocess (fresh `/tmp/vv-e2e.sqlite3`), third parties stubbed; includes the offline-queue refresh/resync regression
+- Run: `cd backend && .venv/bin/pytest tests/` (or Docker: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`), `cd frontend-react && npm run test`, `npm run test:e2e`, `npm run build`
 
 ---
 

@@ -6,7 +6,8 @@ import { api, ApiError } from '@/lib/api'
 import {
   isPermanentQueueStatus,
   itemKey,
-  migrateItem,
+  loadQueue,
+  QUEUE_KEY,
 } from '@/lib/offline'
 import type {
   QueueItem,
@@ -14,7 +15,6 @@ import type {
 } from '@/lib/offline'
 import type { FuelEntry } from '@/types'
 
-const QUEUE_KEY = 'vv_offline_queue'
 const RETRY_DELAY_MS = 60_000
 const ESCALATION_THRESHOLD = 3
 
@@ -26,22 +26,6 @@ interface OfflineContextValue {
 }
 
 const OfflineContext = createContext<OfflineContextValue | null>(null)
-
-function loadQueue(): QueueItem[] {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]') as unknown[]
-    return parsed.map((item) => {
-      const migrated = migrateItem(item as { id: number; data: unknown })
-      if (migrated.payload.kind === 'fuel-create') {
-        migrated.payload.data.client_request_id =
-          migrated.payload.data.client_request_id ?? crypto.randomUUID()
-      }
-      return migrated
-    })
-  } catch {
-    return []
-  }
-}
 
 function describeItem(item: QueueItem): string {
   const p = item.payload

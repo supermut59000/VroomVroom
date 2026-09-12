@@ -1,9 +1,46 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-08-22
+Last updated: 2026-09-12
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## Session log — 2026-09-12
+
+### Offline-queue data-loss fix + comprehensive frontend test suite (39 → 150)
+
+**Bug fixed (real data loss):** fuel fills logged offline during a server outage disappeared after the server came back and the PWA was refreshed — they never reached the backend. Root cause in `use-offline.tsx`: the persisted `vv_offline_queue` was read **once** in a `useState` initializer — after a page refresh the persisted queue never made it into React state, so nothing ever synced. A second flaw: one corrupted item made the shared `JSON.parse` throw and silently dropped the **whole** queue.
+
+- Extracted `loadQueue()` into `src/lib/offline.ts`: per-item migration + hardening — one malformed item is dropped alone, valid ones survive; accepts both current `{id, payload}` and legacy `{id, data}` shapes.
+- `OfflineProvider` now rehydrates queue state from localStorage on mount (`useEffect(loadQueue)`).
+- Regression coverage: `lib/offline.test.ts` (4) + `hooks/use-offline.test.tsx` (13) — refresh rehydration, legacy migration, corrupt-item isolation, permanent (400/404/409/422) vs retryable (401/403/429/5xx/transport) classification, E10 stripping on sync.
+
+**Frontend tests: 39 → 150 across 16 files.** New infra: jsdom + Testing Library (user-event, jest-dom) in `src/test/` — deterministic fetch router (`fixtures.ts`, ordered substring routes, base `http://test.local/api/v1`, call recording), shared `renderWithProviders`, Radix pointer-capture + `scrollIntoView` polyfills, `ResizeObserver` stub reporting 800×400 (Recharts `ResponsiveContainer` renders nothing at 0×0). Everything mocked — no network.
+
+New coverage per area: VehicleAddDialog (6), FuelAddDialog (10 — incl. E10 auto-capture online **and** offline, offline queue on transport failure, fuel-type mismatch warning), MaintenanceAddDialog (6), FlexFuel dialogs (14 — E10 prices CRUD, conversion CRUD, BlendCalculator empty state), StationPricesDialog (8 — GPS, city datalist, pagination, price/distance sort, favorites persistence, cheapest badge, Escape close), Dashboard (7), Header (6 — theme toggle, station dialog), all 8 Recharts charts (13 — SVG render + empty states), `api.ts` (9 — API key, 15 s timeout abort, 204, ApiError French detail), `csv.ts` (8 — BOM, `;`, escaping, filenames), and `public/sw.js` (11 — executed in a Node `vm` sandbox: network-first API + cache fallback, static cache-first, DATA_CACHE eviction at 300, skipWaiting/clients.claim, 4 s timeout fallback).
+
+`npm run build` green — test files are part of the tsconfig compilation and fully type-checked (`tsc -b`).
+
+**Backend: 133 → 143 tests.** Gap audit against the full endpoint inventory found three endpoints with zero coverage; added 10 tests:
+- `GET /fuel-entries/stations` — distinct, sorted, nulls excluded, per-vehicle filter.
+- `GET /fuel-entries/vehicle/{id}/nearest-station` — within/outside radius (404), entries without GPS ignored, **most-recent-within-radius wins** (not globally closest).
+- `DELETE /vehicles/{id}` — soft delete default (hidden from active list, still GET-able by id) vs `?force=true` hard delete with cascade, 404 unknown.
+
+`conftest.py` now points `app.main.SessionLocal` at the in-memory test engine, so `/health` (which opens its own session, bypassing the `get_db` override) no longer requires a live MariaDB — **suite is green in any environment**. `backend/.venv/bin/pytest tests/` works directly (the "no venv, use Docker" note is outdated).
+
+**Behavior spec:** `tmp/TEST-BEHAVIOR.md` (French, temporary) — action → expected-result tables per feature area (clicks, submits, refresh, offline). Delete or promote after review.
+
+**Cross-process & real-browser coverage added (same day):**
+- `backend/tests/test_integration_http.py` (6 tests): boots `dev_sqlite_server.py` as a subprocess, speaks **real HTTP** (httpx) — health, seeded data, vehicle CRUD lifecycle, stats, force delete, 404s, offline-sync idempotency (`client_request_id`: same-vehicle duplicate → 201 existing entry, cross-vehicle reuse → 409), odometer-decrease 422 path. `dev_sqlite_server.py` got a `BACKEND_CORS_ORIGINS` setdefault for the e2e origin (env-overridable).
+- `frontend-react/e2e/` + `playwright.config.ts` — **6 Playwright tests, real system Chromium + real built app (`vite preview`, SW active) + real FastAPI/SQLite backend**; only third parties are stubbed (`data.economie.gouv.fr` via `context.route`, `/routing/matrix`). Covers: PWA load + SW activation, online fuel add → real 201, **the reported bug end-to-end** (backend unreachable via `route.abort` → fill queued → refresh → queue rehydrated + banner → backend restored → 60 s retry syncs, real 201, count +1), offline capture → `online` event → immediate sync, dark mode survives refresh, station dialog with mocked stations + Escape.
+  - `npm run test:e2e` (webServer auto-boots backend on :18055 with fresh `/tmp/vv-e2e.sqlite3` and builds the frontend with `VITE_API_URL=http://127.0.0.1:18055/api/v1`; `reuseExistingServer` locally). ~1.5 min.
+  - Pitfalls baked in: `context.route` (not `page.route`) is required to intercept the Opendatasoft call; Playwright's offline emulation does **not** survive `page.reload()` (`navigator.onLine` flips back to true) — hence the `route.abort` strategy for the server-down scenario; the 60 s retry needs `test.setTimeout(150_000)`.
+  - `vite.config.ts` vitest `exclude: ['e2e/**']` — Playwright specs must not be collected by vitest.
+  - SW note: it only intercepts **same-origin** traffic — from the app origin the API (other port / `carmanagementapi.*`) is never intercepted, so the SW's API cache branch only applies when the API is same-origin (e.g. dev proxy).
+
+**Totals:** 150 frontend unit/component + 6 frontend e2e + 149 backend (143 API-level + 6 HTTP integration), all green; production build green. No deploy migration.
 
 ---
 

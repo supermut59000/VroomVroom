@@ -32,6 +32,10 @@ def setup_database():
     from app.models.e10_reference_price import E10ReferencePrice  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    # /health opens its own SessionLocal (not the get_db override) — point it
+    # at the test engine so the health endpoint doesn't need a live MariaDB.
+    import app.main as app_main
+    app_main.SessionLocal = TestingSessionLocal
     yield
     Base.metadata.drop_all(bind=engine)
 
