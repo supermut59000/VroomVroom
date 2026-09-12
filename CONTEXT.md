@@ -9,7 +9,7 @@ Last updated: 2026-09-12
 
 ## Session log — 2026-09-12
 
-### Offline-queue data-loss fix + comprehensive frontend test suite (39 → 150)
+### Offline-queue data-loss fix + comprehensive frontend test suite (39 → 151)
 
 **Bug fixed (real data loss):** fuel fills logged offline during a server outage disappeared after the server came back and the PWA was refreshed — they never reached the backend. Root cause in `use-offline.tsx`: the persisted `vv_offline_queue` was read **once** in a `useState` initializer — after a page refresh the persisted queue never made it into React state, so nothing ever synced. A second flaw: one corrupted item made the shared `JSON.parse` throw and silently dropped the **whole** queue.
 
@@ -17,7 +17,7 @@ Last updated: 2026-09-12
 - `OfflineProvider` now rehydrates queue state from localStorage on mount (`useEffect(loadQueue)`).
 - Regression coverage: `lib/offline.test.ts` (4) + `hooks/use-offline.test.tsx` (13) — refresh rehydration, legacy migration, corrupt-item isolation, permanent (400/404/409/422) vs retryable (401/403/429/5xx/transport) classification, E10 stripping on sync.
 
-**Frontend tests: 39 → 150 across 16 files.** New infra: jsdom + Testing Library (user-event, jest-dom) in `src/test/` — deterministic fetch router (`fixtures.ts`, ordered substring routes, base `http://test.local/api/v1`, call recording), shared `renderWithProviders`, Radix pointer-capture + `scrollIntoView` polyfills, `ResizeObserver` stub reporting 800×400 (Recharts `ResponsiveContainer` renders nothing at 0×0). Everything mocked — no network.
+**Frontend tests: 39 → 151 across 16 files.** New infra: jsdom + Testing Library (user-event, jest-dom) in `src/test/` — deterministic fetch router (`fixtures.ts`, ordered substring routes, base `http://test.local/api/v1`, call recording), shared `renderWithProviders`, Radix pointer-capture + `scrollIntoView` polyfills, `ResizeObserver` stub reporting 800×400 (Recharts `ResponsiveContainer` renders nothing at 0×0). Everything mocked — no network.
 
 New coverage per area: VehicleAddDialog (6), FuelAddDialog (10 — incl. E10 auto-capture online **and** offline, offline queue on transport failure, fuel-type mismatch warning), MaintenanceAddDialog (6), FlexFuel dialogs (14 — E10 prices CRUD, conversion CRUD, BlendCalculator empty state), StationPricesDialog (8 — GPS, city datalist, pagination, price/distance sort, favorites persistence, cheapest badge, Escape close), Dashboard (7), Header (6 — theme toggle, station dialog), all 8 Recharts charts (13 — SVG render + empty states), `api.ts` (9 — API key, 15 s timeout abort, 204, ApiError French detail), `csv.ts` (8 — BOM, `;`, escaping, filenames), and `public/sw.js` (11 — executed in a Node `vm` sandbox: network-first API + cache fallback, static cache-first, DATA_CACHE eviction at 300, skipWaiting/clients.claim, 4 s timeout fallback).
 
@@ -39,6 +39,7 @@ New coverage per area: VehicleAddDialog (6), FuelAddDialog (10 — incl. E10 aut
   - Pitfalls baked in: `context.route` (not `page.route`) is required to intercept the Opendatasoft call; Playwright's offline emulation does **not** survive `page.reload()` (`navigator.onLine` flips back to true) — hence the `route.abort` strategy for the server-down scenario; the 60 s retry needs `test.setTimeout(150_000)`.
   - `vite.config.ts` vitest `exclude: ['e2e/**']` — Playwright specs must not be collected by vitest.
   - SW note: it only intercepts **same-origin** traffic — from the app origin the API (other port / `carmanagementapi.*`) is never intercepted, so the SW's API cache branch only applies when the API is same-origin (e.g. dev proxy).
+  - **SW navigation timeout (fixed 2026-09-12):** the SPA-navigation branch was network-first with **no** timeout — on a "connected but no internet" network `fetch` hangs instead of rejecting, `respondWith` never settled and the PWA **loaded forever** on cold start. Now races the fetch against the same 4 s timeout as the API branch, then falls back to cached `/`. Regression test in `sw.test.ts` (hung fetch, `fastTimeout`): cold start now yields the cached shell within ~4 s, after which the app renders its offline UI (banner + queue). Note: the **first** launch must still be online — a SW that was never installed has nothing to cache.
   - webServer bootstraps `backend/.venv` when absent (tries `python3.12 → 3.11 → 3.10 → python3` in order — bare `python3` may be too new for pydantic wheels, e.g. 3.14 has no `pydantic_core` wheel) so e2e runs on a fresh clone.
 
 **Production compose build as a test step (2026-09-12, after prod build broke on `bun install --frozen-lockfile`):**
@@ -49,7 +50,7 @@ New coverage per area: VehicleAddDialog (6), FuelAddDialog (10 — incl. E10 aut
 - `frontend-react/.dockerignore` added (`node_modules`, `dist`, `e2e`, artifacts) so `COPY . .` can never ship a host `node_modules` over the bun install in the image.
 - `docker-compose.prod.yml`: removed obsolete `version: '3.8'` (Compose warning).
 
-**Totals:** 150 frontend unit/component + 6 frontend e2e + 149 backend (143 API-level + 6 HTTP integration), all green; production compose build green (verified locally via the exact Dockerfile steps: `bun install --frozen-lockfile` + `bun run build`). No deploy migration.
+**Totals:** 151 frontend unit/component + 6 frontend e2e + 149 backend (143 API-level + 6 HTTP integration), all green; production compose build green (verified locally via the exact Dockerfile steps: `bun install --frozen-lockfile` + `bun run build`). No deploy migration.
 
 ---
 

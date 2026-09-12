@@ -103,10 +103,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // HTML navigation: network first, fall back to cached index.html (SPA)
+  // HTML navigation: network first, fall back to cached index.html (SPA).
+  // Timeout is mandatory: a "connected but no internet" network (Wi-Fi on,
+  // no route) hangs fetch instead of rejecting it, and a hung respondWith is
+  // a page that loads forever.
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request)
+      Promise.race([
+        fetch(event.request),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
+      ])
         .then((response) => {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));

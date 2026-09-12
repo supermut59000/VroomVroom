@@ -235,6 +235,18 @@ describe('sw.js asset/tile/navigation fetches', () => {
     expect(await res.text()).toBe('<html>spa</html>')
   })
 
+  it('SPA navigation: HUNG network (Wi-Fi on, no internet) falls back to cache via timeout', async () => {
+    // fetch neither rejects nor resolves (TCP timeout can take minutes):
+    // without the 4s race the page would load forever.
+    const swb = makeSandbox({
+      fetchImpl: () => new Promise<Response>(() => {}),
+      fastTimeout: true,
+    })
+    swb.cacheStorage.set(CACHE_NAME, new Map([['/', new Response('<html>spa</html>', { status: 200 })]]))
+    const res = await runFetch(swb, new Request('http://test.local/'), 'navigate')
+    expect(await res.text()).toBe('<html>spa</html>')
+  })
+
   it('POST requests are never intercepted', () => {
     const swb = makeSandbox()
     let responded = false
