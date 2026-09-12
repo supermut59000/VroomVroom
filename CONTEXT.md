@@ -39,8 +39,17 @@ New coverage per area: VehicleAddDialog (6), FuelAddDialog (10 — incl. E10 aut
   - Pitfalls baked in: `context.route` (not `page.route`) is required to intercept the Opendatasoft call; Playwright's offline emulation does **not** survive `page.reload()` (`navigator.onLine` flips back to true) — hence the `route.abort` strategy for the server-down scenario; the 60 s retry needs `test.setTimeout(150_000)`.
   - `vite.config.ts` vitest `exclude: ['e2e/**']` — Playwright specs must not be collected by vitest.
   - SW note: it only intercepts **same-origin** traffic — from the app origin the API (other port / `carmanagementapi.*`) is never intercepted, so the SW's API cache branch only applies when the API is same-origin (e.g. dev proxy).
+  - webServer bootstraps `backend/.venv` when absent (tries `python3.12 → 3.11 → 3.10 → python3` in order — bare `python3` may be too new for pydantic wheels, e.g. 3.14 has no `pydantic_core` wheel) so e2e runs on a fresh clone.
 
-**Totals:** 150 frontend unit/component + 6 frontend e2e + 149 backend (143 API-level + 6 HTTP integration), all green; production build green. No deploy migration.
+**Production compose build as a test step (2026-09-12, after prod build broke on `bun install --frozen-lockfile`):**
+- `npm run test:prod-build` = `docker compose -f ../docker-compose.prod.yml build` — the exact `up --build` the server runs, from the repo root's compose file. `npm run test:full` = `npm run test && npm run test:e2e && npm run test:prod-build` (one command: unit + e2e + prod images).
+- **Lockfile rule:** the prod frontend Dockerfile builds with **bun** (`bun install --frozen-lockfile` + `bun run build`) while local dev uses **npm**. Every `package.json` change must commit **both** `bun.lock` and `package-lock.json`, or the prod build fails with "lockfile had changes, but lockfile is frozen". `test:prod-build` is the guard that catches drift before push.
+- **`overrides: {"vite": "$vite"}`** in `package.json` is load-bearing: bun otherwise nests a second vite under `node_modules/vitest/node_modules/vite`, and `tsc -b` fails inside the image (duplicate `vite` types — `test` key / plugin context incompatibility). Verified: bun and npm builds produce byte-identical dist (same asset hashes).
+- `vite.config.ts` imports `defineConfig` from **`vitest/config`** (not bare `vite` + `/// <reference types>`): the `test` key is typed without relying on a single vite copy for global augmentation.
+- `frontend-react/.dockerignore` added (`node_modules`, `dist`, `e2e`, artifacts) so `COPY . .` can never ship a host `node_modules` over the bun install in the image.
+- `docker-compose.prod.yml`: removed obsolete `version: '3.8'` (Compose warning).
+
+**Totals:** 150 frontend unit/component + 6 frontend e2e + 149 backend (143 API-level + 6 HTTP integration), all green; production compose build green (verified locally via the exact Dockerfile steps: `bun install --frozen-lockfile` + `bun run build`). No deploy migration.
 
 ---
 

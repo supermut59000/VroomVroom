@@ -12,8 +12,9 @@ Last updated: 2026-09-12
 - **Frontend tests 39 → 150 (16 files):** added jsdom + Testing Library infra (`src/test/`: fetch router, providers, Radix/ResizeObserver polyfills). New component/hook/PWA coverage: vehicle, fuel (incl. E10 auto-capture online/offline), maintenance, FlexFuel dialogs, station prices, dashboard, header/theme, all 8 charts, `api.ts`, `csv.ts`, service worker (run in a Node `vm` sandbox).
 - **Backend tests 133 → 149:** closed the three real coverage gaps (`/fuel-entries/stations`, `/fuel-entries/vehicle/{id}/nearest-station`, `DELETE /vehicles/{id}` soft vs `?force=true`), plus 6 **cross-process HTTP integration tests** (`test_integration_http.py`: real subprocess server, real httpx — vehicle lifecycle, idempotent offline-sync retry, 409 cross-vehicle `client_request_id`, 422 odometer decrease). `conftest.py` now points the app's `SessionLocal` at the test engine so `/health` needs no live MariaDB — suite green anywhere.
 - **Playwright e2e (6 tests, `npm run test:e2e`):** real system Chromium + real built app (SW active) + real FastAPI/SQLite backend; only third parties stubbed. Covers PWA/SW activation, online add, **the reported bug end-to-end** (server down → queued → refresh → queue survives → server back → auto-resync → 201), offline capture + `online`-event resync, theme persistence, station dialog.
+- **Prod compose build now part of the suite:** `npm run test:prod-build` (exact `docker compose -f docker-compose.prod.yml build`) and `npm run test:full` (unit + e2e + prod build). The prod image builds with **bun** → rule: every `package.json` change commits both `bun.lock` and `package-lock.json`. Fixed the frozen-lockfile break (regenerated `bun.lock`), added `overrides: {"vite": "$vite"}` (bun nested a 2nd vite → `tsc -b` failed in the image), `vite.config.ts` now imports `defineConfig` from `vitest/config`, new `frontend-react/.dockerignore`, obsolete `version:` dropped from `docker-compose.prod.yml`, e2e webServer bootstraps `backend/.venv` on fresh clones (python3.12→3.11→3.10→3).
 - Temporary behavior spec (actions → expected results) in `tmp/TEST-BEHAVIOR.md` — delete or promote after review.
-- Totals: 150 frontend unit/component + 6 e2e + 149 backend, all green; production build green. No deploy migration.
+- Totals: 150 frontend unit/component + 6 e2e + 149 backend, all green; production compose build green. No deploy migration.
 
 ---
 
@@ -169,6 +170,7 @@ VroomVroom is a self-hosted vehicle management web app. It tracks vehicles, fuel
 - Frontend: 150 vitest tests (as of 2026-09-12) — pure functions in `src/lib/` (blend-math, station-sort, vehicle-stats, offline queue, csv, service worker via Node `vm` sandbox) + jsdom/Testing Library component tests (vehicle/fuel/maintenance dialogs, FlexFuel dialogs, station prices, dashboard, header/theme, all 8 charts, `api.ts`)
 - E2E: 6 Playwright tests (`frontend-react/e2e/smoke.spec.ts`, `npm run test:e2e`) — real system Chromium + real built app + real backend subprocess (fresh `/tmp/vv-e2e.sqlite3`), third parties stubbed; includes the offline-queue refresh/resync regression
 - Run: `cd backend && .venv/bin/pytest tests/` (or Docker: `docker compose run --rm -v ./backend:/app backend sh -c "pip install -q pytest pytest-asyncio httpx && python -m pytest tests/ -v --tb=short"`), `cd frontend-react && npm run test`, `npm run test:e2e`, `npm run build`
+- **Full gate (one command):** `cd frontend-react && npm run test:full` = vitest 150 + Playwright e2e 6 + `docker compose -f ../docker-compose.prod.yml build` (the exact prod images — catches bun-lockfile drift before push). Server deploy: `docker compose -f docker-compose.prod.yml up -d --build`.
 
 ---
 
