@@ -16,6 +16,11 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    coverage: {
+      provider: 'v8',
+      include: ['src/**'],
+      exclude: ['**/*.test.*', 'src/test/**'],
+    },
     // Deterministic API base for api.ts (never the real homelab backend)
     env: {
       VITE_API_URL: 'http://test.local/api/v1',

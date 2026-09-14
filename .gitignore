@@ -44,3 +44,6 @@ backend/data/
 
 # Temp working files (audits, scratch)
 tmp/
+
+# pytest-cov
+.coverage
