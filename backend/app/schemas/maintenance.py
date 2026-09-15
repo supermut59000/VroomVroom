@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from typing import Optional, List
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
+
 
 
 # Base schema with common fields
@@ -33,24 +34,6 @@ class MaintenanceBase(BaseModel):
         description="Recommended odometer reading for next maintenance",
     )
 
-    @field_validator('cost')
-    def cost_must_be_positive(cls, v):
-        if v < 0:
-            raise ValueError("Cost must be non-negative")
-        return v
-
-    @field_validator('odometer_reading')
-    def odometer_reading_must_be_positive(cls, v):
-        if v < 0:
-            raise ValueError("Odometer reading must be non-negative")
-        return v
-
-    @field_validator('next_maintenance_odometer')
-    def next_odometer_must_be_positive(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("Next odometer reading must be non-negative")
-        return v
-
 
 class MaintenanceCreate(MaintenanceBase):
     """Schema for creating a maintenance entry"""
@@ -69,24 +52,6 @@ class MaintenanceUpdate(BaseModel):
     notes: Optional[str] = Field(None, max_length=500)
     next_maintenance_date: Optional[date] = None
     next_maintenance_odometer: Optional[int] = Field(None, ge=0, le=9999999)
-
-    @field_validator('cost')
-    def cost_must_be_positive(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("Cost must be non-negative")
-        return v
-
-    @field_validator('odometer_reading')
-    def odometer_reading_must_be_positive(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("Odometer reading must be non-negative")
-        return v
-
-    @field_validator('next_maintenance_odometer')
-    def next_odometer_must_be_positive(cls, v):
-        if v is not None and v < 0:
-            raise ValueError("Next odometer reading must be non-negative")
-        return v
 
 
 class MaintenanceResponse(MaintenanceBase):

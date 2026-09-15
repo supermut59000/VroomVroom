@@ -317,15 +317,13 @@ class VehicleService:
 
             if i == 0:
                 last_full_tank_odometer = float(entry.odometer_reading)
-                if is_full:
-                    accumulated_liters = 0.0
-                    accumulated_e85_liters = 0.0
-                    # The first Plein establishes a tank composition for the
-                    # first usable segment.
-                    prev_added_e85_frac = 1.0 if is_e85 else 0.0
-                else:
-                    accumulated_liters = entry.liters
-                    accumulated_e85_liters = entry.liters if is_e85 else 0.0
+                # entries[0] is always a Plein: the history was truncated at the
+                # first full tank above (anchor-less leading partials excluded).
+                accumulated_liters = 0.0
+                accumulated_e85_liters = 0.0
+                # The first Plein establishes a tank composition for the
+                # first usable segment.
+                prev_added_e85_frac = 1.0 if is_e85 else 0.0
                 continue
 
             if is_full:
@@ -597,10 +595,11 @@ class VehicleService:
                 days_since_last_entry = max(0, (date.today() - last_entry.fueling_date).days)
 
             # Distance = last odometer - initial odometer
+            # (initial_odometer is NOT NULL in the schema; the fuel-stats
+            # fallback was unreachable — a falsy last odometer implies
+            # fuel_stats.total_distance <= 0 too).
             if last_odometer and vehicle.initial_odometer is not None:
                 total_distance = last_odometer - float(vehicle.initial_odometer)
-            elif fuel_stats.total_distance > 0:
-                total_distance = float(fuel_stats.total_distance)
         else:
             last_odometer = vehicle.initial_odometer
 

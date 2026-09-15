@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/test/providers'
-import { installFetchRouter, baseRoutes, vehicleFull1, conversion1, entry1, entry2 } from '@/test/fixtures'
+import { installFetchRouter, baseRoutes, vehicleFull1, conversion1, entry1, entry2, latestEntry1, maintenance1 } from '@/test/fixtures'
 import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
+import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { PriceChart } from '@/components/charts/PriceChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
 import { OdometerChart } from '@/components/charts/OdometerChart'
@@ -161,6 +163,52 @@ describe('Charts', () => {
             cumulative_savings: 90.4,
           },
         ])}
+      />,
+    )
+    expect(svg(container)).not.toBeNull()
+  })
+})
+
+describe('MonthlyCostChart', () => {
+  const mEntry = (date: string, cost: number, odom: number) =>
+    ({ ...latestEntry1, fueling_date: date, total_cost: cost, odometer_reading: odom, liters: cost / 1.7 })
+
+  it('renders nothing when there are no entries at all', () => {
+    const { container } = render(<MonthlyCostChart entries={[]} maintenances={[]} />)
+    expect(container.querySelector('svg.recharts-surface')).toBeNull()
+    expect(screen.queryByText('Coûts mensuels')).toBeNull()
+  })
+
+  it('renders monthly bars and the average in euros mode', () => {
+    const { container } = render(
+      <MonthlyCostChart
+        entries={[mEntry('2026-04-01', 60, 10000), mEntry('2026-05-01', 80, 11000), mEntry('2026-06-01', 40, 12000)]}
+        maintenances={[]}
+      />,
+    )
+    expect(screen.getByText('Coûts mensuels')).toBeInTheDocument()
+    expect(svg(container)).not.toBeNull()
+    expect(screen.getByText(/Moyenne : [\d.,]+ €/)).toBeInTheDocument()
+  })
+
+  it('switches to €/100km mode and re-titles', async () => {
+    const { container } = render(
+      <MonthlyCostChart
+        entries={[mEntry('2026-04-01', 60, 10000), mEntry('2026-05-01', 80, 11000), mEntry('2026-06-01', 40, 12000)]}
+        maintenances={[]}
+      />,
+    )
+    await userEvent.click(screen.getByText('€ / 100km'))
+    expect(screen.getByText('Coût / 100km')).toBeInTheDocument()
+    expect(svg(container)).not.toBeNull()
+    expect(screen.getByText(/Moyenne : [\d.,]+ €\/100km/)).toBeInTheDocument()
+  })
+
+  it('includes spread maintenance costs in the bars', () => {
+    const { container } = render(
+      <MonthlyCostChart
+        entries={[mEntry('2026-04-01', 60, 10000), mEntry('2026-05-01', 80, 11000), mEntry('2026-06-01', 40, 12000)]}
+        maintenances={[maintenance1]}
       />,
     )
     expect(svg(container)).not.toBeNull()

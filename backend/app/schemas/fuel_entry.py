@@ -1,7 +1,8 @@
 from datetime import date, datetime
 from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
+
 
 from app.core.enums import FuelType
 
@@ -29,26 +30,6 @@ class FuelEntryBase(BaseModel):
     notes: Optional[str] = Field(None, max_length=500, description="Additional notes about this fueling")
     client_request_id: Optional[UUID] = Field(None, description="Stable ID used to make client retries idempotent")
 
-    @field_validator('liters')
-    @classmethod
-    def liters_must_be_positive(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Liters must be positive")
-        return v
-
-    @field_validator('price_per_liter')
-    @classmethod
-    def price_per_liter_must_be_positive(cls, v: float) -> float:
-        if v <= 0:
-            raise ValueError("Price per liter must be positive")
-        return v
-
-    @field_validator('odometer_reading')
-    @classmethod
-    def odometer_reading_must_be_positive(cls, v: int) -> int:
-        if v < 0:
-            raise ValueError("Odometer reading must be non-negative")
-        return v
 
 class FuelEntryCreate(FuelEntryBase):
     """Schema for creating a fuel entry"""
@@ -68,27 +49,6 @@ class FuelEntryUpdate(BaseModel):
     fueling_date: Optional[date] = None
     is_full_tank: Optional[bool] = None
     notes: Optional[str] = Field(None, max_length=500)
-
-    @field_validator('liters')
-    @classmethod
-    def liters_must_be_positive(cls, v: float | None) -> float | None:
-        if v is not None and v <= 0:
-            raise ValueError("Liters must be positive")
-        return v
-
-    @field_validator('price_per_liter')
-    @classmethod
-    def price_per_liter_must_be_positive(cls, v: float | None) -> float | None:
-        if v is not None and v <= 0:
-            raise ValueError("Price per liter must be positive")
-        return v
-
-    @field_validator('odometer_reading')
-    @classmethod
-    def odometer_reading_must_be_positive(cls, v: int | None) -> int | None:
-        if v is not None and v < 0:
-            raise ValueError("Odometer reading must be non-negative")
-        return v
 
 
 class FuelEntryResponse(FuelEntryBase):

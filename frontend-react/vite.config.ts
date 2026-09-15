@@ -19,7 +19,18 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**'],
-      exclude: ['**/*.test.*', 'src/test/**'],
+      // Vendored shadcn/ui primitives are copied third-party code, not app
+      // logic — exclude them so the number reflects code we own.
+      exclude: ['**/*.test.*', 'src/test/**', 'src/components/ui/**'],
+      // Guardrails: fail CI if coverage drops below these floors.
+      // Set just under the current measured values to avoid brittleness.
+      // Current (2026-09): stmts 84.56 / branch 70.25 / funcs 76.14 / lines 86.91.
+      thresholds: {
+        statements: 80,
+        branches: 65,
+        functions: 70,
+        lines: 80,
+      },
     },
     // Deterministic API base for api.ts (never the real homelab backend)
     env: {
