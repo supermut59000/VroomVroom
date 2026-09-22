@@ -20,7 +20,7 @@ interface DistanceChartProps {
   entries: FuelEntry[]
 }
 
-type LitersRow = { month: string; monthKey: string; [fuel: string]: string | number }
+type LitersRow = { month: string; monthKey: string; total: number; [fuel: string]: string | number }
 
 /**
  * Combined "mensuel" card (toggle pattern, same as MonthlyCostChart's € / 100km):
@@ -61,22 +61,11 @@ export function DistanceChart({ entries }: DistanceChartProps) {
     return { data: result, avgKm, projectedAnnual }
   }, [entries, currentMonthKey])
 
-  // Litres per month per fuel type (stacked in the "L / mois" view)
+  // Litres per month per fuel type (stacked in the "L / mois" view).
+  // Each row carries its own `total` — the tooltip shows the share of THAT month,
+  // the header subtitle keeps the grand totals.
   const liters = useMemo(() => {
     const byMonth = new Map<string, LitersRow>()
-    for (const e of entries) {
-      const key = e.fueling_date.slice(0, 7)
-      const [year, m] = key.split('-')
-      const label = new Date(Number(year), Number(m) - 1).toLocaleDateString('fr-FR', {
-        month: 'short',
-        year: '2-digit',
-      })
-      const row = byMonth.get(key) ?? { month: label, monthKey: key }
-      row[e.fuel_type] = ((row[e.fuel_type] as number | undefined) ?? 0) + e.liters
-      byMonth.set(key, row)
-    }
-    const rows = [...byMonth.values()].sort((a, b) => a.monthKey.localeCompare(b.monthKey))
-
     // Distinct fuel types in chronological order of appearance (same as PriceChart)
     const seen = new Set<string>()
     const fuelTypes: string[] = []
@@ -85,6 +74,19 @@ export function DistanceChart({ entries }: DistanceChartProps) {
         seen.add(e.fuel_type)
         fuelTypes.push(e.fuel_type)
       }
+      const key = e.fueling_date.slice(0, 7)
+      const [year, m] = key.split('-')
+      const label = new Date(Number(year), Number(m) - 1).toLocaleDateString('fr-FR', {
+        month: 'short',
+        year: '2-digit',
+      })
+      const row = byMonth.get(key) ?? { month: label, monthKey: key, total: 0 }
+      row[e.fuel_type] = ((row[e.fuel_type] as number | undefined) ?? 0) + e.liters
+      byMonth.set(key, row)
+    }
+    const rows = [...byMonth.values()].sort((a, b) => a.monthKey.localeCompare(b.monthKey))
+    for (const row of rows) {
+      row.total = fuelTypes.reduce((s, ft) => s + ((row[ft] as number | undefined) ?? 0), 0)
     }
 
     const totals: Record<string, number> = {}
@@ -181,9 +183,10 @@ export function DistanceChart({ entries }: DistanceChartProps) {
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} unit=" L" />
               <Tooltip
-                formatter={(value: number, name: string) => {
+                formatter={(value, name, item) => {
                   const v = value as number
-                  const share = liters.grandTotal > 0 ? Math.round((v / liters.grandTotal) * 100) : 0
+                  const total = (item.payload as LitersRow | undefined)?.total ?? 0
+                  const share = total > 0 ? Math.round((v / total) * 100) : 0
                   return [`${Math.round(v * 10) / 10} L (${share} %)`, FUEL_LABEL[name] ?? name]
                 }}
               />

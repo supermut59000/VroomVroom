@@ -424,7 +424,7 @@ projected_yearly = cost_per_month * 12
 | ConsumptionChart | Recharts LineChart | L/100km per fill, avg reference line, full-tank markers |
 | PriceChart | Recharts LineChart | EUR/L per fill, station name labels |
 | MonthlyCostChart | Recharts BarChart + LineChart | Stacked fuel/maintenance per month, projected annual |
-| DistanceChart | Recharts BarChart | Toggle km/mois ↔ L/mois: monthly km (avg + projected annual) or litres/month stacked by fuel type (per-fuel share subtitle + tooltip) |
+| DistanceChart | Recharts BarChart | Toggle km/mois ↔ L/mois: monthly km (avg + projected annual) or litres/month stacked by fuel type (per-fuel grand-total share subtitle, per-month share tooltip) |
 | RangeChart | Recharts LineChart | Estimated tank range per segment (capacity / consumption), avg reference line |
 | OdometerChart | Recharts LineChart | Odometer progression, insurance limit, warnings — only rendered when a km limit is set |
 | StationsMap | Leaflet (ui/map.tsx) | Map of GPS fill locations, clustered 100m radius |
