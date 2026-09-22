@@ -16,13 +16,14 @@ import { useVehicle } from '@/hooks/use-vehicles'
 import { useFlexfuelConversion, useFlexfuelRentability } from '@/hooks/use-flexfuel'
 import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
 import { PriceChart } from '@/components/charts/PriceChart'
+import { FuelTypeHistoryChart } from '@/components/charts/FuelTypeHistoryChart'
 import { StationsMap } from '@/components/charts/StationsMap'
-import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilityChart'
 import { EthanolHistoryChart } from '@/components/charts/EthanolHistoryChart'
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
+import { RangeChart } from '@/components/charts/RangeChart'
 import { OdometerChart } from '@/components/charts/OdometerChart'
-import { RefuelingPatternChart } from '@/components/charts/RefuelingPatternChart'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 interface FuelChartsProps {
@@ -147,14 +148,18 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <ErrorBoundary>
             <PriceChart entries={filteredEntries} splitByFuelType={!!flexfuelConversion} />
           </ErrorBoundary>
+          <ErrorBoundary><FuelTypeHistoryChart entries={filteredEntries} /></ErrorBoundary>
           <ErrorBoundary><MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} /></ErrorBoundary>
           <ErrorBoundary><DistanceChart entries={filteredEntries} /></ErrorBoundary>
-          {vehicle && allEntries && (
+          {vehicle && (
+            <ErrorBoundary>
+              <RangeChart dataPoints={filteredConsumptionData} tankCapacity={vehicle.tank_capacity} />
+            </ErrorBoundary>
+          )}
+          {vehicle && allEntries && !vehicle.insurance_unlimited && vehicle.insurance_km_limit != null && (
             <ErrorBoundary><OdometerChart vehicle={vehicle} entries={allEntries} /></ErrorBoundary>
           )}
           <ErrorBoundary><StationsMap entries={filteredEntries} /></ErrorBoundary>
-          <Separator />
-          <ErrorBoundary><RefuelingPatternChart entries={filteredEntries} /></ErrorBoundary>
 
           {/* FlexFuel E85 */}
           {flexfuelConversion && vehicle && allEntries && (
@@ -172,7 +177,22 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           {rentability && (
             <>
               <Separator />
-              <ErrorBoundary><FlexfuelRentabilityChart data={rentability} /></ErrorBoundary>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Rentabilité FlexFuel</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">
+                    {rentability.break_even_reached && rentability.break_even_date
+                      ? `Kit remboursé le ${new Date(rentability.break_even_date).toLocaleDateString('fr-FR')} ✓`
+                      : `Kit non remboursé (${Math.round((rentability.total_savings / rentability.kit_cost) * 100)} %)`}
+                    {' · '}Économies totales : {rentability.total_savings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
+                    {rentability.monthly_average_savings != null && (
+                      <> · ~{Math.round(rentability.monthly_average_savings)} €/mois</>
+                    )}
+                  </p>
+                </CardContent>
+              </Card>
             </>
           )}
         </div>

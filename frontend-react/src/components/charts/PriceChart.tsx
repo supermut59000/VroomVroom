@@ -29,7 +29,7 @@ type Row = {
 }
 
 // Display label per fuel_type value
-const FUEL_LABEL: Record<string, string> = {
+export const FUEL_LABEL: Record<string, string> = {
   e85: 'E85',
   essence: 'E10',
   sp98: 'SP98',
@@ -39,7 +39,7 @@ const FUEL_LABEL: Record<string, string> = {
   hybride: 'Hybride',
 }
 
-const FUEL_COLOR: Record<string, string> = {
+export const FUEL_COLOR: Record<string, string> = {
   e85: 'hsl(142, 71%, 45%)',
   essence: 'hsl(25, 95%, 53%)',
   sp98: 'hsl(217, 91%, 60%)',

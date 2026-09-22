@@ -1,9 +1,22 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-09-12
+Last updated: 2026-09-22
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## Session log — 2026-09-22
+
+### Chart purge — rule: every chart must trigger an action (Corsa audit)
+- **Design rule (user)**: a chart must lead to an action (buy elsewhere, go to the cheap station, winter E85 check, range planning…), never just restate a stat ("my consumption is X" — that's the stats block's job).
+- **Removed**: `RefuelingPatternChart` (refuel habits — no action) and `FlexfuelRentabilityChart` (break-even reached 2026-07-17 → the curve answers no question anymore). The rentability section of the graphs dialog is now a one-line stat card: `Kit remboursé le … ✓ · Économies totales … € · ~… €/mois`. `useFlexfuelRentability` + backend endpoint unchanged.
+- **OdometerChart**: kept (useful when a vehicle has a km limit) but only rendered when `!vehicle.insurance_unlimited && vehicle.insurance_km_limit != null` — hidden for the Corsa and the Scénic (both unlimited).
+- **Added `FuelTypeHistoryChart`** (`charts/FuelTypeHistoryChart.tsx`): monthly stacked bars, litres per fuel type, subtitle `E85 : 3 400 L (92 %) · E10 : …`. No pie — the CostOfOwnershipSection donut is the only pie left. Reuses `FUEL_LABEL`/`FUEL_COLOR`, now exported from PriceChart.
+- **Added `RangeChart`** (`charts/RangeChart.tsx`): estimated range per fill-to-fill segment = `tank_capacity × 100 / consumption` (data from `useConsumptionHistory`). Subtitle moyenne/min/max + average reference line; setup card when `tank_capacity` is null. Action: "can I still make a 400 km trip on one tank".
+- Graphs popup order now: Consumption → Price → **FuelTypeHistory** → MonthlyCost → Distance → **Range** → Odometer (conditional) → StationsMap → EthanolHistory (flexfuel) → Rentability stat line (flexfuel).
+- Frontend: `npm run build` + 272 tests green (Charts.test.tsx: −4 deleted-chart tests, +4 new).
 
 ---
 
@@ -268,9 +281,9 @@ When making schema changes:
 - **PriceChart**: €/L per fill-up over time (line). For FlexFuel vehicles (`splitByFuelType=true` when a conversion exists and ≥ 2 distinct fuel types in history), renders **one line per fuel_type** with a colored dot + its own liters-weighted average reference line. Single-line mode otherwise.
 - **MonthlyCostChart**: stacked bars fuel + maintenance per month. Toggle: €/mois ↔ €/100km. Both modes show 3-month projection as faded bars (avg of last 3 months). Custom tooltip shows each component + a **Total** line. €/100km moyenne is correctly weighted: `Σ cost_completed_months / Σ distance_completed_months × 100` (NOT an average of monthly ratios — past bug).
 - **DistanceChart**: km per month (bar) + projected annual km badge. **Gap months are filled**: when two adjacent fill months are non-contiguous (no fills between), the total km between them is spread uniformly across the missing months. No more fake single-month spike on a resuming month.
-- **OdometerChart** (`charts/OdometerChart.tsx`): absolute odometer progression line + dotted projection. Reference line + badges shown when `vehicle.insurance_km_limit` is set (and `insurance_unlimited` is false). Without a limit, still useful as a progression chart with 12-month projection. Uses **allEntries** (never date-filtered). Replaces the old `InsuranceKmChart` (now deleted).
+- **OdometerChart** (`charts/OdometerChart.tsx`): absolute odometer progression line + dotted projection. Reference line + badges shown when `vehicle.insurance_km_limit` is set (and `insurance_unlimited` is false). Uses **allEntries** (never date-filtered). Replaces the old `InsuranceKmChart` (now deleted). **Since 2026-09-22: only rendered in the graphs dialog when the vehicle has a limit** (`!insurance_unlimited && insurance_km_limit != null`) — unlimited-insurance vehicles don't get it.
 - **StationsMap**: clusters GPS fill points within 100m radius, Leaflet map.
-- **FlexfuelRentabilityChart**: cumulative savings line vs kit cost reference line. If break-even not reached: dotted projection line extending at `monthly_average_savings` rate until kit cost is hit. Badge shows projected break-even month. Monthly savings bar chart.
+- **Rentability stat line** (2026-09-22, replaces the deleted `FlexfuelRentabilityChart`): one line in the graphs dialog — `Kit remboursé le <date> ✓` (or `Kit non remboursé (<pct> %)`), total savings in €, monthly average. Data still from `useFlexfuelRentability`; the old chart (cumulative savings line vs kit cost, break-even projection, monthly bars) is gone because break-even had already been reached — no action left to trigger.
 - **BlendCalculator** (`frontend-react/src/components/flexfuel/BlendCalculator.tsx`): in-graphs popup, only for FlexFuel vehicles. See dedicated section below.
 
 #### Insurance km calculation (mirrors backend exactly)

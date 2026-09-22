@@ -9,11 +9,10 @@ import { PriceChart } from '@/components/charts/PriceChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
 import { OdometerChart } from '@/components/charts/OdometerChart'
 import { EthanolHistoryChart } from '@/components/charts/EthanolHistoryChart'
-import { RefuelingPatternChart } from '@/components/charts/RefuelingPatternChart'
-import { FlexfuelRentabilityChart } from '@/components/charts/FlexfuelRentabilityChart'
+import { FuelTypeHistoryChart } from '@/components/charts/FuelTypeHistoryChart'
+import { RangeChart } from '@/components/charts/RangeChart'
 import type {
   ConsumptionDataPoint,
-  FlexfuelRentabilitySummary,
   Vehicle,
 } from '@/types'
 
@@ -107,64 +106,39 @@ describe('Charts', () => {
     expect(svg(container)).not.toBeNull()
   })
 
-  it('RefuelingPatternChart: empty entries render nothing', () => {
-    const { container } = render(<RefuelingPatternChart entries={[]} />)
+  it('FuelTypeHistoryChart: empty entries render nothing', () => {
+    const { container } = render(<FuelTypeHistoryChart entries={[]} />)
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('RefuelingPatternChart: renders habit cards from entries', () => {
-    render(<RefuelingPatternChart entries={[entry2, entry1]} />)
-    expect(screen.getByText('Habitudes de ravitaillement')).toBeInTheDocument()
+  it('FuelTypeHistoryChart: renders stacked bars and the per-fuel share', () => {
+    const e85Entry = { ...entry1, id: 51, fuel_type: 'e85' as const, liters: 30, fueling_date: '2026-08-05' }
+    const { container } = render(<FuelTypeHistoryChart entries={[entry2, e85Entry, entry1]} />)
+    expect(screen.getByText('Carburants versés (L / mois)')).toBeInTheDocument()
+    // 30 L e85 + 78 L essence = 108 L → 28 % / 72 %
+    expect(screen.getByText(/E85 : 30 L \(28 %\)/)).toBeInTheDocument()
+    expect(screen.getByText(/E10 : 78 L \(72 %\)/)).toBeInTheDocument()
+    expect(svg(container)).not.toBeNull()
   })
 
-  const rentability = (points: FlexfuelRentabilitySummary['data_points']): FlexfuelRentabilitySummary => ({
-    vehicle_id: 1,
-    kit_cost: 850,
-    overconsumption_pct: 20,
-    conversion_date: '2024-03-15',
-    total_e85_fills: points.length,
-    total_savings: points[points.length - 1]?.cumulative_savings ?? 0,
-    break_even_reached: (points[points.length - 1]?.cumulative_savings ?? 0) >= 850,
-    break_even_date: null,
-    monthly_average_savings: 100,
-    skipped_fills_no_e10_price: 0,
-    data_points: points,
-    monthly_savings: [],
-  })
-
-  it('FlexfuelRentabilityChart: no E85 fills → explanatory empty state', () => {
-    const { container } = render(<FlexfuelRentabilityChart data={rentability([])} />)
-    expect(screen.getByText(/Aucun plein E85 enregistré depuis la conversion/)).toBeInTheDocument()
+  it('RangeChart: missing tank capacity → setup message, no chart', () => {
+    const { container } = render(
+      <RangeChart dataPoints={[point('2026-06-01', 6.0, 700, 42)]} tankCapacity={null} />,
+    )
+    expect(screen.getByText(/Renseignez la capacité du réservoir/)).toBeInTheDocument()
     expect(svg(container)).toBeNull()
   })
 
-  it('FlexfuelRentabilityChart: renders cumulative savings line with data', () => {
+  it('RangeChart: renders the range line and the average', () => {
     const { container } = render(
-      <FlexfuelRentabilityChart
-        data={rentability([
-          {
-            date: '2024-06-01',
-            e85_liters: 40,
-            e85_cost: 34,
-            equivalent_e10_liters: 48,
-            e10_reference_price: 1.65,
-            e10_equivalent_cost: 79.2,
-            savings: 45.2,
-            cumulative_savings: 45.2,
-          },
-          {
-            date: '2024-08-01',
-            e85_liters: 40,
-            e85_cost: 34,
-            equivalent_e10_liters: 48,
-            e10_reference_price: 1.65,
-            e10_equivalent_cost: 79.2,
-            savings: 45.2,
-            cumulative_savings: 90.4,
-          },
-        ])}
+      <RangeChart
+        dataPoints={[point('2026-06-01', 6.0, 700, 42), point('2026-07-01', 7.0, 300, 21)]}
+        tankCapacity={50}
       />,
     )
+    expect(screen.getByText('Autonomie (km)')).toBeInTheDocument()
+    // 50×100/6 = 833 km, 50×100/7 ≈ 714 km → moyenne 774 km
+    expect(screen.getByText(/Moyenne : 774 km/)).toBeInTheDocument()
     expect(svg(container)).not.toBeNull()
   })
 })
