@@ -16,7 +16,6 @@ import { useVehicle } from '@/hooks/use-vehicles'
 import { useFlexfuelConversion, useFlexfuelRentability } from '@/hooks/use-flexfuel'
 import { ConsumptionChart } from '@/components/charts/ConsumptionChart'
 import { PriceChart } from '@/components/charts/PriceChart'
-import { FuelTypeHistoryChart } from '@/components/charts/FuelTypeHistoryChart'
 import { StationsMap } from '@/components/charts/StationsMap'
 import { EthanolHistoryChart } from '@/components/charts/EthanolHistoryChart'
 import { MonthlyCostChart } from '@/components/charts/MonthlyCostChart'
@@ -24,6 +23,7 @@ import { DistanceChart } from '@/components/charts/DistanceChart'
 import { RangeChart } from '@/components/charts/RangeChart'
 import { OdometerChart } from '@/components/charts/OdometerChart'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 interface FuelChartsProps {
@@ -148,7 +148,6 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
           <ErrorBoundary>
             <PriceChart entries={filteredEntries} splitByFuelType={!!flexfuelConversion} />
           </ErrorBoundary>
-          <ErrorBoundary><FuelTypeHistoryChart entries={filteredEntries} /></ErrorBoundary>
           <ErrorBoundary><MonthlyCostChart entries={filteredEntries} maintenances={filteredMaintenances} /></ErrorBoundary>
           <ErrorBoundary><DistanceChart entries={filteredEntries} /></ErrorBoundary>
           {vehicle && (
@@ -179,18 +178,52 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
               <Separator />
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Rentabilité FlexFuel</CardTitle>
+                  <CardTitle className="flex items-center gap-2 text-base">🌿 Rentabilité E85</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm">
-                    {rentability.break_even_reached && rentability.break_even_date
-                      ? `Kit remboursé le ${new Date(rentability.break_even_date).toLocaleDateString('fr-FR')} ✓`
-                      : `Kit non remboursé (${Math.round((rentability.total_savings / rentability.kit_cost) * 100)} %)`}
-                    {' · '}Économies totales : {rentability.total_savings.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} €
-                    {rentability.monthly_average_savings != null && (
-                      <> · ~{Math.round(rentability.monthly_average_savings)} €/mois</>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="rounded-md bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Économie totale</p>
+                      <p className="text-lg font-bold text-emerald-600">
+                        {Math.round(rentability.total_savings).toLocaleString('fr-FR')} €
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Coût du kit</p>
+                      <p className="text-lg font-bold">
+                        {Math.round(rentability.kit_cost).toLocaleString('fr-FR')} €
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">
+                        {rentability.break_even_reached ? 'Rentabilisé le' : 'Reste à amortir'}
+                      </p>
+                      <p className="text-lg font-bold">
+                        {rentability.break_even_reached && rentability.break_even_date
+                          ? new Date(rentability.break_even_date).toLocaleDateString('fr-FR')
+                          : `${Math.max(0, Math.round(rentability.kit_cost - rentability.total_savings)).toLocaleString('fr-FR')} €`}
+                      </p>
+                    </div>
+                    <div className="rounded-md bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Moy. /mois</p>
+                      <p className="text-lg font-bold">
+                        {rentability.monthly_average_savings
+                          ? `${Math.round(rentability.monthly_average_savings).toLocaleString('fr-FR')} €`
+                          : '—'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge variant="outline">{rentability.total_e85_fills} pleins E85</Badge>
+                    <Badge variant="outline">Surconsommation {rentability.overconsumption_pct}%</Badge>
+                    {rentability.break_even_reached ? (
+                      <Badge className="border-0 bg-emerald-100 text-emerald-700">Rentabilisé</Badge>
+                    ) : (
+                      <Badge className="border-0 bg-orange-100 text-orange-700">
+                        En cours d'amortissement
+                      </Badge>
                     )}
-                  </p>
+                  </div>
                 </CardContent>
               </Card>
             </>

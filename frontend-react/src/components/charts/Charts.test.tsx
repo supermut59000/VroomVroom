@@ -9,7 +9,6 @@ import { PriceChart } from '@/components/charts/PriceChart'
 import { DistanceChart } from '@/components/charts/DistanceChart'
 import { OdometerChart } from '@/components/charts/OdometerChart'
 import { EthanolHistoryChart } from '@/components/charts/EthanolHistoryChart'
-import { FuelTypeHistoryChart } from '@/components/charts/FuelTypeHistoryChart'
 import { RangeChart } from '@/components/charts/RangeChart'
 import type {
   ConsumptionDataPoint,
@@ -106,14 +105,10 @@ describe('Charts', () => {
     expect(svg(container)).not.toBeNull()
   })
 
-  it('FuelTypeHistoryChart: empty entries render nothing', () => {
-    const { container } = render(<FuelTypeHistoryChart entries={[]} />)
-    expect(container).toBeEmptyDOMElement()
-  })
-
-  it('FuelTypeHistoryChart: renders stacked bars and the per-fuel share', () => {
+  it('DistanceChart: L / mois toggle shows litres stacked by fuel with share', async () => {
     const e85Entry = { ...entry1, id: 51, fuel_type: 'e85' as const, liters: 30, fueling_date: '2026-08-05' }
-    const { container } = render(<FuelTypeHistoryChart entries={[entry2, e85Entry, entry1]} />)
+    const { container } = render(<DistanceChart entries={[entry2, e85Entry, entry1]} />)
+    await userEvent.click(screen.getByText('L / mois'))
     expect(screen.getByText('Carburants versés (L / mois)')).toBeInTheDocument()
     // 30 L e85 + 78 L essence = 108 L → 28 % / 72 %
     expect(screen.getByText(/E85 : 30 L \(28 %\)/)).toBeInTheDocument()

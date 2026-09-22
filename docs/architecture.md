@@ -423,15 +423,14 @@ projected_yearly = cost_per_month * 12
 |-----------|-----------|---------|
 | ConsumptionChart | Recharts LineChart | L/100km per fill, avg reference line, full-tank markers |
 | PriceChart | Recharts LineChart | EUR/L per fill, station name labels |
-| FuelTypeHistoryChart | Recharts BarChart | Litres/month stacked by fuel type, per-fuel share subtitle |
 | MonthlyCostChart | Recharts BarChart + LineChart | Stacked fuel/maintenance per month, projected annual |
-| DistanceChart | Recharts BarChart + LineChart | Monthly km, running total, avg line, projected annual badge |
+| DistanceChart | Recharts BarChart | Toggle km/mois ↔ L/mois: monthly km (avg + projected annual) or litres/month stacked by fuel type (per-fuel share subtitle + tooltip) |
 | RangeChart | Recharts LineChart | Estimated tank range per segment (capacity / consumption), avg reference line |
 | OdometerChart | Recharts LineChart | Odometer progression, insurance limit, warnings — only rendered when a km limit is set |
 | StationsMap | Leaflet (ui/map.tsx) | Map of GPS fill locations, clustered 100m radius |
 | EthanolHistoryChart | Recharts LineChart | Ethanol % per full fill, target band, E10-equivalent area |
 
-FlexFuel rentability is not a chart anymore: the FuelCharts dialog shows a one-line stat card (kit break-even date, total savings, monthly average) from `useFlexfuelRentability`.
+FlexFuel rentability is not a chart anymore: the FuelCharts dialog shows a stat card (4 tiles — total savings, kit cost, break-even date / remaining, monthly average — plus fill-count, overconsumption and status badges) from `useFlexfuelRentability`.
 
 ### Dialogs — 15 files
 | Dialog | File |
