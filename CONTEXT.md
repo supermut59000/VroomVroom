@@ -16,6 +16,7 @@ Last updated: 2026-09-22
 - **`DistanceChart` gained a `km / mois ↔ L / mois` toggle** (MonthlyCostChart pattern): the L view is the fuel-type stacked litres/month bars (grand totals + share in the subtitle, **share of that month** in the tooltip). No pie — the CostOfOwnershipSection donut is the only pie left. Reuses `FUEL_LABEL`/`FUEL_COLOR`, now exported from PriceChart. (First shipped as a standalone `FuelTypeHistoryChart`, merged into DistanceChart after user feedback — the two monthly views are strongly related.)
 - **Added `RangeChart`** (`charts/RangeChart.tsx`): estimated range per fill-to-fill segment = `tank_capacity × 100 / consumption` (data from `useConsumptionHistory`). Subtitle moyenne/min/max + average reference line; setup card when `tank_capacity` is null. Action: "can I still make a 400 km trip on one tank".
 - Graphs popup order now: Consumption → Price → MonthlyCost → Distance (km ↔ L toggle) → **Range** → Odometer (conditional) → StationsMap → EthanolHistory (flexfuel) → Rentability stat card (flexfuel).
+- **BUILT THEN REMOVED** (commit `9531bc1`, rewound): `StationCostChart` "Vos stations" (annual cost of usual stations vs cheapest within 5 km, gouv.fr). User verdict: no use case. Don't rebuild without an explicit ask — same for the maintenance-countdown chart (already covered by `useMaintenanceReminders` in VehicleCard).
 - Frontend: `npm run build` + 272 tests green (Charts.test.tsx: −4 deleted-chart tests, +4 new).
 
 ---
