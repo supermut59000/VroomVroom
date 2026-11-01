@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { render } from '@testing-library/react'
 import { Header } from '@/components/layout/Header'
-import { installFetchRouter, baseRoutes, json } from '@/test/fixtures'
+import { installFetchRouter, baseRoutes, json, stats1 } from '@/test/fixtures'
 
 vi.mock('@/hooks/use-geolocation', () => ({
   useGeolocation: () => ({
@@ -80,6 +80,34 @@ describe('Header', () => {
     expect(screen.getByRole('heading', { name: 'VroomVroom' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Prix des stations' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Changer le thème' })).toBeInTheDocument()
+  })
+
+  it('cold-alert button is hidden without a flexfuel vehicle, shown with one', async () => {
+    installFetchRouter(baseRoutes) // stats1.has_flexfuel = false
+    render(
+      <ThemeProvider attribute="class" defaultTheme="system" storageKey="vroomvroom-theme">
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <Header />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    )
+    expect(await screen.findByRole('button', { name: 'Prix des stations' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Alerte froid' })).toBeNull()
+  })
+
+  it('shows the cold-alert button when a vehicle has a flexfuel conversion', async () => {
+    installFetchRouter([
+      ['/vehicles/stats/batch', () => json({ '1': { ...stats1, has_flexfuel: true } })],
+      ...baseRoutes,
+    ] as [string, (url: string, init?: RequestInit) => Response][])
+    render(
+      <ThemeProvider attribute="class" defaultTheme="system" storageKey="vroomvroom-theme">
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <Header />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    )
+    expect(await screen.findByRole('button', { name: 'Alerte froid' })).toBeInTheDocument()
   })
 
   it('station dialog is closed until its button is clicked', () => {

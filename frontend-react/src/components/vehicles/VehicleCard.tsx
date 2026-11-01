@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Wallet,
   FlaskConical,
+  Droplets,
 } from 'lucide-react'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +49,7 @@ interface VehicleCardProps {
   onMaintenanceAdd: () => void
   onMaintenanceView: () => void
   onBlendCalc?: () => void
+  onPumpFill?: () => void
 }
 
 export function VehicleCard({
@@ -58,6 +60,7 @@ export function VehicleCard({
   onFuelView,
   onMaintenanceView,
   onBlendCalc,
+  onPumpFill,
 }: VehicleCardProps) {
   const { data: stats } = useVehicleStats(vehicle.id)
   const { data: costStats } = useVehicleCostStats(vehicle.id)
@@ -276,6 +279,17 @@ export function VehicleCard({
               </Button>
             </TooltipTrigger>
             <TooltipContent>Mélange E85</TooltipContent>
+          </Tooltip>
+        )}
+
+        {flexfuelConversion && onPumpFill && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-10 w-10 bg-emerald-600 text-white hover:bg-emerald-700" onClick={onPumpFill} aria-label="À la pompe">
+                <Droplets className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>À la pompe</TooltipContent>
           </Tooltip>
         )}
 

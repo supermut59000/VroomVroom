@@ -169,3 +169,19 @@ Nouveau dialog `PumpFillDialog`, point d'entrée = bouton **« À la pompe »** 
 7. **`android-local`** : plugin Capacitor local-notifications + chemin natif de `notify.ts` + AAB (½ j — la logique est déjà testée sur main).
 
 **Total : ~5–6 jours sur `main`, ½ j de reprise sur `android-local`.**
+
+---
+
+## Implémentation (2026-10-30, branche `android-local`)
+
+Statut : **les 3 fonctions sont codées et testées** ; coque Capacitor ajoutée, APK debug en build.
+
+- **Fonction 1** : `use-nearby-stations.ts` (+ `e85Only`), toggle dans `StationPricesDialog` et `NearbyStationsList`, i18n `stations.withE85/cityPlaceholder`. Test : `StationPricesDialog.test.tsx` (filtre on/off via le hook).
+- **Fonction 2** : `has_flexfuel` (schema + `get_vehicle_stats` — le flag existe déjà dans la requête, 0 requête supplémentaire ; batch hérité), `lib/cold-alert.ts`, `lib/notify.ts` (Capacitor v8 : `schedule.at`), `hooks/use-cold-alert.ts`, `ColdAlertDialog.tsx`, bouton flocon Header (gated par le batch stats), banner Dashboard, `CommuneSelector` extrait de `StationPricesDialog` (prop `listId`, défaut `commune-suggestions` pour ne pas casser les tests existants).
+- **Fonction 3** : `lib/pump-fill.ts` (`buildBlendPayloads` — E10 enregistré comme `fuel_type: 'essence'`, cf. option « SP95-E10 » de FuelAddDialog), `PumpFillDialog.tsx` (état réservoir sans saisie, reco winter existante, litres suivant la reco jusqu'à édition utilisateur, prix pré-remplis : dernier E85 + réf E10 du jour), bouton « À la pompe » sur `VehicleCard` (gated `flexfuelConversion`).
+- **Tests** : 303 vitest (dont 31 nouveaux) + 226 pytest (dont `test_stats_has_flexfuel_flag`) + tsc -b vert.
+- **Écart 1 (documenté)** : v1 du dialog pompe = **online seulement** (mutation directe, toast d'erreur si hors-ligne) — le payload reste `client_request_id`-idempotent pour brancher la queue plus tard ; en cas de panne à la pompe, l'écran « Ajouter un plein » classique garde la queue offline.
+- **Écart 2** : le bonus SW background sync (PWA) n'est pas fait — le banner + la notification à l'ouverture couvrent la v1, le vrai push (VAPID/FCM) reste en P2.
+- **Fix e2e préexistant** : `smoke.spec.ts` « online fuel add » — `waitForResponse` était enregistré APRÈS le clic : avec un backend chaud, le 201 atterrit avant l'écouteur → timeout 60 s aléatoire (2/4 runs). Réordonné : enregistrement avant le clic. 3/3 verts après fix.
+- **Coque Android** : `capacitor.config.ts` (appId `fr.ouiouibaguette.vroomvroom`, `androidScheme: https` pour le SW + geolocation WebView), `android/` généré, plugin `@capacitor/local-notifications` synchronisé. Le build web Android doit passer `VITE_API_URL=https://carmanagementapi.home.ouiouibaguette.fr/api/v1` (le hostname WebView est `localhost` → le fallback de `api.ts` pointe sinon vers 8055 local).
+- **A faire avant Play** : icône/splash (cap-assets), keystore de signature + AAB release (`bundleRelease`), data safety (GPS → OSRM public, ville → open-meteo).

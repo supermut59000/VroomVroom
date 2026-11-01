@@ -690,4 +690,5 @@ class VehicleService:
             summer=seasonal["summer"],
             autumn=seasonal["autumn"],
             winter=seasonal["winter"],
+            has_flexfuel=flexfuel is not None,
         )

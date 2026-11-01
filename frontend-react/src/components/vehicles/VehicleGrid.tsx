@@ -13,6 +13,7 @@ interface VehicleGridProps {
   onMaintenanceAdd: (id: number) => void
   onMaintenanceView: (id: number) => void
   onBlendCalc: (id: number) => void
+  onPumpFill: (id: number) => void
 }
 
 export function VehicleGrid({
@@ -25,6 +26,7 @@ export function VehicleGrid({
   onMaintenanceAdd,
   onMaintenanceView,
   onBlendCalc,
+  onPumpFill,
 }: VehicleGridProps) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -40,6 +42,7 @@ export function VehicleGrid({
           onMaintenanceAdd={() => onMaintenanceAdd(vehicle.id)}
           onMaintenanceView={() => onMaintenanceView(vehicle.id)}
           onBlendCalc={() => onBlendCalc(vehicle.id)}
+          onPumpFill={() => onPumpFill(vehicle.id)}
         />
       ))}
     </div>

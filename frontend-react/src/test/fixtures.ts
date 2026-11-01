@@ -135,6 +135,7 @@ export const stats1: VehicleStats = {
   summer: null,
   autumn: null,
   winter: null,
+  has_flexfuel: false,
 }
 
 export const fuelStats1: FuelStatistics = {

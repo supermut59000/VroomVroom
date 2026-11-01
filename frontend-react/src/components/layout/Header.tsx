@@ -1,12 +1,18 @@
 import { useState } from 'react'
-import { Car, Sun, Moon, Fuel } from 'lucide-react'
+import { Car, Sun, Moon, Fuel, Snowflake } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { StationPricesDialog } from '@/components/fuel/StationPricesDialog'
+import { ColdAlertDialog } from '@/components/flexfuel/ColdAlertDialog'
+import { useAllVehicleStats } from '@/hooks/use-vehicles'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
   const [stationPricesOpen, setStationPricesOpen] = useState(false)
+  const [coldAlertOpen, setColdAlertOpen] = useState(false)
+  // E85 specialities are only offered when a converted vehicle is recorded
+  const { data: batchStats } = useAllVehicleStats()
+  const hasE85Vehicle = Object.values(batchStats ?? {}).some((s) => s.has_flexfuel)
 
   const toggleTheme = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
@@ -30,6 +36,17 @@ export function Header() {
               <Fuel className="h-5 w-5" />
               <span className="sr-only">Prix des stations</span>
             </Button>
+            {hasE85Vehicle && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setColdAlertOpen(true)}
+                title="Alerte froid (E85)"
+              >
+                <Snowflake className="h-5 w-5" />
+                <span className="sr-only">Alerte froid</span>
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={toggleTheme} title="Changer le thème">
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -42,6 +59,10 @@ export function Header() {
       <StationPricesDialog
         open={stationPricesOpen}
         onClose={() => setStationPricesOpen(false)}
+      />
+      <ColdAlertDialog
+        open={coldAlertOpen}
+        onClose={() => setColdAlertOpen(false)}
       />
     </>
   )

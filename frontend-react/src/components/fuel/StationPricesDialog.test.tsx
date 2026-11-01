@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithProviders } from '@/test/providers'
 import { installFetchRouter, baseRoutes, json } from '@/test/fixtures'
@@ -178,6 +178,28 @@ describe('StationPricesDialog', () => {
       await screen.findByText('Impossible de charger les prix des stations'),
     ).toBeInTheDocument()
     expect(screen.queryByText('1.650 €/L')).toBeNull()
+  })
+
+  it('E85 filter hides stations without an e85 price', async () => {
+    const user = userEvent.setup()
+    installFetchRouter(
+      stationRoutes([
+        stationRow('stA', '1 rue Proche', 50.01, 1.5, { e10: 1.7, e85: 0.78 }),
+        stationRow('stB', '99 avenue Loin', 50.02, 1.51, { e10: 1.65 }),
+      ]),
+    )
+    renderWithProviders(<StationPricesDialog open onClose={() => {}} />)
+    await heading()
+    // both stations listed (stB cheaper → row 0)
+    expect(await screen.findByText('1.650 €/L')).toBeInTheDocument()
+    expect(screen.getByText('1.700 €/L')).toBeInTheDocument()
+    expect(screen.getByText(/2 stations dans un rayon de 5 km/)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Avec E85' }))
+    // stB (no E85) disappears — stA is the only row left
+    await waitFor(() => expect(screen.queryByText('1.650 €/L')).toBeNull())
+    expect(screen.getByText('1.700 €/L')).toBeInTheDocument()
+    expect(screen.getByText(/1 stations dans un rayon de 5 km/)).toBeInTheDocument()
   })
 
   it('star click toggles a favourite in localStorage', async () => {

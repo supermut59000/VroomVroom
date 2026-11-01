@@ -64,7 +64,7 @@ interface UseNearbyStationsReturn {
   stations: NearbyStation[]
   loading: boolean
   error: string | null
-  fetch: (lat: number, lon: number, fuelType?: FuelType | keyof StationPrices, radiusKm?: number) => Promise<void>
+  fetch: (lat: number, lon: number, fuelType?: FuelType | keyof StationPrices, radiusKm?: number, e85Only?: boolean) => Promise<void>
   clear: () => void
 }
 
@@ -78,6 +78,7 @@ export function useNearbyStations(): UseNearbyStationsReturn {
     lon: number,
     fuelType?: FuelType | keyof StationPrices,
     radiusKm: number = 5,
+    e85Only: boolean = false,
   ) => {
     setLoading(true)
     setError(null)
@@ -148,7 +149,8 @@ export function useNearbyStations(): UseNearbyStationsReturn {
         })
         .filter((s): s is NearbyStation => s !== null)
 
-      setStations(parsed)
+      // E85 filter: e85_prix is already fetched for every station — display-only.
+      setStations(e85Only ? parsed.filter((s) => s.prices.e85 != null) : parsed)
     } catch {
       setError('Impossible de charger les prix des stations')
       setStations([])

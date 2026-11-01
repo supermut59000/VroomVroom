@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Fuel,
   MapPin,
@@ -17,7 +17,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -42,12 +41,8 @@ import { StationsMapView } from './StationsMapView'
 import type { MappedStation } from './StationsMapView'
 import type { StationPrices } from '@/hooks/use-nearby-stations'
 import { haversineM } from '@/lib/geo'
-
-interface Commune {
-  nom: string
-  codesPostaux: string[]
-  centre: { type: string; coordinates: [number, number] } // [lon, lat]
-}
+import { CommuneSelector, communeLabel } from './CommuneSelector'
+import { t } from '@/lib/i18n'
 
 interface SearchOrigin {
   lat: number
@@ -70,14 +65,6 @@ const SORT_LABELS: Record<SortMode, string> = {
   time: 'Temps de trajet',
 }
 
-const GEO_API = 'https://geo.api.gouv.fr/communes'
-
-
-function communeLabel(c: Commune): string {
-  const cp = c.codesPostaux[0] ?? ''
-  return cp ? `${c.nom} (${cp})` : c.nom
-}
-
 export function StationPricesDialog({ open, onClose }: StationPricesDialogProps) {
   const [fuelKey, setFuelKey] = useState<keyof StationPrices>('e10')
   const [sortMode, setSortMode] = useState<SortMode>('price')
@@ -85,9 +72,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
   const [radiusKm, setRadiusKm] = useState(5)
   const [origin, setOrigin] = useState<SearchOrigin | null>(null)
   const [cityInput, setCityInput] = useState('')
-  const [suggestions, setSuggestions] = useState<Commune[]>([])
-  const [cityLoading, setCityLoading] = useState(false)
-  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [e85Only, setE85Only] = useState(false)
 
   const geo = useGeolocation()
   const { stations, loading, error, fetch: fetchStations, clear } = useNearbyStations()
@@ -103,7 +88,6 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
       clear()
       setOrigin(null)
       setCityInput('')
-      setSuggestions([])
       setView('list')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -122,59 +106,18 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [geo.status, geo.latitude, geo.longitude])
 
-  // Fetch stations whenever origin / fuelKey / radiusKm changes
+  // Fetch stations whenever origin / fuelKey / radiusKm / e85Only changes
   useEffect(() => {
     if (origin != null) {
-      fetchStations(origin.lat, origin.lon, fuelKey, radiusKm)
+      fetchStations(origin.lat, origin.lon, fuelKey, radiusKm, e85Only)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [origin, fuelKey, radiusKm])
+  }, [origin, fuelKey, radiusKm, e85Only])
 
-  // Autocomplete from geo.api.gouv.fr
-  const fetchSuggestions = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setSuggestions([])
-      return
-    }
-    setCityLoading(true)
-    try {
-      const isPostal = /^\d+$/.test(q)
-      const params = new URLSearchParams()
-      if (isPostal) {
-        params.set('codePostal', q)
-      } else {
-        params.set('nom', q)
-        params.set('boost', 'population')
-      }
-      params.set('fields', 'nom,codesPostaux,centre')
-      params.set('limit', '8')
-      const res = await window.fetch(`${GEO_API}?${params}`)
-      if (!res.ok) throw new Error()
-      const data: Commune[] = await res.json()
-      setSuggestions(data)
-    } catch {
-      setSuggestions([])
-    } finally {
-      setCityLoading(false)
-    }
-  }, [])
-
-  const handleCityInput = (value: string) => {
+  const handleCityInputChange = (value: string) => {
     setCityInput(value)
-
-    // If the typed value exactly matches a datalist option, use those coords
-    const match = suggestions.find((c) => communeLabel(c) === value)
-    if (match) {
-      const [lon, lat] = match.centre.coordinates
-      setOrigin({ lat, lon, label: communeLabel(match), mode: 'city' })
-      return
-    }
-
     // Clear city origin when user edits the field freely
     if (origin?.mode === 'city') setOrigin(null)
-
-    if (suggestTimer.current) clearTimeout(suggestTimer.current)
-    suggestTimer.current = setTimeout(() => fetchSuggestions(value), 300)
   }
 
   // Road distance/time to each station. Straight-line distance is a poor guide
@@ -244,24 +187,14 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
         </DialogHeader>
 
         {/* City search bar — native datalist, same pattern as station name in FuelAddDialog */}
-        <div className="relative flex items-center">
-          <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="pl-8 pr-8"
-            placeholder="Ville ou code postal…"
-            list="commune-suggestions"
-            value={cityInput}
-            onChange={(e) => handleCityInput(e.target.value)}
-          />
-          {cityLoading && (
-            <Loader2 className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-          )}
-          <datalist id="commune-suggestions">
-            {suggestions.map((c) => (
-              <option key={c.nom + (c.codesPostaux[0] ?? '')} value={communeLabel(c)} />
-            ))}
-          </datalist>
-        </div>
+        <CommuneSelector
+          value={cityInput}
+          onChange={handleCityInputChange}
+          onSelect={(c) => {
+            const [lon, lat] = c.centre.coordinates
+            setOrigin({ lat, lon, label: communeLabel(c), mode: 'city' })
+          }}
+        />
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2">
@@ -308,6 +241,17 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            type="button"
+            variant={e85Only ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-9 gap-1 text-xs"
+            onClick={() => setE85Only((v) => !v)}
+            aria-pressed={e85Only}
+          >
+            {t.stations.withE85}
+          </Button>
 
           {origin != null && (
             <Badge variant="outline" className="h-9 gap-1 px-2 text-xs">

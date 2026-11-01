@@ -147,6 +147,9 @@ class VehicleStats(BaseModel):
     summer: Optional[SeasonStats] = None
     autumn: Optional[SeasonStats] = None
     winter: Optional[SeasonStats] = None
+    # True when a FlexFuel conversion is recorded for this vehicle.
+    # Gates the E85-only UI features (cold alert, pump screen).
+    has_flexfuel: bool = False
 
 
 # Bilan de période — stats entre deux dates

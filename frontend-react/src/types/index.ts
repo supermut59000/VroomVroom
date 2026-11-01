@@ -123,6 +123,8 @@ export interface VehicleStats {
   summer: SeasonStats | null
   autumn: SeasonStats | null
   winter: SeasonStats | null
+  /** True when a FlexFuel conversion is recorded — gates E85-only features */
+  has_flexfuel: boolean
 }
 
 export interface VehicleCostStats {

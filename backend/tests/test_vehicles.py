@@ -126,6 +126,22 @@ class TestVehicleStats:
         assert data["total_distance"] == 0.0
         assert data["average_consumption"] is None
 
+    def test_stats_has_flexfuel_flag(self, client, created_vehicle, created_flexfuel_vehicle, sample_conversion_data):
+        """has_flexfuel gates the E85-only UI (cold alert, pump screen)."""
+        plain = client.get(f"/api/v1/vehicles/{created_vehicle['id']}/stats").json()
+        assert plain["has_flexfuel"] is False
+
+        client.post(
+            f"/api/v1/flexfuel/vehicles/{created_flexfuel_vehicle['id']}/conversion",
+            json=sample_conversion_data,
+        )
+        flex = client.get(f"/api/v1/vehicles/{created_flexfuel_vehicle['id']}/stats").json()
+        assert flex["has_flexfuel"] is True
+
+        batch = client.get("/api/v1/vehicles/stats/batch").json()
+        assert batch[str(created_flexfuel_vehicle["id"])]["has_flexfuel"] is True
+        assert batch[str(created_vehicle["id"])]["has_flexfuel"] is False
+
     def test_stats_with_entries(self, client, created_vehicle):
         vid = created_vehicle["id"]
 

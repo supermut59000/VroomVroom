@@ -7,6 +7,7 @@ import { useFavoriteStations } from '@/hooks/use-favorite-stations'
 import type { FuelType } from '@/types'
 import { useState } from 'react'
 import { haversineM } from '@/lib/geo'
+import { t } from '@/lib/i18n'
 
 interface HistoryEntry {
   latitude: number | null
@@ -40,17 +41,18 @@ export function NearbyStationsList({
   autoSelect = false,
 }: NearbyStationsListProps) {
   const [open, setOpen] = useState(true)
+  const [e85Only, setE85Only] = useState(false)
   const { stations, loading, error, fetch, clear } = useNearbyStations()
   const { toggle: toggleFav, isFavorite } = useFavoriteStations()
   const hasAutoSelected = useRef(false)
 
   useEffect(() => {
-    fetch(latitude, longitude, fuelType)
+    fetch(latitude, longitude, fuelType, 5, e85Only)
     return () => {
       clear()
       hasAutoSelected.current = false
     }
-  }, [latitude, longitude, fuelType, fetch, clear])
+  }, [latitude, longitude, fuelType, fetch, clear, e85Only])
 
   // Auto-select the nearest station with a valid price
   useEffect(() => {
@@ -97,6 +99,19 @@ export function NearbyStationsList({
             </Badge>
           )}
         </span>
+        <button
+          type="button"
+          onClick={() => setE85Only((v) => !v)}
+          aria-pressed={e85Only}
+          title="Afficher seulement les stations avec E85"
+          className={`ml-2 rounded-full border px-2 py-0.5 text-xs transition-colors ${
+            e85Only
+              ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          {t.stations.withE85}
+        </button>
         {open ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
       </button>
 

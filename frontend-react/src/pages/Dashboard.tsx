@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Car, RefreshCw, Fuel } from 'lucide-react'
+import { Plus, Car, RefreshCw, Fuel, Snowflake, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet'
 import { useVehicles } from '@/hooks/use-vehicles'
 import { useOffline } from '@/hooks/use-offline'
+import { useColdAlert } from '@/hooks/use-cold-alert'
 import { VehicleGrid } from '@/components/vehicles/VehicleGrid'
 import { VehicleAddDialog } from '@/components/vehicles/VehicleAddDialog'
 import { VehicleDetailsDialog } from '@/components/vehicles/VehicleDetailsDialog'
@@ -19,10 +20,13 @@ import { FuelViewDialog } from '@/components/fuel/FuelViewDialog'
 import { MaintenanceAddDialog } from '@/components/maintenance/MaintenanceAddDialog'
 import { MaintenanceViewDialog } from '@/components/maintenance/MaintenanceViewDialog'
 import { BlendCalculatorDialog } from '@/components/flexfuel/BlendCalculatorDialog'
+import { PumpFillDialog } from '@/components/flexfuel/PumpFillDialog'
 
 export function Dashboard() {
   const { data: vehicles, isLoading, error, refetch } = useVehicles()
   const { queue: offlineQueue } = useOffline()
+  const { message: coldAlertMessage } = useColdAlert()
+  const [coldBannerOpen, setColdBannerOpen] = useState(true)
 
   // Dialog state
   const [addVehicleOpen, setAddVehicleOpen] = useState(false)
@@ -33,6 +37,7 @@ export function Dashboard() {
   const [maintenanceAddVehicleId, setMaintenanceAddVehicleId] = useState<number | null>(null)
   const [maintenanceViewVehicleId, setMaintenanceViewVehicleId] = useState<number | null>(null)
   const [blendCalcVehicleId, setBlendCalcVehicleId] = useState<number | null>(null)
+  const [pumpFillVehicleId, setPumpFillVehicleId] = useState<number | null>(null)
   const [fabSheetOpen, setFabSheetOpen] = useState(false)
 
   const handleFabClick = () => {
@@ -100,6 +105,23 @@ export function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {coldAlertMessage && coldBannerOpen && (
+        <div className="flex items-start justify-between gap-2 rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200">
+          <span className="flex items-center gap-2">
+            <Snowflake className="h-4 w-4 shrink-0" />
+            {coldAlertMessage}
+          </span>
+          <button
+            type="button"
+            onClick={() => setColdBannerOpen(false)}
+            aria-label="Fermer l'alerte"
+            className="shrink-0"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
           Mes véhicules ({vehicles.length})
@@ -125,6 +147,7 @@ export function Dashboard() {
         onMaintenanceAdd={setMaintenanceAddVehicleId}
         onMaintenanceView={setMaintenanceViewVehicleId}
         onBlendCalc={setBlendCalcVehicleId}
+        onPumpFill={setPumpFillVehicleId}
       />
 
       {/* Dialogs */}
@@ -160,6 +183,10 @@ export function Dashboard() {
       <BlendCalculatorDialog
         vehicleId={blendCalcVehicleId}
         onClose={() => setBlendCalcVehicleId(null)}
+      />
+      <PumpFillDialog
+        vehicleId={pumpFillVehicleId}
+        onClose={() => setPumpFillVehicleId(null)}
       />
 
       {/* Floating Action Button — quick fuel add */}

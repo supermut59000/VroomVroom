@@ -66,11 +66,13 @@ test('online fuel add reaches the real backend over HTTP', async ({ page, contex
 
   await page.goto('/')
   await page.getByText('SMOKE-01').waitFor()
-  await fillFuelDialog(page, { station: 'SMOKE Online' })
 
+  // Registered BEFORE the click: a fast 201 would otherwise land before the
+  // listener exists and the await would time out (flaky under warm backends).
   const resp = page.waitForResponse(
     (r) => r.url().includes('/fuel-entries/') && r.request().method() === 'POST',
   )
+  await fillFuelDialog(page, { station: 'SMOKE Online' })
   await page.getByText('Plein ajouté avec succès').waitFor()
   const post: Response = await resp
   expect(post.status()).toBe(201)
