@@ -12,6 +12,10 @@ import {
 import { E10ReferencePriceDialog } from '@/components/flexfuel/E10ReferencePriceDialog'
 import { FlexfuelConversionDialog } from '@/components/flexfuel/FlexfuelConversionDialog'
 import { BlendCalculatorDialog } from '@/components/flexfuel/BlendCalculatorDialog'
+import { BlendCalculator } from '@/components/flexfuel/BlendCalculator'
+import { render } from '@testing-library/react'
+import { vehicleFull1, latestEntry1 } from '@/test/fixtures'
+import type { FuelEntry } from '@/types'
 
 const toastMock = vi.hoisted(() => ({
   success: vi.fn(),
@@ -256,6 +260,33 @@ describe('FlexfuelConversionDialog', () => {
     expect(
       screen.getByRole('heading', { name: 'Ajouter une conversion E85' }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('BlendCalculator', () => {
+  it('survives a null→set tank_capacity re-render (rules of hooks)', () => {
+    // The capacity-missing early return used to sit BEFORE the useMemo calls:
+    // filling in tank_capacity on a mounted calculator changed the hook count
+    // and crashed React. NOTE: bare render, not renderWithProviders — the
+    // provider harness remounts the subtree on rerender and would mask the
+    // hook-count error this test exists to catch.
+    const entries = [
+      { ...latestEntry1, fueling_date: '2025-01-05', odometer_reading: 50000 },
+      { ...latestEntry1, id: 2, fueling_date: '2025-01-20', odometer_reading: 50500 },
+    ] as FuelEntry[]
+
+    const { rerender } = render(
+      <BlendCalculator conversion={conversion1} vehicle={{ ...vehicleFull1, tank_capacity: null }} entries={entries} />,
+    )
+    expect(screen.getByText(/Renseignez la capacité du réservoir/)).toBeInTheDocument()
+
+    expect(() =>
+      rerender(
+        <BlendCalculator conversion={conversion1} vehicle={vehicleFull1} entries={entries} />,
+      ),
+    ).not.toThrow()
+    expect(screen.getByText('Diluant')).toBeInTheDocument()
+    expect(screen.queryByText(/Renseignez la capacité du réservoir/)).toBeNull()
   })
 })
 

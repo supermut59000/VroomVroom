@@ -405,6 +405,27 @@ class TestSameStopTiebreaker:
         assert data[2]["consumption"] == 9.0
         assert data[3]["consumption"] == 3.5
 
+    def test_anchor_stop_booster_counts_in_first_e85_fraction(self, client, created_vehicle):
+        """The first Plein's (date, odometer) stop establishes the tank
+        composition: a same-stop E85 booster must count in the first
+        segment's e85_fraction (old code used the anchor full's type only)."""
+        vid = created_vehicle["id"]
+        entries = [
+            {"odometer_reading": 50000, "liters": 5.0, "is_full_tank": False, "fueling_date": "2025-06-01", "fuel_type": "e85"},
+            {"odometer_reading": 50000, "liters": 40.0, "is_full_tank": True, "fueling_date": "2025-06-01", "fuel_type": "essence"},
+            {"odometer_reading": 50500, "liters": 45.0, "is_full_tank": True, "fueling_date": "2025-06-10", "fuel_type": "e85"},
+        ]
+        for e in entries:
+            client.post("/api/v1/fuel-entries/", json={
+                "vehicle_id": vid, "price_per_liter": 1.80, **e})
+
+        resp = client.get(f"/api/v1/fuel-entries/vehicle/{vid}/consumption-history")
+        data = resp.json()["data_points"]
+        # Segment 50000→50500: 45 L / 500 km = 9.0, burned fuel = the anchor
+        # stop's mix (5 L E85 + 40 L essence) → e85_fraction 5/45, not 0.0.
+        assert data[2]["consumption"] == 9.0
+        assert data[2]["e85_fraction"] == round(5 / 45, 4)
+
 
 class TestBoundaryInputs:
     def test_pagination_beyond_last_page_returns_empty(self, client, sample_fuel_entry_data):

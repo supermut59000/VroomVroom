@@ -45,30 +45,8 @@ export function BlendCalculator({
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP98'
   const e85EthFraction = e85EthanolFraction()
   const tankCapacity = vehicle.tank_capacity
-
-  // The whole blend/tank math needs a real tank size; a silent 50 L default
-  // produces precise-looking but wrong percentages (backend stats also refuse
-  // range_km without tank_capacity). Ask for the field instead.
-  if (tankCapacity == null) {
-    const hint = (
-      <p className="text-sm text-muted-foreground">
-        Renseignez la capacité du réservoir dans les infos du véhicule pour utiliser le
-        calculateur de mélange.
-      </p>
-    )
-    if (embedded) return hint
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <FlaskConical className="h-4 w-4 text-emerald-600" />
-            Calculateur de mélange E85
-          </CardTitle>
-        </CardHeader>
-        <CardContent>{hint}</CardContent>
-      </Card>
-    )
-  }
+  // Aliased condition so the memos below narrow tankCapacity to number.
+  const hasTankCapacity = tankCapacity != null
   const conversionDate = conversion.conversion_date
   const target = conversion.target_ethanol_pct
   const tolerance = conversion.ethanol_tolerance_pct
@@ -79,7 +57,10 @@ export function BlendCalculator({
   )
 
   const tankState = useMemo(
-    () => computeTankState(entries, conversionDate, tankCapacity),
+    () =>
+      hasTankCapacity
+        ? computeTankState(entries, conversionDate, tankCapacity)
+        : null,
     [entries, conversionDate, tankCapacity],
   )
 
@@ -87,7 +68,7 @@ export function BlendCalculator({
   const inputOdo = currentOdo !== '' ? Number(currentOdo) : lastOdo
 
   const { remainingLiters, currentEthanolPct } = useMemo(() => {
-    if (!tankState || !avgConsumption) return { remainingLiters: 0, currentEthanolPct: 0 }
+    if (!tankState || !avgConsumption || tankCapacity == null) return { remainingLiters: 0, currentEthanolPct: 0 }
     const distance = Math.max(0, inputOdo - tankState.lastOdo)
     const consumed = (distance * avgConsumption) / 100
     const remaining = Math.min(Math.max(0, tankState.litersInTank - consumed), tankCapacity)
@@ -108,6 +89,7 @@ export function BlendCalculator({
   //    In the E85-pur zone x ≥ full-tank capacity → show as "plein complet".
   //    In the dead zone (past odoA) x < full-tank → actionable partial fill.
   const limitFill = useMemo(() => {
+    if (tankCapacity == null) return null
     const targetFrac = (target + tolerance) / 100
     const maxFill = tankCapacity - remainingLiters
     if (maxFill <= 0 || remainingLiters <= 0) return null
@@ -130,33 +112,37 @@ export function BlendCalculator({
 
   const thresholds = useMemo(
     () =>
-      computeThresholds(
-        remainingLiters,
-        currentEthanolPct / 100,
-        tankCapacity,
-        target,
-        tolerance,
-        dilutantEthFraction,
-        avgConsumption ?? 8,
-        inputOdo,
-        e85EthFraction,
-      ),
+      tankCapacity == null
+        ? { odoA: null, odoB: null, odoBNow: false, pureE85AlwaysSafe: false }
+        : computeThresholds(
+            remainingLiters,
+            currentEthanolPct / 100,
+            tankCapacity,
+            target,
+            tolerance,
+            dilutantEthFraction,
+            avgConsumption ?? 8,
+            inputOdo,
+            e85EthFraction,
+          ),
     [remainingLiters, currentEthanolPct, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo, e85EthFraction],
   )
 
   const winterRec = useMemo(
     () =>
-      computeWinterRec(
-        remainingLiters,
-        ethanolLiters,
-        tankCapacity,
-        target,
-        tolerance,
-        dilutantEthFraction,
-        avgConsumption ?? 8,
-        inputOdo,
-        e85EthFraction,
-      ),
+      tankCapacity == null
+        ? ({ type: 'tank_full', currentPct: 0 } as const)
+        : computeWinterRec(
+            remainingLiters,
+            ethanolLiters,
+            tankCapacity,
+            target,
+            tolerance,
+            dilutantEthFraction,
+            avgConsumption ?? 8,
+            inputOdo,
+            e85EthFraction,
+          ),
     [remainingLiters, ethanolLiters, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo, e85EthFraction],
   )
 
@@ -164,7 +150,7 @@ export function BlendCalculator({
   const intervals = Array.from({ length: 4 }, (_, i) => intervalOverrides[i] ?? intervalKmNum)
   const futureFills = useMemo(
     () =>
-      avgConsumption && intervals.every((v) => v > 0)
+      tankCapacity != null && avgConsumption && intervals.every((v) => v > 0)
         ? simulateFutureFills(
             remainingLiters,
             ethanolLiters,
@@ -181,6 +167,32 @@ export function BlendCalculator({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [remainingLiters, ethanolLiters, inputOdo, JSON.stringify(intervals), tankCapacity, avgConsumption, target, tolerance, dilutantEthFraction, e85EthFraction],
   )
+
+  // The whole blend/tank math needs a real tank size; a silent 50 L default
+  // produces precise-looking but wrong percentages (backend stats also refuse
+  // range_km without tank_capacity). Ask for the field instead.
+  // MUST stay after every hook above: a null→set tank_capacity re-render
+  // before this return would change the hook count and crash React.
+  if (tankCapacity == null) {
+    const hint = (
+      <p className="text-sm text-muted-foreground">
+        Renseignez la capacité du réservoir dans les infos du véhicule pour utiliser le
+        calculateur de mélange.
+      </p>
+    )
+    if (embedded) return hint
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FlaskConical className="h-4 w-4 text-emerald-600" />
+            Calculateur de mélange E85
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{hint}</CardContent>
+      </Card>
+    )
+  }
 
   if (!avgConsumption) {
     const noDataContent = (

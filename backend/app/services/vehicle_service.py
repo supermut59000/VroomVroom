@@ -276,6 +276,9 @@ class VehicleService:
             FuelEntry.id,
         ).all()
 
+        # Fraction of E85 in the fuel of the anchor stop (see below) —
+        # computed from the full (date, odometer) stop, not just the anchor full.
+        anchor_stop_e85_frac: Optional[float] = None
         if entries:
             # The anchor for fill-to-fill MUST be a full tank, otherwise the first
             # computed segment uses an artificially short distance (partial → next
@@ -285,6 +288,24 @@ class VehicleService:
                 (i for i, e in enumerate(entries) if getattr(e, "is_full_tank", True)),
                 None,
             )
+            if first_full_idx is not None:
+                anchor = entries[first_full_idx]
+                # A same-stop partial (booster) is sorted just before the anchor
+                # full but is dropped by the truncation above — yet its fuel is
+                # in the tank during the first segment, so count it.
+                stop = [
+                    e
+                    for e in entries
+                    if e.fueling_date == anchor.fueling_date
+                    and e.odometer_reading == anchor.odometer_reading
+                ]
+                stop_liters = sum(e.liters for e in stop)
+                stop_e85 = sum(
+                    e.liters if e.fuel_type == FuelType.E85 else 0.0 for e in stop
+                )
+                anchor_stop_e85_frac = (
+                    stop_e85 / stop_liters if stop_liters > 0 else 0.0
+                )
             entries = entries[first_full_idx:] if first_full_idx is not None else []
 
         def month_to_season(month: int) -> str:
@@ -321,9 +342,9 @@ class VehicleService:
                 # first full tank above (anchor-less leading partials excluded).
                 accumulated_liters = 0.0
                 accumulated_e85_liters = 0.0
-                # The first Plein establishes a tank composition for the
-                # first usable segment.
-                prev_added_e85_frac = 1.0 if is_e85 else 0.0
+                # The anchor stop (full + any same-stop booster) establishes
+                # the tank composition for the first usable segment.
+                prev_added_e85_frac = anchor_stop_e85_frac
                 continue
 
             if is_full:

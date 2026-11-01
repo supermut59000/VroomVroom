@@ -7,6 +7,16 @@ Last updated: 2026-09-22
 
 ---
 
+## Session log — 2026-10-17 — /app-audit fixes (B1 + B2)
+
+- **B1 (fixed) — Rules-of-Hooks violation**: `BlendCalculator.tsx` et `EthanolHistoryChart.tsx` avaient le early-return « capacité réservoir manquante » AVANT les `useMemo`. Re-render avec `tank_capacity` null→valeur sur un composant déjà monté = changement du nombre de hooks = crash React. Fix : early-return déplacé APRÈS tous les hooks, les memo short-circuitent sur `tankCapacity == null` (narrowing via `hasTankCapacity`/guards). Test de régression (`flexfuel-dialogs.test.tsx`) : **render nu** obligatoire — le harnais `renderWithProviders` REMOUNT le sous-arbre à chaque `rerender` (effet cleanup observé) et masque donc l'erreur de hooks ; vérifié que le test échoue sur l'ancien code ("Rendered more hooks") et passe sur le nouveau.
+- **B2 (fixed) — booster de l'ancre ignoré dans le 1er `e85_fraction`** : dans `fuel_service.get_consumption_history` et `vehicle_service._compute_seasonal_consumption`, la fraction E85 du premier segment utilisait le type du Plein ancre seul (`1.0/0.0`) au lieu du stop complet (date, odomètre). Un Partiel E85 5 L + Plein Essence 40 L à la même pompe donnait 0 % au lieu de 5/45 ≈ 0.111. Les litres du booster restent exclus du segment (règle « pas d'ancre sur partiel »), seule l'attribution de la fraction change. 2 tests de régression discriminants (consommation-history + saison hiver).
+- **B3 (écarté, faux constat)** : le clamp `eth` dans `simulateFutureFills` est déjà exact — l'invariant eth ≤ rem est préservé par construction ; aucune correction.
+- **Dérives doc notées (non corrigées)** : le log 2026-09-12 parle de 409 pour `client_request_id` inter-véhicules → c'est un 422 (comportement identique pour la queue offline) ; pytest sur clone frais exige `backend/.env` ou `DB_*` dans l'env (le claim « green anywhere » portait sur `/health`, pas sur `Settings`).
+- Suites : backend 225 passed, frontend 272 passed, `npm run build` vert.
+
+---
+
 ## Session log — 2026-09-22
 
 ### Chart purge — rule: every chart must trigger an action (Corsa audit)

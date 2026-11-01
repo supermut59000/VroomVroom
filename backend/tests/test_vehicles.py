@@ -401,6 +401,27 @@ class TestSeasonalAutonomy:
         assert winter["e85_fraction"] == 0.52
         assert winter["fill_count"] == 3
 
+    def test_anchor_stop_booster_counts_in_season_e85_fraction(
+        self, client, created_flexfuel_vehicle, sample_conversion_data
+    ):
+        """A same-stop booster at the first Plein after conversion is in the
+        tank during the first segment — the season's e85_fraction must count
+        it (old code used the anchor full's fuel type only → 0.0)."""
+        vid = created_flexfuel_vehicle["id"]
+        client.post(f"/api/v1/flexfuel/vehicles/{vid}/conversion", json={
+            **sample_conversion_data, "conversion_date": "2024-11-01"})
+
+        # Anchor stop at 50000: 5 L E85 partial + 40 L essence full (same pump)
+        self._fill(client, vid, 50000, 5.0, "2024-12-01", fuel="e85", full=False)
+        self._fill(client, vid, 50000, 40.0, "2024-12-01", fuel="essence")
+        self._fill(client, vid, 50500, 45.0, "2024-12-10", fuel="e85")
+
+        data = client.get(f"/api/v1/vehicles/{vid}/stats").json()
+        # One winter segment: 45 L / 500 km = 9.0, E85 burned = 45 × 5/45 = 5 L
+        assert data["winter"]["fill_count"] == 1
+        assert data["winter"]["avg_consumption"] == 9.0
+        assert data["winter"]["e85_fraction"] == round(5 / 45, 3)
+
 
 class TestStatsBatchAndTimeline:
     def test_stats_batch_returns_active_vehicles_only(self, client, created_vehicle, sample_vehicle_data):

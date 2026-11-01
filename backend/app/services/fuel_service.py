@@ -426,10 +426,21 @@ class FuelService:
                     last_full_tank_odometer = entry.odometer_reading
                     accumulated_liters = 0.0
                     accumulated_e85_liters = 0.0
-                    # The very first Plein established a tank composition,
-                    # which will be burned during the next segment.
+                    # The whole (date, odometer) stop establishes the tank
+                    # composition: a same-stop partial (booster) poured at the
+                    # same pump as the anchor full is in the tank too.
+                    start = i
+                    while (
+                        start > 0
+                        and entries[start - 1].fueling_date == entry.fueling_date
+                        and entries[start - 1].odometer_reading == entry.odometer_reading
+                    ):
+                        start -= 1
+                    stop = entries[start : i + 1]
+                    stop_liters = sum(e.liters for e in stop)
+                    stop_e85 = sum(_e85_l(e) for e in stop)
                     prev_added_e85_frac = (
-                        1.0 if entry.fuel_type == FuelType.E85 else 0.0
+                        stop_e85 / stop_liters if stop_liters > 0 else 0.0
                     )
             else:
                 if is_full:
