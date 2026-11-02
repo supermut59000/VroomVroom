@@ -128,14 +128,6 @@ export function BlendCalculator({
     [remainingLiters, currentEthanolPct, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo, e85EthFraction],
   )
 
-  // Autonomie d'un réservoir PLEIN d'E85 (conso E10 mesurée + surconsommation
-  // du boîtier) : le nombre de km faisables avec un plein full-éthanol.
-  const rangeE85Km = useMemo(() => {
-    if (!avgConsumption || tankCapacity == null) return null
-    const consoE85 = avgConsumption * (1 + (conversion.overconsumption_pct ?? 0) / 100)
-    return Math.round((tankCapacity * 100) / consoE85)
-  }, [avgConsumption, tankCapacity, conversion.overconsumption_pct])
-
   const winterRec = useMemo(
     () =>
       tankCapacity == null
@@ -280,11 +272,6 @@ export function BlendCalculator({
               E85 pur ≥ {target + tolerance}%
             </p>
           </>
-        )}
-        {rangeE85Km != null && (
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Plein E85 : ~{rangeE85Km.toLocaleString('fr-FR')} km d'autonomie
-          </p>
         )}
       </div>
 

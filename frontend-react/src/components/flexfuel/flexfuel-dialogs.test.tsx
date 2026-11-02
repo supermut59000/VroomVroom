@@ -298,8 +298,6 @@ describe('BlendCalculator', () => {
       { ...latestEntry1, id: 2, fueling_date: '2025-01-20', odometer_reading: 50500 },
     ] as FuelEntry[]
     render(<BlendCalculator conversion={conversion1} vehicle={vehicleFull1} entries={entries} embedded />)
-    // Range of a full E85 tank — always visible
-    expect(screen.getByText(/Plein E85 : ~[\d\s]+ km d'autonomie/)).toBeInTheDocument()
     // 85 % > limite 82 % → les seuils km sont actifs toute l'année
     expect(screen.queryByText('Toujours possible')).toBeNull()
     expect(screen.getByText("Jusqu'au km")).toBeInTheDocument()

@@ -1123,7 +1123,7 @@ Pleins futurs + E10/SP98 conservés) :
   `limitFill` « Plein complet » prend le relais, pas de crash).
 - **Carte B : 2 états** (Maintenant / À partir du km) + « – » de repli anti-crash —
   « Inutile avec le grade actuel » supprimé.
-- « Plein E85 : ~X km » conservé (demande utilisateur de novembre).
+- « Plein E85 : ~X km d'autonomie » retiré du calculateur sur demande (2026-11-02).
 - 352 vitest verts + tsc -b, APK vérifiée sur émulateur.
 
 ## Pending / Ideas for Future Sessions

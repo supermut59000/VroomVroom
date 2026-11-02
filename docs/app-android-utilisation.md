@@ -48,8 +48,6 @@ surconsommation boîtier 20 %) :*
   limite, « À partir du km Y » = km à atteindre pour diluer au taux nécessaire,
   5 L de diluant → cible exacte) et la recommandation de mélange sont actifs
   **toute l'année**.
-- **« Plein E85 : ~417 km d'autonomie »** — nombre de km faisables avec un plein
-  full-éthanol (50 L ÷ 12 L/100 = conso E10 × 1,20).
 - **Affichage au style d'avril 2026** (logique août conservée) : litres et
   pourcentages **entiers**, carte « E85 pur » à 3 états (Jusqu'au km / Partiel
   possible / Fenêtre passée), carte « Dilution » à 2 états (Maintenant / À partir
