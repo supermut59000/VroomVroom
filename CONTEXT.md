@@ -45,6 +45,28 @@ Last updated: 2026-11-01
 - **Doc** : `docs/app-android-utilisation.md` — walkthrough avec 12 captures d'écran + **liste complète des permissions extraites de l'APK** (INTERNET, COARSE/FINE_LOCATION, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, WAKE_LOCK, SCHEDULE_EXACT_ALARM, receiver interne) + texte à déclarer sur le Play Store.
 - Suites : **352 vitest verts** + tsc -b. Non relancé : `npm run test:full`.
 
+### Grade E85 saisonnier à bornes (remplace le modèle 2 grades)
+
+L'utilisateur a rejeté les lignes « Au grade d'été (85 %) » : il veut **l'intervalle
+[min, max] d'éthanol de chaque saison affiché** (les stations ne sont pas
+obligatoirement au taux nominal). Plan validé dans `docs/plan-grade-e85-saisonnier.md`.
+
+- **4 saisons** (table `E85_SEASONS` implicite dans `blend-math.ts`) : Été 1/5–30/9
+  [85, 85] · Intersaison 1/10–31/10 [65, 75] · Hiver 1/11–15/3 [60, 75] ·
+  Intersaison 16/3–30/4 [65, 75]. `e85Season(date)` → {key, label, periode, min, max}.
+- **Calculs de sécurité au MAX de la saison** (surestimer = plus d'essence, jamais
+  moins) ; wrapper `e85EthanolFraction = e85Season().max` conservé (historique
+  éthanol via `fuelEthanolFraction`). Affichage à bornes : `formatE85Range` →
+  « 85 % » / « 65 – 75 % ».
+- UI : ligne « **Grade E85 — {saison} ({période}) : min – max % d'éthanol** » en haut
+  du calculateur + dans la carte « À la pompe » ; cartes bornées (« Grade saison :
+  60 – 75 % », « Inutile : max saison 75% ≤ limite 82% ») ; footer borné. `summerRef`
+  supprimé. Km de seuils actifs seulement quand max saison > limite (été).
+- Alerte froid : `isWinterWindow` = saison `hiver` (31/10 n'est plus « hiver ») ;
+  message « (grade E85 60 – 75 % en cette période) ».
+- Tests : bornes des 4 saisons (9 dates), wrapper, format, calculateur hiver/été avec
+  `vi.setSystemTime` (deterministe), pompe, froid. **355 vitest verts + tsc -b.**
+
 ---
 
 ## Session log — 2026-10-17 — /app-audit fixes (B1 + B2)

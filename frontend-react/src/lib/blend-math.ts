@@ -3,10 +3,25 @@ import type { FuelEntry } from '@/types'
 // Pure blend/tank math for FlexFuel vehicles — no React, no DOM.
 // Consumed by BlendCalculator and unit-tested in blend-math.test.ts.
 
-// Conservative upper bounds: overestimating ethanol recommends more gasoline,
-// never less. Winter-grade E85 is 60–75%; transition periods may still carry
-// summer stock, so only the mandatory winter window uses 75%.
-export function e85EthanolFraction(date: string | Date = new Date()): number {
+// ── Seasonal E85 grade (ethanol %) — 4 periods ─────────────────────────────
+// Stations are not obliged to pump the nominal rate: each season has a
+// [min, max] ethanol interval. Safety checks use the MAX (overestimating
+// ethanol recommends more gasoline, never less). Intervals confirmed 2026-11
+// (see docs/plan-grade-e85-saisonnier.md).
+export interface E85Season {
+  key: 'ete' | 'intersaison' | 'hiver'
+  label: string
+  periode: string
+  min: number
+  max: number
+}
+
+const ETE: E85Season = { key: 'ete', label: 'Été', periode: '1er mai – 30 sept', min: 0.85, max: 0.85 }
+const INTERSAISON_OCT: E85Season = { key: 'intersaison', label: 'Intersaison', periode: '1er oct – 31 oct', min: 0.65, max: 0.75 }
+const HIVER: E85Season = { key: 'hiver', label: 'Hiver', periode: '1er nov – 15 mars', min: 0.60, max: 0.75 }
+const INTERSAISON_MARS: E85Season = { key: 'intersaison', label: 'Intersaison', periode: '16 mars – 30 avril', min: 0.65, max: 0.75 }
+
+export function e85Season(date: string | Date = new Date()): E85Season {
   let month: number
   let day: number
   if (typeof date === 'string') {
@@ -17,10 +32,22 @@ export function e85EthanolFraction(date: string | Date = new Date()): number {
     month = date.getMonth() + 1
     day = date.getDate()
   }
+  if (month >= 5 && month <= 9) return ETE
+  if (month === 10) return INTERSAISON_OCT
+  if (month >= 11 || month <= 2 || (month === 3 && day <= 15)) return HIVER
+  return INTERSAISON_MARS
+}
 
-  const winter = month === 11 || month === 12 || month <= 2 ||
-    (month === 3 && day <= 15) || (month === 10 && day === 31)
-  return winter ? 0.75 : 0.85
+/** Conservative upper bound of the season (used by all safety checks). */
+export function e85EthanolFraction(date: string | Date = new Date()): number {
+  return e85Season(date).max
+}
+
+/** Bounded display: « 85 % » or « 65 – 75 % ». */
+export function formatE85Range(season: E85Season): string {
+  return season.min === season.max
+    ? `${Math.round(season.max * 100)} %`
+    : `${Math.round(season.min * 100)} – ${Math.round(season.max * 100)} %`
 }
 
 export const ETHANOL_FRACTION: Record<string, number> = {

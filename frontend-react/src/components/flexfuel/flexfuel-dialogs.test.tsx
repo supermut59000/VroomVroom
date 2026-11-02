@@ -289,7 +289,9 @@ describe('BlendCalculator', () => {
     expect(screen.queryByText(/Renseignez la capacité du réservoir/)).toBeNull()
   })
 
-  it('shows the full-E85 range and the summer-grade dilution threshold (winter state)', () => {
+  it('shows the bounded seasonal grade and explains dilution-off (hiver, 02/11/2026)', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-11-02T08:00:00'))
     const entries = [
       { ...latestEntry1, fueling_date: '2025-01-05', odometer_reading: 50000 },
       { ...latestEntry1, id: 2, fueling_date: '2025-01-20', odometer_reading: 50500 },
@@ -297,10 +299,29 @@ describe('BlendCalculator', () => {
     render(<BlendCalculator conversion={conversion1} vehicle={vehicleFull1} entries={entries} embedded />)
     // Range of a full E85 tank — always visible
     expect(screen.getByText(/Plein E85 : ~[\d\s]+ km d'autonomie/)).toBeInTheDocument()
-    // Winter (grade 75 % ≤ 82 %): the km thresholds are null, so the summer
-    // reference (grade 85 %) must show both odometers instead of hiding them
-    // (card A: « jusqu'au km » odoA, card B: « à partir du km » odoB)
-    expect(screen.getAllByText(/Au grade d'été \(85 %\) : /)).toHaveLength(2)
+    // Bounded seasonal grade: Hiver (1er nov – 15 mars) : 60 – 75 % d'éthanol
+    expect(screen.getByText(/Grade E85 — Hiver \(1er nov – 15 mars\)/)).toBeInTheDocument()
+    expect(screen.getByText(/60 – 75 % d'éthanol/)).toBeInTheDocument()
+    // Max saison 75 % ≤ limite 82 % → E85 pur OK, dilution inutile — les bornes expliquent pourquoi
+    expect(screen.getByText('Toujours possible')).toBeInTheDocument()
+    expect(screen.getByText('Grade saison : 60 – 75 %')).toBeInTheDocument()
+    expect(screen.getByText(/Inutile : max saison 75% ≤ limite 82%/)).toBeInTheDocument()
+    vi.useRealTimers()
+  })
+
+  it('shows the live km thresholds, not « Toujours possible », when the season max exceeds the limit (été)', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-15T08:00:00'))
+    const entries = [
+      { ...latestEntry1, fueling_date: '2025-01-05', odometer_reading: 50000 },
+      { ...latestEntry1, id: 2, fueling_date: '2025-01-20', odometer_reading: 50500 },
+    ] as FuelEntry[]
+    render(<BlendCalculator conversion={conversion1} vehicle={vehicleFull1} entries={entries} embedded />)
+    expect(screen.getByText(/Grade E85 — Été \(1er mai – 30 sept\)/)).toBeInTheDocument()
+    // Max saison 85 % > limite 82 % : les seuils km reviennent, plus de « Toujours possible »
+    expect(screen.queryByText('Toujours possible')).toBeNull()
+    expect(screen.getByText("Jusqu'au km")).toBeInTheDocument()
+    vi.useRealTimers()
   })
 })
 

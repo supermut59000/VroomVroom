@@ -1,4 +1,4 @@
-import { e85EthanolFraction } from '@/lib/blend-math'
+import { e85Season, formatE85Range } from '@/lib/blend-math'
 
 // Cold-alert config + forecast logic — pure, no React, no DOM.
 // The notification delivery itself lives in notify.ts (platform-specific).
@@ -43,7 +43,7 @@ export function saveColdAlert(cfg: ColdAlertConfig): void {
 
 /** Mandatory winter-grade E85 window (31 Oct – 15 Mar) — same rule as the blend calculator. */
 export function isWinterWindow(date: Date = new Date()): boolean {
-  return e85EthanolFraction(date) === 0.75
+  return e85Season(date).key === 'hiver'
 }
 
 /** Next occurrence of HH:MM — today if not yet passed, otherwise tomorrow. */
@@ -117,7 +117,7 @@ export function coldAdvice(
   const base = `${cityLabel} ${cfg.time} : ${tempC} °C prévu : ajoutez de l'E10 pour faciliter les démarrages à froid`
   return {
     level: 'cold',
-    message: isWinterWindow() ? `${base} (grade E85 ≤ 75 % en cette période)` : base,
+    message: isWinterWindow() ? `${base} (grade E85 ${formatE85Range(e85Season())} en cette période)` : base,
   }
 }
 

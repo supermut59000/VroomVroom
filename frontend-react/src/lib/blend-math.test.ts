@@ -5,6 +5,8 @@ import {
   computeThresholds,
   computeWinterRec,
   e85EthanolFraction,
+  e85Season,
+  formatE85Range,
   fuelEthanolFraction,
   simulateFutureFills,
 } from './blend-math'
@@ -36,12 +38,32 @@ function entry(partial: Partial<FuelEntry>): FuelEntry {
 
 const CONVERSION = '2026-01-01'
 
-describe('seasonal ethanol defaults', () => {
-  it('uses the conservative seasonal maximum for E85', () => {
-    expect(e85EthanolFraction('2026-03-15')).toBe(0.75)
-    expect(e85EthanolFraction('2026-03-16')).toBe(0.85)
-    expect(e85EthanolFraction('2026-10-30')).toBe(0.85)
-    expect(e85EthanolFraction('2026-10-31')).toBe(0.75)
+describe('seasonal E85 grade (4 periods, bounded)', () => {
+  it('returns the right season and interval at every boundary', () => {
+    const s = (d: string) => e85Season(d)
+    expect(s('2026-04-30')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
+    expect(s('2026-05-01')).toMatchObject({ key: 'ete', min: 0.85, max: 0.85 })
+    expect(s('2026-09-30')).toMatchObject({ key: 'ete', min: 0.85, max: 0.85 })
+    expect(s('2026-10-01')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
+    expect(s('2026-10-31')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
+    expect(s('2026-11-01')).toMatchObject({ key: 'hiver', min: 0.60, max: 0.75 })
+    expect(s('2027-02-14')).toMatchObject({ key: 'hiver', min: 0.60, max: 0.75 })
+    expect(s('2027-03-15')).toMatchObject({ key: 'hiver', min: 0.60, max: 0.75 })
+    expect(s('2027-03-16')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
+  })
+
+  it('e85EthanolFraction keeps returning the conservative seasonal maximum', () => {
+    expect(e85EthanolFraction('2026-06-01')).toBe(0.85)
+    expect(e85EthanolFraction('2026-10-15')).toBe(0.75)
+    expect(e85EthanolFraction('2026-11-15')).toBe(0.75)
+    expect(e85EthanolFraction('2027-03-15')).toBe(0.75)
+    expect(e85EthanolFraction('2027-03-16')).toBe(0.75)
+  })
+
+  it('formats the bounded range', () => {
+    expect(formatE85Range(e85Season('2026-06-01'))).toBe('85 %')
+    expect(formatE85Range(e85Season('2026-10-15'))).toBe('65 – 75 %')
+    expect(formatE85Range(e85Season('2026-12-01'))).toBe('60 – 75 %')
   })
 
   it('distinguishes SP98-E5 from E10', () => {

@@ -27,6 +27,8 @@ import {
   computeTankState,
   computeWinterRec,
   e85EthanolFraction,
+  e85Season,
+  formatE85Range,
 } from '@/lib/blend-math'
 import type { DilutantType } from '@/lib/blend-math'
 import { buildBlendPayloads } from '@/lib/pump-fill'
@@ -103,6 +105,7 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
   }, [tankState, avgConsumption, inputOdo, tankCapacity])
 
   const e85EthFraction = e85EthanolFraction()
+  const season = e85Season()
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP98'
 
@@ -241,6 +244,9 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
               <p className="text-xs font-medium text-muted-foreground">{t.pump.tank}</p>
               <p className="text-lg font-semibold">
                 {remainingLiters.toFixed(1)} L · {currentEthanolPct.toFixed(0)} % d'éthanol
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Grade E85 ({season.label}, {season.periode}) : {formatE85Range(season)} d'éthanol
               </p>
             </div>
 

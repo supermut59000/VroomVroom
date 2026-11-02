@@ -41,11 +41,12 @@ describe('cold-alert', () => {
     expect(loadColdAlert()).toEqual(cfg)
   })
 
-  it('isWinterWindow follows the mandatory winter-grade E85 dates', () => {
-    expect(isWinterWindow(new Date(2026, 9, 31))).toBe(true) // Oct 31
+  it('isWinterWindow follows the hiver season (1er nov – 15 mars)', () => {
+    expect(isWinterWindow(new Date(2026, 9, 31))).toBe(false) // Oct 31 = intersaison
+    expect(isWinterWindow(new Date(2026, 10, 1))).toBe(true) // Nov 1
     expect(isWinterWindow(new Date(2026, 10, 15))).toBe(true) // Nov 15
     expect(isWinterWindow(new Date(2027, 2, 15))).toBe(true) // Mar 15
-    expect(isWinterWindow(new Date(2027, 2, 16))).toBe(false) // Mar 16
+    expect(isWinterWindow(new Date(2027, 2, 16))).toBe(false) // Mar 16 = intersaison
     expect(isWinterWindow(new Date(2026, 5, 15))).toBe(false) // Jun 15
   })
 
@@ -86,11 +87,11 @@ describe('cold-alert', () => {
       expect(coldAdvice(null, cfg, 'Lyon').level).toBe('unknown')
     })
 
-    it('adds the winter E85 note only inside the winter window', () => {
-      vi.useFakeTimers({ now: new Date(2026, 10, 15, 12) })
-      expect(coldAdvice(-1, cfg, 'Lyon').message).toContain('E85 ≤ 75 %')
-      vi.useFakeTimers({ now: new Date(2026, 5, 15, 12) })
-      expect(coldAdvice(-1, cfg, 'Lyon').message).not.toContain('E85 ≤ 75 %')
+    it('adds the winter E85 bounded note only inside the hiver season', () => {
+      vi.useFakeTimers({ now: new Date(2026, 10, 15, 12) }) // 15 décembre
+      expect(coldAdvice(-1, cfg, 'Lyon').message).toContain('E85 60 – 75 %')
+      vi.useFakeTimers({ now: new Date(2026, 5, 15, 12) }) // 15 juin
+      expect(coldAdvice(-1, cfg, 'Lyon').message).not.toContain('E85 60 – 75 %')
     })
   })
 

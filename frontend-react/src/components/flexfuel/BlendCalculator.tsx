@@ -16,6 +16,8 @@ import {
   computeThresholds,
   computeWinterRec,
   e85EthanolFraction,
+  e85Season,
+  formatE85Range,
   simulateFutureFills,
 } from '@/lib/blend-math'
 import type { DilutantType } from '@/lib/blend-math'
@@ -44,6 +46,7 @@ export function BlendCalculator({
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP98'
   const e85EthFraction = e85EthanolFraction()
+  const season = e85Season()
   const tankCapacity = vehicle.tank_capacity
   // Aliased condition so the memos below narrow tankCapacity to number.
   const hasTankCapacity = tankCapacity != null
@@ -135,25 +138,6 @@ export function BlendCalculator({
     const consoE85 = avgConsumption * (1 + (conversion.overconsumption_pct ?? 0) / 100)
     return Math.round((tankCapacity * 100) / consoE85)
   }, [avgConsumption, tankCapacity, conversion.overconsumption_pct])
-
-  // Seuils km de référence au grade d'été (85 %) : en hiver le grade actuel
-  // est sous la cible max (odoA/odoB = null, « Toujours possible ») — la
-  // référence été garde les seuils visibles toute l'année.
-  const summerRef = useMemo(() => {
-    if (tankCapacity == null || !avgConsumption) return null
-    if (e85EthFraction > (target + tolerance) / 100) return null // été : les seuils live valent déjà
-    return computeThresholds(
-      remainingLiters,
-      currentEthanolPct / 100,
-      tankCapacity,
-      target,
-      tolerance,
-      dilutantEthFraction,
-      avgConsumption,
-      inputOdo,
-      0.85,
-    )
-  }, [tankCapacity, avgConsumption, e85EthFraction, target, tolerance, remainingLiters, currentEthanolPct, dilutantEthFraction, inputOdo])
 
   const winterRec = useMemo(
     () =>
@@ -266,16 +250,11 @@ export function BlendCalculator({
               Toujours possible
             </p>
             <p className="text-base font-bold text-emerald-800 dark:text-emerald-200">
-              Grade du jour {Math.round(e85EthFraction * 100)}%
+              Grade saison : {formatE85Range(season)}
             </p>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
-              Sous la limite de {target + tolerance}%
+              Max {Math.round(season.max * 100)}% sous la limite de {target + tolerance}%
             </p>
-            {summerRef?.odoA != null && (
-              <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-500">
-                Au grade d'été (85 %) : jusqu'au km {summerRef.odoA.toLocaleString('fr-FR')}
-              </p>
-            )}
           </>
         ) : odoA !== null ? (
           <>
@@ -337,17 +316,9 @@ export function BlendCalculator({
         </p>
         {pureE85AlwaysSafe ? (
           <>
-            <p className="text-sm font-medium text-muted-foreground">Inutile avec le grade actuel</p>
-            {summerRef &&
-              (summerRef.odoBNow ? (
-                <p className="mt-1 text-[11px] text-blue-600 dark:text-blue-400">
-                  Au grade d'été (85 %) : maintenant
-                </p>
-              ) : summerRef.odoB !== null ? (
-                <p className="mt-1 text-[11px] text-blue-600 dark:text-blue-400">
-                  Au grade d'été (85 %) : à partir du km {summerRef.odoB.toLocaleString('fr-FR')}
-                </p>
-              ) : null)}
+            <p className="text-sm font-medium text-muted-foreground">
+              Inutile : max saison {Math.round(season.max * 100)}% ≤ limite {target + tolerance}%
+            </p>
           </>
         ) : odoBNow ? (
           <>
@@ -425,6 +396,11 @@ export function BlendCalculator({
 
   const content = (
     <div className="space-y-3">
+      {/* Seasonal grade — bounded display (min – max ethanol of the season) */}
+      <div className="rounded-md bg-muted/40 px-3 py-2 text-xs">
+        <span className="font-semibold">Grade E85 — {season.label} ({season.periode})</span>
+        <span className="text-muted-foreground"> : {formatE85Range(season)} d'éthanol</span>
+      </div>
       {/* Dilutant selector */}
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-muted-foreground">Diluant</span>
@@ -554,7 +530,7 @@ export function BlendCalculator({
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span>Restant : {remainingLiters.toFixed(1)} L</span>
         <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
-        <span>E85 du jour : {Math.round(e85EthFraction * 100)}%</span>
+        <span>E85 ({season.label}, {season.periode}) : {formatE85Range(season)}</span>
       </div>
     </div>
   )
