@@ -57,22 +57,18 @@ surconsommation boîtier 20 %) :*
   courante avec sa **fourchette** (les stations ne sont pas obligatoirement au taux
   nominal). Les 4 saisons : **Été** 1/5–30/9 : 85–85 % · **Intersaisons** 1/10–31/10
   et 16/3–30/4 : 65–75 % · **Hiver** 1/11–15/3 : 60–75 %.
-- Cartes à bornes : « Toujours possible / Grade saison : 60 – 75 % / Max 75 % sous la
-  limite de 82 % » et « Inutile : max saison 75 % ≤ limite 82 % » — les bornes
-  expliquent pourquoi, au lieu de rien dire.
-- **En été** (max 85 % > limite 82 %) : les km de seuils reviennent — « Jusqu'au km X »
-  (dernier km à plein E85 pur sous la limite) et « À partir du km Y » (km à atteindre
-  pour pouvoir diluer au taux nécessaire, 5 L de diluant → cible exacte).
+- Cartes : « E85 PUR » (Jusqu'au km X / Fenêtre passée / Toujours possible) et
+  « DILUTION E10 » (Maintenant / À partir du km Y / Inutile) — avec la cible
+  saison, les seuils sont actifs **toute l'année** (capture ci-contre : hiver,
+  réservoir à 75 % ≥ limite 68 % → « Fenêtre passée » + dilution « Maintenant »).
 - Sélecteur de diluant (E10/SP98), calcul pour un odomètre précis (+50/+100/+200),
   simulation « Pleins futurs » par paliers.
 - Tous les calculs de sécurité utilisent le **max** de la saison (surestimer
   l'éthanol = recommander plus d'essence, jamais moins).
 - **Cible adaptée à la saison** : le taux cible est saisi sur l'échelle de l'été
-  (85 % = max d'été) ; l'app le décale de (max_saison − 85). Ex. 77 % saisi →
-  77 % en été, **67 % en intersaisons/hiver** (limite 72 % avec tolérance ±5).
-  Conséquence : l'E85 hivernal (jusqu'à 75 %) peut dépasser la limite d'hiver →
-  les km de seuils et la recommandation de dilution s'affichent **toute l'année**.
-  Le réglage enregistré ne change jamais (il garde sa valeur « été »). Modèle
+  (85 % = max d'été) ; l'app le décale de (max_saison − 85). Ex. 75 % saisi →
+  « Cible saison : 65 % (été : 75 %) » en hiver ; les calculs utilisent la cible
+  saison (tolérance absolue). Le réglage enregistré ne change jamais. Modèle
   documenté dans `docs/plan-grade-e85-saisonnier.md`.
 
 Ces seuils utilisent exactement les mêmes fonctions que la version serveur
