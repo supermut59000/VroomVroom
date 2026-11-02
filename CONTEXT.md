@@ -1111,6 +1111,21 @@ grade** — « safe tout le temps sur le taux réel » (85 % = max réel).
   = 34.5, calculateur annuel unique (85 % > 82 % → seuils actifs, aucun « Grade »).
   **352 vitest verts + tsc -b.**
 
+### Affichage = style avril (logique août conservée)
+
+L'utilisateur a comparé avec l'UI d'avril et l'a préférée : « la logique (août) est
+meilleure, pas l'UI ». Appliqué au calculateur (2 questions, 2/2 recommandations :
+Pleins futurs + E10/SP98 conservés) :
+- **Litres et % entiers** (Math.round, 0 décimale) partout : cartes, recommandation,
+  tableau Pleins futurs, footer (« Restant : 50 L · Éthanol actuel : 85% »).
+- **Carte A : 3 états** (Jusqu'au km / Partiel possible / Fenêtre passée) — état
+  « Toujours possible / Sous la limite » supprimé (état grade-safe : la math août
+  `limitFill` « Plein complet » prend le relais, pas de crash).
+- **Carte B : 2 états** (Maintenant / À partir du km) + « – » de repli anti-crash —
+  « Inutile avec le grade actuel » supprimé.
+- « Plein E85 : ~X km » conservé (demande utilisateur de novembre).
+- 352 vitest verts + tsc -b, APK vérifiée sur émulateur.
+
 ## Pending / Ideas for Future Sessions
 
 - **Photo receipts** — snap a photo of pump receipt / maintenance invoice, attach to entry
