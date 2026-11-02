@@ -53,15 +53,21 @@ assurance recalculée à 13 700 km). Le mélange E10+E85 est enregistré en 2 en
 surconsommation boîtier 20 %) :*
 - **« Plein E85 : ~417 km d'autonomie »** — nombre de km faisables avec un plein full-éthanol
   (50 L ÷ 12 L/100 = conso E10 × 1,20).
-- **« Au grade d'été (85 %) : jusqu'au km 1 650 »** — dernier km où un plein E85 pur
-  reste sous la limite (cible + tolérance).
-- **« Au grade d'été (85 %) : à partir du km 1 775 »** — kilométrage à atteindre pour
-  pouvoir diluer au taux nécessaire (5 L de diluant → cible exacte).
-- En hiver (grade 75 % ≤ 82 %), l'E85 pur est « Toujours possible » et la dilution
-  « Inutile avec le grade actuel » — les seuils d'été restent affichés en référence
-  (c'était le point manquant : en hiver, aucun km n'était affiché).
+- **« Grade E85 — {saison} ({période}) : min – max % d'éthanol »** — la saison
+  courante avec sa **fourchette** (les stations ne sont pas obligatoirement au taux
+  nominal). Les 4 saisons : **Été** 1/5–30/9 : 85–85 % · **Intersaisons** 1/10–31/10
+  et 16/3–30/4 : 65–75 % · **Hiver** 1/11–15/3 : 60–75 %.
+- Cartes à bornes : « Toujours possible / Grade saison : 60 – 75 % / Max 75 % sous la
+  limite de 82 % » et « Inutile : max saison 75 % ≤ limite 82 % » — les bornes
+  expliquent pourquoi, au lieu de rien dire.
+- **En été** (max 85 % > limite 82 %) : les km de seuils reviennent — « Jusqu'au km X »
+  (dernier km à plein E85 pur sous la limite) et « À partir du km Y » (km à atteindre
+  pour pouvoir diluer au taux nécessaire, 5 L de diluant → cible exacte).
 - Sélecteur de diluant (E10/SP98), calcul pour un odomètre précis (+50/+100/+200),
   simulation « Pleins futurs » par paliers.
+- Tous les calculs de sécurité utilisent le **max** de la saison (surestimer
+  l'éthanol = recommander plus d'essence, jamais moins). Modèle documenté dans
+  `docs/plan-grade-e85-saisonnier.md`.
 
 Ces seuils utilisent exactement les mêmes fonctions que la version serveur
 (`computeThresholds` / `computeWinterRec` de `lib/blend-math.ts`) : le calculateur
@@ -89,8 +95,8 @@ Si 100 % E85 » (ex. ~450 km plein E85), mix réel de la saison, suivi assurance
 *Prévision open-meteo par commune : si la température du matin passe sous le seuil
 (5 °C par défaut, heure paramétrable), notification + conseil. Le message est :
 « {ville} {heure} : {temp} °C prévu : **ajoutez de l'E10 pour faciliter les
-démarrages à froid** » (+ « grade E85 ≤ 75 % en cette période » en hiver,
-31 octobre – 15 mars). L'alerte nécessite l'app ouverte depuis la veille
+démarrages à froid** » (+ « grade E85 60 – 75 % en cette période » en hiver,
+1er novembre – 15 mars). L'alerte nécessite l'app ouverte depuis la veille
 (limitation Android des notifications planifiées sans accès en arrière-plan).*
 
 ### 3.6 Stations E85 (bouton pompe du header)
