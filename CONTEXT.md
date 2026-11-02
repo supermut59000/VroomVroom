@@ -18,6 +18,13 @@ Last updated: 2026-11-01
 - Suites : frontend 332 vitest + `tsc -b` verts, backend 226 pytest verts. Non relancé depuis les changements 2 modes : `npm run test:full` (e2e + build prod).
 - **Détail UX noté** : les formulaires des dialogs (VehicleAddDialog…) conservent leur état entre fermetures/réouvertures (le Radix reste monté) — un utilisateur qui annule au milieu retrouve ses valeurs à la réouverture. À décider si c'est voulu.
 
+### Retour utilisateur (même journée) — v2 de l'onboarding et des paramètres
+
+- **Le mode serveur ne se choisit plus au premier lancement** : l'onboarding (`ModeSetup`) est désormais 100 % local (bienvenue + intro 3 étapes + « C'est parti » → `saveModeConfig({mode:'local'})`). Le mode serveur est une option cachée : **10 taps rapides sur la ligne de version** dans les paramètres → section « Serveur (avancé) » déverrouillée (persistée en `localStorage vv_server_unlocked` ; toujours visible si déjà en mode server).
+- **Nouveau `SettingsDialog`** (remplace l'ancien dédié au mode) : Mode des données (+ section serveur si déverrouillée), **Guide de l'app** (6 entrées pliables : véhicules, pleins, E85, à la pompe, stations, export), **Faire un don** (panneau : 5 étoiles Play, partage, don — `DONATION_URL` vide à remplir quand le lien est live), À propos (version = cible des 10 taps), reset.
+- Tests : +8 (ModeSetup 3, SettingsDialog 5 dont le déverrouillage 10 taps) → **340 vitest verts**.
+- À faire : lien de don réel (`DONATION_URL` dans `SettingsDialog.tsx`), `npm run test:full`.
+
 ---
 
 ## Session log — 2026-10-17 — /app-audit fixes (B1 + B2)
