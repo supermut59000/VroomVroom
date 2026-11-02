@@ -5,8 +5,6 @@ import {
   computeThresholds,
   computeWinterRec,
   e85EthanolFraction,
-  e85Season,
-  formatE85Range,
   fuelEthanolFraction,
   simulateFutureFills,
 } from './blend-math'
@@ -38,32 +36,12 @@ function entry(partial: Partial<FuelEntry>): FuelEntry {
 
 const CONVERSION = '2026-01-01'
 
-describe('seasonal E85 grade (4 periods, bounded)', () => {
-  it('returns the right season and interval at every boundary', () => {
-    const s = (d: string) => e85Season(d)
-    expect(s('2026-04-30')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
-    expect(s('2026-05-01')).toMatchObject({ key: 'ete', min: 0.85, max: 0.85 })
-    expect(s('2026-09-30')).toMatchObject({ key: 'ete', min: 0.85, max: 0.85 })
-    expect(s('2026-10-01')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
-    expect(s('2026-10-31')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
-    expect(s('2026-11-01')).toMatchObject({ key: 'hiver', min: 0.60, max: 0.75 })
-    expect(s('2027-02-14')).toMatchObject({ key: 'hiver', min: 0.60, max: 0.75 })
-    expect(s('2027-03-15')).toMatchObject({ key: 'hiver', min: 0.60, max: 0.75 })
-    expect(s('2027-03-16')).toMatchObject({ key: 'intersaison', min: 0.65, max: 0.75 })
-  })
-
-  it('e85EthanolFraction keeps returning the conservative seasonal maximum', () => {
-    expect(e85EthanolFraction('2026-06-01')).toBe(0.85)
-    expect(e85EthanolFraction('2026-10-15')).toBe(0.75)
-    expect(e85EthanolFraction('2026-11-15')).toBe(0.75)
-    expect(e85EthanolFraction('2027-03-15')).toBe(0.75)
-    expect(e85EthanolFraction('2027-03-16')).toBe(0.75)
-  })
-
-  it('formats the bounded range', () => {
-    expect(formatE85Range(e85Season('2026-06-01'))).toBe('85 %')
-    expect(formatE85Range(e85Season('2026-10-15'))).toBe('65 – 75 %')
-    expect(formatE85Range(e85Season('2026-12-01'))).toBe('60 – 75 %')
+describe('E85 fraction (fixed 85 % year-round)', () => {
+  it('is always 0.85, winter included — maximum real rate, always safe', () => {
+    expect(e85EthanolFraction()).toBe(0.85)
+    expect(fuelEthanolFraction('e85', '2026-01-15')).toBe(0.85)
+    expect(fuelEthanolFraction('e85', '2026-08-15')).toBe(0.85)
+    expect(fuelEthanolFraction('e85', '2026-11-02')).toBe(0.85)
   })
 
   it('distinguishes SP98-E5 from E10', () => {
@@ -158,14 +136,14 @@ describe('computeTankState', () => {
     expect(state.lastOdo).toBe(1000)
   })
 
-  it('uses winter E85 and SP98 composition automatically', () => {
+  it('uses the fixed 85 % E85 and SP98 composition (winter date included)', () => {
     const entries = [
       entry({ odometer_reading: 1000, liters: 40, fueling_date: '2026-01-02', is_full_tank: true, fuel_type: 'e85' }),
       entry({ odometer_reading: 1000, liters: 10, fueling_date: '2026-01-02', is_full_tank: false, fuel_type: 'sp98' }),
     ]
     const state = computeTankState(entries, CONVERSION, 50)
-    // 40×0.75 + 10×0.05 = 30.5 L ethanol.
-    expect(state.ethanolLiters).toBeCloseTo(30.5, 5)
+    // 40×0.85 + 10×0.05 = 34.5 L ethanol (grade fixe 85 % toute l'année).
+    expect(state.ethanolLiters).toBeCloseTo(34.5, 5)
   })
 
   it('mixes remaining old fuel with the new fill on later stops', () => {

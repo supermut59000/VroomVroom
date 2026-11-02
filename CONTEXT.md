@@ -1089,6 +1089,28 @@ The `e85_fraction` reported in `SeasonStats` is the **average** fraction across 
   et dans les cartes.
 - Doc Android : sections pompe supprimées (06/07), renumérotation 3.1–3.5.
 
+### E85 = 85 % fixe, pas d'affichage de grade (après coupespecs)
+
+L'utilisateur a ajouté 2 specs de référence : `docs/spec-refaire-blendcalculator-etat-2026-04-26.md`
+(état `ae51eef`, 85 % en dur, tout inline) et `docs/spec-refaire-blendcalculator-etat-2026-08-15.md`
+(état `b398c72`, grade binaire 0.75/0.85, blend-math.ts). Choix : **la spec d'août
+(architecture) + 85 % fixe toute l'année (principe d'avril) + aucun affichage de
+grade** — « safe tout le temps sur le taux réel » (85 % = max réel).
+
+- `blend-math.ts` : `e85EthanolFraction()` = 0.85 constant (param date retiré, `_date`
+  ignoré dans `fuelEthanolFraction`) ; suppression de `e85Season`, `E85Season`,
+  `formatE85Range` et des 4 consts de saisons.
+- BlendCalculator : plus de « Grade saison » / « Inutile : max saison… » → texte
+  spec août (« Sous la limite de X% », « Inutile avec le grade actuel ») ; footer
+  sans grade. « Plein E85 : ~X km » conservé. Avec 75/3 (limite 78 < 85) : seuils
+  km + dilution actifs toute l'année.
+- PumpFillDialog : ligne de grade retirée (dialog non câblé de toute façon).
+- cold-alert : `isWinterWindow` inliné (1er nov – 15 mars, même bornes), message
+  froid inchangé (« grade E85 60 – 75 % en cette période » = info factuelle).
+- Tests : fraction fixe (dates hiver/été), computeTankState hiver 40×0.85+10×0.05
+  = 34.5, calculateur annuel unique (85 % > 82 % → seuils actifs, aucun « Grade »).
+  **352 vitest verts + tsc -b.**
+
 ## Pending / Ideas for Future Sessions
 
 - **Photo receipts** — snap a photo of pump receipt / maintenance invoice, attach to entry

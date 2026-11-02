@@ -16,8 +16,6 @@ import {
   computeThresholds,
   computeWinterRec,
   e85EthanolFraction,
-  e85Season,
-  formatE85Range,
   simulateFutureFills,
 } from '@/lib/blend-math'
 import type { DilutantType } from '@/lib/blend-math'
@@ -46,7 +44,6 @@ export function BlendCalculator({
   const dilutantEthFraction = dilutantType === 'e10' ? 0.1 : 0.05
   const dilutantLabel = dilutantType === 'e10' ? 'E10' : 'SP98'
   const e85EthFraction = e85EthanolFraction()
-  const season = e85Season()
   const tankCapacity = vehicle.tank_capacity
   // Aliased condition so the memos below narrow tankCapacity to number.
   const hasTankCapacity = tankCapacity != null
@@ -249,11 +246,8 @@ export function BlendCalculator({
             <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-tight">
               Toujours possible
             </p>
-            <p className="text-base font-bold text-emerald-800 dark:text-emerald-200">
-              Grade saison : {formatE85Range(season)}
-            </p>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
-              Max {Math.round(season.max * 100)}% sous la limite de {target + tolerance}%
+              Sous la limite de {target + tolerance}%
             </p>
           </>
         ) : odoA !== null ? (
@@ -316,9 +310,7 @@ export function BlendCalculator({
         </p>
         {pureE85AlwaysSafe ? (
           <>
-            <p className="text-sm font-medium text-muted-foreground">
-              Inutile : max saison {Math.round(season.max * 100)}% ≤ limite {target + tolerance}%
-            </p>
+            <p className="text-sm font-medium text-muted-foreground">Inutile avec le grade actuel</p>
           </>
         ) : odoBNow ? (
           <>
@@ -525,7 +517,6 @@ export function BlendCalculator({
       <div className="flex gap-4 text-xs text-muted-foreground">
         <span>Restant : {remainingLiters.toFixed(1)} L</span>
         <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
-        <span>E85 ({season.label}, {season.periode}) : {formatE85Range(season)}</span>
       </div>
     </div>
   )

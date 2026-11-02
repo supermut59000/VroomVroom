@@ -39,23 +39,19 @@ coût du mois. Tout est persisté dans IndexedDB et survit aux redémarrages.*
 ![Calculateur](assets/08-calculateur.png)
 *Sur données réelles (Corsa, réservoir plein 50 L à 75 % d'éthanol, conso 10 L/100,
 surconsommation boîtier 20 %) :*
-- **« Plein E85 : ~417 km d'autonomie »** — nombre de km faisables avec un plein full-éthanol
-  (50 L ÷ 12 L/100 = conso E10 × 1,20).
-- **Grade E85 saisonnier à bornes** (pied de carte : « E85 (Hiver, 1er nov – 15 mars)
-  : 60 – 75 % ») — la saison courante avec sa **fourchette** (les stations ne sont
-  pas obligatoirement au taux nominal). Les 4 saisons : **Été** 1/5–30/9 : 85–85 % ·
-  **Intersaisons** 1/10–31/10 et 16/3–30/4 : 65–75 % · **Hiver** 1/11–15/3 : 60–75 %.
-- Cartes à bornes : « Toujours possible / Grade saison : 60 – 75 % / Max 75 % sous la
-  limite de 82 % » et « Inutile : max saison 75 % ≤ limite 82 % » — les bornes
-  expliquent pourquoi, au lieu de rien dire.
-- **En été** (max 85 % > limite 82 %) : les km de seuils reviennent — « Jusqu'au km X »
-  (dernier km à plein E85 pur sous la limite) et « À partir du km Y » (km à atteindre
-  pour pouvoir diluer au taux nécessaire, 5 L de diluant → cible exacte).
+- **E85 = 85 % d'éthanol FIXE toute l'année** — le taux maximal que l'E85 peut
+  réellement atteindre, donc toujours safe : surestimer = plus de diluant, jamais
+  moins. Pas de saisonnalité, **pas d'affichage de grade** (variante « 85 % fixe »
+  de la spec août 2026 — `docs/spec-refaire-blendcalculator-etat-2026-08-15.md`).
+- Conséquence : avec une cible 75/3 (limite 78 %), l'E85 (85 %) dépasse toujours la
+  limite → les km de seuils (« Jusqu'au km X » = dernier km à plein E85 pur sous la
+  limite, « À partir du km Y » = km à atteindre pour diluer au taux nécessaire,
+  5 L de diluant → cible exacte) et la recommandation de mélange sont actifs
+  **toute l'année**.
+- **« Plein E85 : ~417 km d'autonomie »** — nombre de km faisables avec un plein
+  full-éthanol (50 L ÷ 12 L/100 = conso E10 × 1,20).
 - Sélecteur de diluant (E10/SP98), calcul pour un odomètre précis (+50/+100/+200),
   simulation « Pleins futurs » par paliers.
-- Tous les calculs de sécurité utilisent le **max** de la saison (surestimer
-  l'éthanol = recommander plus d'essence, jamais moins). Modèle documenté dans
-  `docs/plan-grade-e85-saisonnier.md`.
 
 Ces seuils utilisent exactement les mêmes fonctions que la version serveur
 (`computeThresholds` / `computeWinterRec` de `lib/blend-math.ts`) : le calculateur

@@ -289,7 +289,8 @@ describe('BlendCalculator', () => {
     expect(screen.queryByText(/Renseignez la capacité du réservoir/)).toBeNull()
   })
 
-  it('shows the bounded seasonal grade and explains dilution-off (hiver, 02/11/2026)', () => {
+  it('shows live km thresholds year-round (fixed 85 %) with no grade display', () => {
+    // Winter date: with the fixed 85 % grade the behavior must be identical to summer
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-11-02T08:00:00'))
     const entries = [
@@ -299,28 +300,12 @@ describe('BlendCalculator', () => {
     render(<BlendCalculator conversion={conversion1} vehicle={vehicleFull1} entries={entries} embedded />)
     // Range of a full E85 tank — always visible
     expect(screen.getByText(/Plein E85 : ~[\d\s]+ km d'autonomie/)).toBeInTheDocument()
-    // Bounded seasonal grade in the footer (top grade line removed on request)
-    expect(screen.getByText(/E85 \(Hiver, 1er nov – 15 mars\) : 60 – 75 %/)).toBeInTheDocument()
-    expect(screen.queryByText(/Grade E85 — /)).toBeNull()
-    // Max saison 75 % ≤ limite 82 % → E85 pur OK, dilution inutile — les bornes expliquent pourquoi
-    expect(screen.getByText('Toujours possible')).toBeInTheDocument()
-    expect(screen.getByText('Grade saison : 60 – 75 %')).toBeInTheDocument()
-    expect(screen.getByText(/Inutile : max saison 75% ≤ limite 82%/)).toBeInTheDocument()
-    vi.useRealTimers()
-  })
-
-  it('shows the live km thresholds, not « Toujours possible », when the season max exceeds the limit (été)', () => {
-    vi.useFakeTimers()
-    vi.setSystemTime(new Date('2026-06-15T08:00:00'))
-    const entries = [
-      { ...latestEntry1, fueling_date: '2025-01-05', odometer_reading: 50000 },
-      { ...latestEntry1, id: 2, fueling_date: '2025-01-20', odometer_reading: 50500 },
-    ] as FuelEntry[]
-    render(<BlendCalculator conversion={conversion1} vehicle={vehicleFull1} entries={entries} embedded />)
-    expect(screen.getByText(/E85 \(Été, 1er mai – 30 sept\) : 85 %/)).toBeInTheDocument()
-    // Max saison 85 % > limite 82 % : les seuils km reviennent, plus de « Toujours possible »
+    // 85 % > limite 82 % → les seuils km sont actifs toute l'année
     expect(screen.queryByText('Toujours possible')).toBeNull()
     expect(screen.getByText("Jusqu'au km")).toBeInTheDocument()
+    // Pas d'affichage de grade (variante « 85 % fixe » de la spec août 2026)
+    expect(screen.queryByText(/Grade/)).toBeNull()
+    expect(screen.queryByText(/E85 du jour/)).toBeNull()
     vi.useRealTimers()
   })
 })

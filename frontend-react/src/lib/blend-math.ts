@@ -4,50 +4,12 @@ import type { FuelEntry } from '@/types'
 // Consumed by BlendCalculator and unit-tested in blend-math.test.ts.
 
 // ── Seasonal E85 grade (ethanol %) — 4 periods ─────────────────────────────
-// Stations are not obliged to pump the nominal rate: each season has a
-// [min, max] ethanol interval. Safety checks use the MAX (overestimating
-// ethanol recommends more gasoline, never less). Intervals confirmed 2026-11
-// (see docs/plan-grade-e85-saisonnier.md).
-export interface E85Season {
-  key: 'ete' | 'intersaison' | 'hiver'
-  label: string
-  periode: string
-  min: number
-  max: number
-}
-
-const ETE: E85Season = { key: 'ete', label: 'Été', periode: '1er mai – 30 sept', min: 0.85, max: 0.85 }
-const INTERSAISON_OCT: E85Season = { key: 'intersaison', label: 'Intersaison', periode: '1er oct – 31 oct', min: 0.65, max: 0.75 }
-const HIVER: E85Season = { key: 'hiver', label: 'Hiver', periode: '1er nov – 15 mars', min: 0.60, max: 0.75 }
-const INTERSAISON_MARS: E85Season = { key: 'intersaison', label: 'Intersaison', periode: '16 mars – 30 avril', min: 0.65, max: 0.75 }
-
-export function e85Season(date: string | Date = new Date()): E85Season {
-  let month: number
-  let day: number
-  if (typeof date === 'string') {
-    const parts = date.slice(0, 10).split('-').map(Number)
-    month = parts[1]
-    day = parts[2]
-  } else {
-    month = date.getMonth() + 1
-    day = date.getDate()
-  }
-  if (month >= 5 && month <= 9) return ETE
-  if (month === 10) return INTERSAISON_OCT
-  if (month >= 11 || month <= 2 || (month === 3 && day <= 15)) return HIVER
-  return INTERSAISON_MARS
-}
-
-/** Conservative upper bound of the season (used by all safety checks). */
-export function e85EthanolFraction(date: string | Date = new Date()): number {
-  return e85Season(date).max
-}
-
-/** Bounded display: « 85 % » or « 65 – 75 % ». */
-export function formatE85Range(season: E85Season): string {
-  return season.min === season.max
-    ? `${Math.round(season.max * 100)} %`
-    : `${Math.round(season.min * 100)} – ${Math.round(season.max * 100)} %`
+// E85 grade: 85 % ethanol FIXED year-round — the maximum rate E85 can actually
+// reach, so always safe: overestimating ethanol recommends more diluent, never
+// less. No seasonal model, no grade display (user decision 2026-11-02, variant
+// « 85 % fixe » of docs/spec-refaire-blendcalculator-etat-2026-08-15.md).
+export function e85EthanolFraction(): number {
+  return 0.85
 }
 
 export const ETHANOL_FRACTION: Record<string, number> = {
@@ -59,8 +21,8 @@ export const ETHANOL_FRACTION: Record<string, number> = {
   hybride: 0.0,
 }
 
-export function fuelEthanolFraction(fuelType: string, date: string | Date): number {
-  return fuelType === 'e85' ? e85EthanolFraction(date) : (ETHANOL_FRACTION[fuelType] ?? 0)
+export function fuelEthanolFraction(fuelType: string, _date: string | Date): number {
+  return fuelType === 'e85' ? e85EthanolFraction() : (ETHANOL_FRACTION[fuelType] ?? 0)
 }
 
 export const MIN_PUMP_LITERS = 5
