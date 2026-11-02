@@ -224,14 +224,14 @@ export function BlendCalculator({
   }
 
   // ── Threshold cards ───────────────────────────────────────────────────────
-  const { odoA, odoB, odoBNow, pureE85AlwaysSafe } = thresholds
+  const { odoA, odoB, odoBNow } = thresholds
 
   const thresholdCards = (
     <div className="grid grid-cols-2 gap-2">
       {/* Card A: Pure E85 deadline */}
       <div
         className={`rounded-lg border p-3 ${
-          pureE85AlwaysSafe || odoA !== null
+          odoA !== null
             ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
             : limitFill
               ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/30'
@@ -241,16 +241,7 @@ export function BlendCalculator({
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
           E85 pur
         </p>
-        {pureE85AlwaysSafe ? (
-          <>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-tight">
-              Toujours possible
-            </p>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
-              Sous la limite de {target + tolerance}%
-            </p>
-          </>
-        ) : odoA !== null ? (
+        {odoA !== null ? (
           <>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-tight">
               Jusqu'au km
@@ -264,8 +255,8 @@ export function BlendCalculator({
             {limitFill && limitFill.addedKm !== null && (
               <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-1 border-t border-emerald-200 dark:border-emerald-800 pt-1">
                 {limitFill.isFull
-                  ? `Plein complet: ${limitFill.liters.toFixed(1)} L → ${limitFill.resultPct.toFixed(1)}% · +${limitFill.addedKm} km`
-                  : `Max: ${limitFill.liters.toFixed(1)} L → ${limitFill.resultPct.toFixed(1)}% · +${limitFill.addedKm} km`}
+                  ? `Plein complet: ${Math.round(limitFill.liters)} L → ${Math.round(limitFill.resultPct)}% · +${limitFill.addedKm} km`
+                  : `Max: ${Math.round(limitFill.liters)} L → ${Math.round(limitFill.resultPct)}% · +${limitFill.addedKm} km`}
               </p>
             )}
           </>
@@ -275,10 +266,10 @@ export function BlendCalculator({
               Partiel possible
             </p>
             <p className="text-base font-bold text-yellow-800 dark:text-yellow-200">
-              {limitFill.liters.toFixed(1)} L E85
+              {Math.round(limitFill.liters)} L E85
             </p>
             <p className="text-[11px] text-yellow-700 dark:text-yellow-500 mt-0.5">
-              → {limitFill.resultPct.toFixed(1)}%
+              → {Math.round(limitFill.resultPct)}%
               {limitFill.addedKm !== null && ` · +${limitFill.addedKm} km`}
             </p>
           </>
@@ -308,11 +299,7 @@ export function BlendCalculator({
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
           Dilution {dilutantLabel}
         </p>
-        {pureE85AlwaysSafe ? (
-          <>
-            <p className="text-sm font-medium text-muted-foreground">Inutile avec le grade actuel</p>
-          </>
-        ) : odoBNow ? (
+        {odoBNow ? (
           <>
             <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">Maintenant</p>
             <p className="text-base font-bold text-blue-800 dark:text-blue-200">
@@ -351,10 +338,10 @@ export function BlendCalculator({
     winterRecCard = (
       <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
         <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
-          {winterRec.e85Liters.toFixed(1)} L E85 pur
+          {Math.round(winterRec.e85Liters)} L E85 pur
         </p>
         <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
-          Résultat : {winterRec.resultPct.toFixed(1)}% (cible ≤ {target + tolerance}%)
+          Résultat : {Math.round(winterRec.resultPct)}% (cible ≤ {target + tolerance}%)
         </p>
         {winterRec.kmSafe !== null && winterRec.kmRelative !== null && (
           <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-500">
@@ -377,10 +364,10 @@ export function BlendCalculator({
           </p>
         )}
         <p className="text-lg font-bold text-blue-800 dark:text-blue-300">
-          {winterRec.dilutantLiters.toFixed(1)} L {dilutantLabel}&nbsp;+&nbsp;{winterRec.e85Liters.toFixed(1)} L E85
+          {Math.round(winterRec.dilutantLiters)} L {dilutantLabel}&nbsp;+&nbsp;{Math.round(winterRec.e85Liters)} L E85
         </p>
         <p className={`mt-1 text-sm ${resultColor}`}>
-          Résultat : {winterRec.resultPct.toFixed(1)}% (cible ≤ {target + tolerance}%)
+          Résultat : {Math.round(winterRec.resultPct)}% (cible ≤ {target + tolerance}%)
         </p>
       </div>
     )
@@ -499,11 +486,11 @@ export function BlendCalculator({
                   </td>
                   <td className="py-1.5 px-2">
                     {fill.type === 'pure_e85'
-                      ? `${fill.e85Liters.toFixed(1)} L E85 pur`
-                      : `${fill.dilutantLiters.toFixed(1)} L ${dilutantLabel} + ${fill.e85Liters.toFixed(1)} L E85`}
+                      ? `${Math.round(fill.e85Liters)} L E85 pur`
+                      : `${Math.round(fill.dilutantLiters)} L ${dilutantLabel} + ${Math.round(fill.e85Liters)} L E85`}
                   </td>
                   <td className={`py-1.5 px-2 text-right font-semibold ${fill.withinTolerance ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-500'}`}>
-                    {fill.resultPct.toFixed(1)}%
+                    {Math.round(fill.resultPct)}%
                   </td>
                 </tr>
               ))}
@@ -515,8 +502,8 @@ export function BlendCalculator({
 
       {/* Details */}
       <div className="flex gap-4 text-xs text-muted-foreground">
-        <span>Restant : {remainingLiters.toFixed(1)} L</span>
-        <span>Éthanol actuel : {currentEthanolPct.toFixed(1)}%</span>
+        <span>Restant : {Math.round(remainingLiters)} L</span>
+        <span>Éthanol actuel : {Math.round(currentEthanolPct)}%</span>
       </div>
     </div>
   )

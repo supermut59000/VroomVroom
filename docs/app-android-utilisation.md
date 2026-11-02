@@ -50,8 +50,11 @@ surconsommation boîtier 20 %) :*
   **toute l'année**.
 - **« Plein E85 : ~417 km d'autonomie »** — nombre de km faisables avec un plein
   full-éthanol (50 L ÷ 12 L/100 = conso E10 × 1,20).
-- Sélecteur de diluant (E10/SP98), calcul pour un odomètre précis (+50/+100/+200),
-  simulation « Pleins futurs » par paliers.
+- **Affichage au style d'avril 2026** (logique août conservée) : litres et
+  pourcentages **entiers**, carte « E85 pur » à 3 états (Jusqu'au km / Partiel
+  possible / Fenêtre passée), carte « Dilution » à 2 états (Maintenant / À partir
+  du km). Sélecteur de diluant E10/SP98, calcul pour un odomètre précis
+  (+50/+100/+200), simulation « Pleins futurs » par paliers.
 
 Ces seuils utilisent exactement les mêmes fonctions que la version serveur
 (`computeThresholds` / `computeWinterRec` de `lib/blend-math.ts`) : le calculateur
@@ -128,7 +131,7 @@ Vérifié sur émulateur (captures ci-dessus) : onboarding, CRUD véhicule + 4 p
 stats live (bug d'invalidation corrigé), calculateur (seuils km + autonomie),
 seed E10, alerte froid (flux open-meteo), stations + filtre E85 + temps de
 trajet, panneau don, déverrouillage serveur, persistance IndexedDB.
-355 tests unitaires/front + 226 tests backend, et un diff différentiel
+352 tests unitaires/front + 226 tests backend, et un diff différentiel
 backend-réel ↔ port-local : 0 écart de valeur sur 19 endpoints.
 
 Limitations connues :
