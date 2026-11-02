@@ -301,10 +301,7 @@ export function BlendCalculator({
         </p>
         {odoBNow ? (
           <>
-            <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">Maintenant</p>
-            <p className="text-base font-bold text-blue-800 dark:text-blue-200">
-              km {inputOdo.toLocaleString('fr-FR')}
-            </p>
+            <p className="text-base font-bold text-blue-800 dark:text-blue-200 leading-tight">Maintenant</p>
             <p className="text-[11px] text-blue-600 dark:text-blue-500 mt-0.5">
               5 L+ {dilutantLabel} → {target}%
             </p>
