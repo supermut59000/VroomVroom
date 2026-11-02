@@ -1,9 +1,22 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-09-22
+Last updated: 2026-11-01
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
+
+---
+
+## Session log — 2026-11-01 — 2 modes de données (local par défaut / server) + Android + bug stats
+
+- **2 modes de données** : `src/lib/local/` — couche de données locale complète (wrapper IndexedDB, port TS des 4 services backend avec formules identiques — `pyRound` arrondi bancaire —, API locale ~25 routes aux mêmes chemins d'URL que les hooks). `api.ts` choisit le transport **par requête** selon `localStorage vv_mode`. **local = par défaut** (aucun compte, aucun serveur, zéro CORS) ; **server = avancé** (URL API + clé API collées au premier lancement, à runtime — pas durcies dans l'APK). Onboarding `ModeSetup.tsx` (choix du mode + 3 étapes d'intro), `SettingsDialog.tsx` (engrenage du header) : changement de mode (URL + clé + test de connexion, reload) / reset des données (IndexedDB).
+- **Bug de fraîcheur des stats (prod, découvert en test émulateur)** : la carte véhicule lit ses stats via `useVehicleStats` = snapshot du batch en `initialData` pendant que la query par-véhicule est désactivée (garde N+1). Les mutations n'invalidaient que les clés par-véhicule → la carte restait à « Pleins: 0 » après ajout d'un plein (le refetch-on-focus du navigateur masquait ; sur WebView Android rien ne refetchait). Fix : les 9 mutations affectant les stats (fuel ×3, vehicle ×3, conversion E85 ×3) invalident aussi `vehicleStatsBatch`, et `useVehicleStats` retourne la valeur **live** du batch. Régression : `hooks/use-vehicle-stats-batch.test.tsx`.
+- **Features E85 (commit cfd7140)** : alerte froid (prévision hiver par ville via open-meteo, flag `has_flexfuel` dans le batch stats — 0 requête en plus, dédup des notifications en localStorage), filtre « Avec E85 » sur la liste des stations, écran « À la pompe » (PumpFillDialog : état réservoir déduit du dernier plein, mélange E10/E85 recommandé, 2 entrées sauvegardées d'un coup — le diluant en `fuel_type='essence'`).
+- **SEO-LLM (0 €, `docs/plan-seo-llm.md`)** : `robots.txt` (crawlers IA) + `llms.txt` + `llms-full.txt` (FAQ réponses directes : formule du mélange, 60–75 % hiver, +15–25 % surconsommation, kit 700–1000 € / 25 000 km). À faire : 3 pages FAQ statiques `/e85/*` + JSON-LD (~½ j, avant la mise en ligne Play).
+- **Android** : coque Capacitor v8 `fr.ouiouibaguette.vroomvroom`, APK debug (JDK 21, SDK dans `~/.local/android-tools`). Testé de bout en bout sur émulateur Pixel 7 : onboarding → véhicule → 4 pleins → stats live (Pleins/Conso/Total) + persistance au restart. **Côté serveur de l'utilisateur** : le mode server exige `https://localhost` dans `BACKEND_CORS_ORIGINS` du `.env.docker` déployé (+ `API_KEY` optionnel) + restart — l'origine de la WebView est `https://localhost` (cause de l'échec « on ne peut pas afficher les véhicules »). `.env.example` du repo à mettre à jour (pas encore fait).
+- **Étude marché (`docs/market-study-android.md`)** : Google Play en primaire (F-Droid optionnel), budget 0 € (frais Play 25 $ uniques, dons/Pro 2,50 € plus tard si traction), pas de VPS.
+- Suites : frontend 332 vitest + `tsc -b` verts, backend 226 pytest verts. Non relancé depuis les changements 2 modes : `npm run test:full` (e2e + build prod).
+- **Détail UX noté** : les formulaires des dialogs (VehicleAddDialog…) conservent leur état entre fermetures/réouvertures (le Radix reste monté) — un utilisateur qui annule au milieu retrouve ses valeurs à la réouverture. À décider si c'est voulu.
 
 ---
 

@@ -1,4 +1,23 @@
-function getApiUrl(): string {
+import { ApiError } from './api-error'
+import { loadModeConfig } from './local/config'
+import { localRequest } from './local/local-api'
+
+export { ApiError }
+
+type Api = {
+  get<T>(path: string): Promise<T>
+  post<T>(path: string, body: unknown): Promise<T>
+  put<T>(path: string, body: unknown): Promise<T>
+  delete<T = void>(path: string): Promise<T>
+}
+
+// The mode (local | server) is read per request: it can be saved at first
+// launch (ModeSetup) AFTER this module has loaded.
+function getApiUrl(cfg: ReturnType<typeof loadModeConfig> = loadModeConfig()): string {
+  // Server mode: the URL pasted at setup wins.
+  if (cfg?.mode === 'server' && cfg.serverUrl) {
+    return cfg.serverUrl
+  }
   // Allow override via env variable
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL
@@ -18,22 +37,13 @@ export const API_URL = getApiUrl()
 
 const REQUEST_TIMEOUT_MS = 15_000
 
-function getHeaders(withBody = false): Record<string, string> {
+function getHeaders(withBody = false, cfg: ReturnType<typeof loadModeConfig> = loadModeConfig()): Record<string, string> {
   const headers: Record<string, string> = {}
   if (withBody) headers['Content-Type'] = 'application/json'
-  const apiKey = import.meta.env.VITE_API_KEY
+  // Runtime key (server mode, pasted at setup) wins over the build-time one.
+  const apiKey = cfg?.apiKey || import.meta.env.VITE_API_KEY
   if (apiKey) headers['X-API-Key'] = apiKey
   return headers
-}
-
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -60,33 +70,35 @@ function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> 
   )
 }
 
-export const api = {
-  get<T>(path: string): Promise<T> {
-    return fetchWithTimeout(`${API_URL}${path}`, { headers: getHeaders() }).then((r) =>
-      handleResponse<T>(r),
-    )
-  },
+function remoteCall<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
+  const cfg = loadModeConfig()
+  const url = `${getApiUrl(cfg).replace(/\/$/, '')}${path}`
+  const options: RequestInit = { method }
+  options.headers = getHeaders(body !== undefined, cfg)
+  if (body !== undefined) options.body = JSON.stringify(body)
+  return fetchWithTimeout(url, options).then((r) => handleResponse<T>(r))
+}
 
-  post<T>(path: string, body: unknown): Promise<T> {
-    return fetchWithTimeout(`${API_URL}${path}`, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify(body),
-    }).then((r) => handleResponse<T>(r))
+/** Same interface in both modes — the hooks don't know which one is active. */
+export const api: Api = {
+  get<T>(path: string) {
+    return loadModeConfig()?.mode === 'local'
+      ? localRequest<T>('GET', path)
+      : remoteCall<T>('GET', path)
   },
-
-  put<T>(path: string, body: unknown): Promise<T> {
-    return fetchWithTimeout(`${API_URL}${path}`, {
-      method: 'PUT',
-      headers: getHeaders(true),
-      body: JSON.stringify(body),
-    }).then((r) => handleResponse<T>(r))
+  post<T>(path: string, body: unknown) {
+    return loadModeConfig()?.mode === 'local'
+      ? localRequest<T>('POST', path, body)
+      : remoteCall<T>('POST', path, body)
   },
-
-  delete<T = void>(path: string): Promise<T> {
-    return fetchWithTimeout(`${API_URL}${path}`, {
-      method: 'DELETE',
-      headers: getHeaders(),
-    }).then((r) => handleResponse<T>(r))
+  put<T>(path: string, body: unknown) {
+    return loadModeConfig()?.mode === 'local'
+      ? localRequest<T>('PUT', path, body)
+      : remoteCall<T>('PUT', path, body)
+  },
+  delete<T = void>(path: string) {
+    return loadModeConfig()?.mode === 'local'
+      ? localRequest<T>('DELETE', path)
+      : remoteCall<T>('DELETE', path)
   },
 }

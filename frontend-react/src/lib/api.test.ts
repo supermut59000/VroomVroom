@@ -25,7 +25,7 @@ describe('api client', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
     expect(fetchSpy.mock.calls[0][0]).toBe(`${API_URL}/vehicles/`)
     const init = fetchSpy.mock.calls[0][1] as RequestInit
-    expect(init.method).toBeUndefined()
+    expect(init.method ?? 'GET').toBe('GET')
     expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined()
   })
 

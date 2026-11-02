@@ -117,6 +117,7 @@ export function useCreateFuelEntry() {
       queryClient.invalidateQueries({ queryKey: ['consumptionHistory', variables.vehicle_id] })
       queryClient.invalidateQueries({ queryKey: ['vehicleStats', variables.vehicle_id] })
       queryClient.invalidateQueries({ queryKey: ['vehicleCostStats', variables.vehicle_id] })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
       queryClient.invalidateQueries({ queryKey: ['stationSuggestions', variables.vehicle_id] })
     },
   })
@@ -141,6 +142,7 @@ export function useUpdateFuelEntry(vehicleId: number) {
       queryClient.invalidateQueries({ queryKey: ['consumptionHistory', vehicleId] })
       queryClient.invalidateQueries({ queryKey: ['vehicleStats', vehicleId] })
       queryClient.invalidateQueries({ queryKey: ['vehicleCostStats', vehicleId] })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }
@@ -156,6 +158,7 @@ export function useDeleteFuelEntry(vehicleId: number) {
       queryClient.invalidateQueries({ queryKey: ['consumptionHistory', vehicleId] })
       queryClient.invalidateQueries({ queryKey: ['vehicleStats', vehicleId] })
       queryClient.invalidateQueries({ queryKey: ['vehicleCostStats', vehicleId] })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }

@@ -39,7 +39,7 @@ export function useAllVehicleStats() {
 
 export function useVehicleStats(id: number | null) {
   const { data: batch } = useAllVehicleStats()
-  return useQuery({
+  const query = useQuery({
     queryKey: ['vehicleStats', id],
     queryFn: () => api.get<VehicleStats>(`/vehicles/${id}/stats`),
     enabled: shouldFetchIndividualStats(batch, id),
@@ -48,6 +48,11 @@ export function useVehicleStats(id: number | null) {
       ? { initialData: batch[String(id)], staleTime: 30_000 }
       : {}),
   })
+  // The batch is the live source for the card: while it holds the vehicle the
+  // individual query is disabled and its initialData is a one-shot snapshot
+  // that never follows batch refetches (card stuck on stale stats).
+  const fromBatch = id !== null && batch ? batch[String(id)] : undefined
+  return { ...query, data: fromBatch ?? query.data }
 }
 
 export function useVehicleCostStats(vehicleId: number) {
@@ -89,6 +94,7 @@ export function useCreateVehicle() {
     mutationFn: (data: VehicleCreate) => api.post<Vehicle>('/vehicles/', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }
@@ -102,6 +108,7 @@ export function useUpdateVehicle() {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
       queryClient.invalidateQueries({ queryKey: ['vehicle', variables.id] })
       queryClient.invalidateQueries({ queryKey: ['vehicleStats', variables.id] })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }
@@ -121,6 +128,7 @@ export function useDeleteVehicle() {
       api.delete(`/vehicles/${id}${force ? '?force=true' : ''}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }

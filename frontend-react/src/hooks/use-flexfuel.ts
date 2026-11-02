@@ -36,6 +36,7 @@ export function useCreateFlexfuelConversion() {
       queryClient.invalidateQueries({
         queryKey: ['flexfuelRentability', variables.vehicle_id],
       })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }
@@ -55,6 +56,7 @@ export function useUpdateFlexfuelConversion(vehicleId: number) {
       queryClient.invalidateQueries({
         queryKey: ['flexfuelRentability', vehicleId],
       })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }
@@ -70,6 +72,7 @@ export function useDeleteFlexfuelConversion(vehicleId: number) {
       queryClient.invalidateQueries({
         queryKey: ['flexfuelRentability', vehicleId],
       })
+      queryClient.invalidateQueries({ queryKey: ['vehicleStatsBatch'] })
     },
   })
 }

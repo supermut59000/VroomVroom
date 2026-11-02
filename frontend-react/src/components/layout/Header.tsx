@@ -1,15 +1,17 @@
 import { useState } from 'react'
-import { Car, Sun, Moon, Fuel, Snowflake } from 'lucide-react'
+import { Car, Sun, Moon, Fuel, Snowflake, Settings2 } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
 import { StationPricesDialog } from '@/components/fuel/StationPricesDialog'
 import { ColdAlertDialog } from '@/components/flexfuel/ColdAlertDialog'
+import { SettingsDialog } from '@/components/layout/SettingsDialog'
 import { useAllVehicleStats } from '@/hooks/use-vehicles'
 
 export function Header() {
   const { theme, setTheme } = useTheme()
   const [stationPricesOpen, setStationPricesOpen] = useState(false)
   const [coldAlertOpen, setColdAlertOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   // E85 specialities are only offered when a converted vehicle is recorded
   const { data: batchStats } = useAllVehicleStats()
   const hasE85Vehicle = Object.values(batchStats ?? {}).some((s) => s.has_flexfuel)
@@ -47,6 +49,15 @@ export function Header() {
                 <span className="sr-only">Alerte froid</span>
               </Button>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              title="Réglages"
+            >
+              <Settings2 className="h-5 w-5" />
+              <span className="sr-only">Réglages</span>
+            </Button>
             <Button variant="ghost" size="icon" onClick={toggleTheme} title="Changer le thème">
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -64,6 +75,7 @@ export function Header() {
         open={coldAlertOpen}
         onClose={() => setColdAlertOpen(false)}
       />
+      <SettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   )
 }
