@@ -9,6 +9,14 @@ const config: CapacitorConfig = {
     // geolocation prompts to behave like a browser.
     androidScheme: 'https',
   },
+  android: {
+    // Geolocation (station search, fill GPS capture) — the WebView only
+    // prompts for permissions declared here.
+    permissions: [
+      'android.permission.ACCESS_COARSE_LOCATION',
+      'android.permission.ACCESS_FINE_LOCATION',
+    ],
+  },
 }
 
 export default config

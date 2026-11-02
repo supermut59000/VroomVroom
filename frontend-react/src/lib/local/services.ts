@@ -22,19 +22,66 @@ import type { LocalRow } from './db'
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Python round() — half to even (the backend expected values were computed with it). */
+/**
+ * Python round() ported to JS: half-to-even on the EXACT binary value of the
+ * double. Arithmetic rounding (value * 10**n) diverges on edge cases —
+ * pyRound(16.255, 2) must be 16.25 (the stored double is 16.2549999999…).
+ * We take the 17-significant-digit expansion and round the digit string.
+ */
 export function pyRound(value: number, nd = 0): number {
   if (!Number.isFinite(value)) return value
-  const factor = 10 ** nd
-  const scaled = value * factor
-  const floored = Math.floor(scaled)
-  const frac = scaled - floored
-  let nearest: number
-  if (Math.abs(frac - 0.5) < 1e-9) {
-    nearest = floored % 2 === 0 ? floored : floored + 1
-  } else {
-    nearest = Math.round(scaled)
+  const neg = value < 0
+  const s = Math.abs(value).toPrecision(17)
+  if (s.includes('e')) {
+    // Exotic magnitude (≥1e16 or tiny): arithmetic path is display-fine
+    const factor = 10 ** nd
+    return Math.sign(value) * (Math.round(Math.abs(value) * factor) / factor)
   }
-  return nearest / factor
+  const [intPart, fracPart = ''] = s.split('.')
+  const pointAt = intPart.length
+  const cut = pointAt + nd // digits kept (before the rounding digit)
+  const digits = intPart + fracPart
+  if (cut >= digits.length) return neg ? -value : value
+  const keep = digits.slice(0, cut)
+  const rest = digits.slice(cut)
+  const first = rest.charCodeAt(0) - 48
+  let inc = 0
+  if (first > 5) {
+    inc = 1
+  } else if (first === 5) {
+    if (/[1-9]/.test(rest.slice(1))) {
+      inc = 1
+    } else if (cut > 0) {
+      // Exact tie: half to even on the last kept digit
+      const lastKept = keep.charCodeAt(cut - 1) - 48
+      if (lastKept % 2 === 1) inc = 1
+    }
+  }
+  let out = keep
+  if (inc === 1) {
+    const arr = out.split('')
+    let i = arr.length - 1
+    while (i >= 0) {
+      const d = arr[i].charCodeAt(0) - 48
+      if (d < 9) {
+        arr[i] = String(d + 1)
+        break
+      }
+      arr[i] = '0'
+      i--
+    }
+    if (i < 0) arr.unshift('1')
+    out = arr.join('')
+  }
+  if (nd < 0) out += '0'.repeat(-nd)
+  const pointPos = out.length - Math.max(0, nd)
+  const str = pointPos <= 0
+    ? '0.' + '0'.repeat(-pointPos) + out
+    : pointPos >= out.length
+      ? out
+      : out.slice(0, pointPos) + '.' + out.slice(pointPos)
+  const result = parseFloat(str)
+  return neg ? -result : result
 }
 
 function todayStr(): string {

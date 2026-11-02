@@ -147,10 +147,12 @@ export async function localRequest<T = unknown>(
     if (s[1] === 'vehicle' && s.length >= 3) {
       const vid = id(2)
       if (method === 'GET' && s.length === 3) {
+        // Plain array (matches backend List[FuelEntryResponse]); page/per_page
+        // mirror the backend skip/limit.
         const all = await svc.listFuelEntriesByVehicle(vid)
-        const perPage = Number(q.get('per_page') ?? 100)
-        const limited = perPage >= all.length ? all : all.slice(0, perPage)
-        return limited as unknown as T
+        const perPage = Number(q.get('per_page') ?? 20)
+        const page = Number(q.get('page') ?? 1)
+        return all.slice((page - 1) * perPage, page * perPage) as unknown as T
       }
       if (method === 'GET' && s[3] === 'latest') {
         const e = await svc.latestFuelEntry(vid)
@@ -162,11 +164,16 @@ export async function localRequest<T = unknown>(
       if (method === 'GET' && s[3] === 'consumption-history')
         return svc.consumptionHistory(vid) as Promise<T>
       if (method === 'GET' && s[3] === 'nearest-station') {
+        const radius = Number(q.get('radius_m') ?? 250)
+        // Mirrors the backend Query(ge=1, le=500) validation (422 outside)
+        if (!(radius >= 1 && radius <= 500)) {
+          throw new ApiError(422, 'radius_m must be between 1 and 500')
+        }
         const st = await svc.nearestStation(
           vid,
           Number(q.get('lat')),
           Number(q.get('lon')),
-          Number(q.get('radius_m') ?? 250),
+          radius,
         )
         if (!st) notFound('No station within radius')
         return st as T

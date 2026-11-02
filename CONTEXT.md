@@ -23,7 +23,19 @@ Last updated: 2026-11-01
 - **Le mode serveur ne se choisit plus au premier lancement** : l'onboarding (`ModeSetup`) est désormais 100 % local (bienvenue + intro 3 étapes + « C'est parti » → `saveModeConfig({mode:'local'})`). Le mode serveur est une option cachée : **10 taps rapides sur la ligne de version** dans les paramètres → section « Serveur (avancé) » déverrouillée (persistée en `localStorage vv_server_unlocked` ; toujours visible si déjà en mode server).
 - **Nouveau `SettingsDialog`** (remplace l'ancien dédié au mode) : Mode des données (+ section serveur si déverrouillée), **Guide de l'app** (6 entrées pliables : véhicules, pleins, E85, à la pompe, stations, export), **Faire un don** (panneau : 5 étoiles Play, partage, don — `DONATION_URL` vide à remplir quand le lien est live), À propos (version = cible des 10 taps), reset.
 - Tests : +8 (ModeSetup 3, SettingsDialog 5 dont le déverrouillage 10 taps) → **340 vitest verts**.
-- À faire : lien de don réel (`DONATION_URL` dans `SettingsDialog.tsx`), `npm run test:full`.
+
+### Audit différentiel web↔local + fixes (même journée, après « rien ne fonctionne de ce que tu as porté »)
+
+- **Méthode** : seed identique des deux côtés (Corsa E85, 5 pleins dont booster même-stop, conversion, E10 refs, maintenance) → dump JSON des 19 endpoints backend réel (TestClient) vs `localRequest` → deep diff normalisé (ids/timestamps/is_active). **Résultat final : 0 diff de valeur** sur stats, batch, timeline, period-stats, consumption-history (fill-to-fill), statistics, rentability, pagination, 422.
+- **Bugs corrigés dans l'audit** :
+  1. `pyRound` : l'arrondi sur `value*10**n` divergeait de Python sur les cas limites (16.255→16.26 au lieu de 16.25 — Python arrondit la valeur binaire exacte du double, demi-arrondi pair). Nouveau portage : expansion 17 chiffres significatifs + arrondi de la chaîne (7 tests d'edge : 2.675→2.67, ties 2.5→2/3.5→4/0.125→0.12, carry 9.9999→10, négatifs).
+  2. `GET /fuel-entries/vehicle/{id}` ignorait `page` (backend : skip=(page-1)*per_page) → pagination cassée au-delà de 20 pleins (per_page=20 par défaut dans le hook).
+  3. `nearest-station` n'appliquait pas la validation radius_m 1..500 du backend (422 attendu).
+  - Écarts restants bénins (documentés) : le local renvoie des champs en plus (`is_active`, liste /vehicles/ « grasse » vs slim) — aucun consommateur ne diverge (la carte lit l'assurance depuis stats, identiques des deux côtés).
+- **Permission GPS manquante dans l'APK** : le manifest Capacitor ne déclarait AUCUNE permission de localisation → « GPS indisponible » permanent (dans le navigateur, c'est Chrome qui demande ; en APK, la WebView ne peut demander que ce qui est déclaré). `cap sync` ne régénère PAS le manifest (fichier user-owned) → ajout manuel de `ACCESS_COARSE_LOCATION` + `ACCESS_FINE_LOCATION` dans `android/app/src/main/AndroidManifest.xml` (+ `android.permissions` dans capacitor.config.ts pour mémoire). Vérifié sur émulateur : badge « GPS actif », 36 stations Lyon chargées, filtre « Avec E85 » 36→13 avec prix E85 par station.
+- **Tests E2E émulateur (données réelles Corsa)** : BlendCalculator (chargement, « Pleins futurs » 4 paliers × 300 km, diluant E10→SP98), flow « À la pompe » complet (compteur 1300 → réservoir 20 L → « 30.0 L E85 plein direct » → Enregistrer → Pleins 3, Total 116 €, assurance 13 700 km), alerte froid (Lyon → 0.2 °C prévu, « plein E10 conseillé (E85 ≤ 75 % en cette période) »).
+- **Don** : `DONATION_URL = https://paypal.me/wiwibaguette` dans `SettingsDialog.tsx` (panneau vérifié sur émulateur).
+- Suites : 347 vitest verts après nettoyage des fichiers de dump temporaires. Non relancé : `npm run test:full`.
 
 ---
 

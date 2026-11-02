@@ -22,9 +22,8 @@ import {
   clearModeConfig,
 } from '@/lib/local/config'
 
-// Donation link (Google Play in-app billing or PayPal/Ko-fi) — fill in when
-// the donation option is actually live; the panel then shows the link.
-const DONATION_URL = ''
+// Donation link (PayPal.Me) — the panel shows the link when set.
+const DONATION_URL = 'https://paypal.me/wiwibaguette'
 const APP_VERSION = '1.0.0'
 const UNLOCK_KEY = 'vv_server_unlocked'
 

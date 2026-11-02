@@ -104,6 +104,9 @@ describe('local-api router', () => {
     const list = await localRequest<unknown[]>('GET', '/fuel-entries/vehicle/1?per_page=500')
     expect(Array.isArray(list)).toBe(true)
     expect(list).toHaveLength(1)
+    // Pagination honours `page` (backend skip/limit) — page 2 of 1 must be empty
+    const page2 = await localRequest<unknown[]>('GET', '/fuel-entries/vehicle/1?page=2&per_page=20')
+    expect(page2).toHaveLength(0)
     const latest = await localRequest<{ odometer_reading: number }>(
       'GET', '/fuel-entries/vehicle/1/latest',
     )

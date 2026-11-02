@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { db } from './db'
 import type { LocalRow } from './db'
 import * as svc from './services'
+import { pyRound } from './services'
 import type {
   FuelEntry,
   Vehicle,
@@ -80,6 +81,33 @@ async function seedConversion(over: Record<string, unknown> = {}) {
 
 beforeEach(async () => {
   await db.clearAll()
+})
+
+describe('pyRound — must match Python round() (half-to-even on the binary value)', () => {
+  it('does not treat values just below .5 as ties (16.255 → 16.25)', () => {
+    expect(pyRound(16.255, 2)).toBe(16.25)
+  })
+  it('2.675 → 2.67 (stored double is 2.674999…)', () => {
+    expect(pyRound(2.675, 2)).toBe(2.67)
+  })
+  it('exact ties round to even', () => {
+    expect(pyRound(2.5, 0)).toBe(2)
+    expect(pyRound(3.5, 0)).toBe(4)
+    expect(pyRound(0.125, 2)).toBe(0.12)
+    expect(pyRound(0.375, 2)).toBe(0.38)
+  })
+  it('carries through trailing 9s', () => {
+    expect(pyRound(9.9999, 2)).toBe(10)
+  })
+  it('negative values keep the sign', () => {
+    expect(pyRound(-2.5, 0)).toBe(-2)
+    expect(pyRound(-16.255, 2)).toBe(-16.25)
+  })
+  it('ordinary rounding still works', () => {
+    expect(pyRound(1.004, 2)).toBe(1)
+    expect(pyRound(1.999, 2)).toBe(2)
+    expect(pyRound(123.456, 0)).toBe(123)
+  })
 })
 
 describe('vehicles (local)', () => {
