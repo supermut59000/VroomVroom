@@ -79,7 +79,7 @@ describe('cold-alert', () => {
 
     it('cold at the threshold (≤ is cold)', () => {
       expect(coldAdvice(5, cfg, 'Lyon').level).toBe('cold')
-      expect(coldAdvice(-1, cfg, 'Lyon').message).toContain('plein E10 conseillé')
+      expect(coldAdvice(-1, cfg, 'Lyon').message).toContain("ajoutez de l'E10 pour faciliter les démarrages à froid")
     })
 
     it('unknown when the forecast has no matching hour', () => {

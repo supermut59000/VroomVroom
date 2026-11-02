@@ -114,10 +114,10 @@ export function coldAdvice(
       message: `${cityLabel} ${cfg.time} : ${tempC} °C prévu, pas d'alerte`,
     }
   }
-  const base = `${cityLabel} ${cfg.time} : ${tempC} °C prévu, plein E10 conseillé`
+  const base = `${cityLabel} ${cfg.time} : ${tempC} °C prévu : ajoutez de l'E10 pour faciliter les démarrages à froid`
   return {
     level: 'cold',
-    message: isWinterWindow() ? `${base} (E85 ≤ 75 % en cette période)` : base,
+    message: isWinterWindow() ? `${base} (grade E85 ≤ 75 % en cette période)` : base,
   }
 }
 

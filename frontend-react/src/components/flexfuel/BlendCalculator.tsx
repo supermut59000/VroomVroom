@@ -128,6 +128,33 @@ export function BlendCalculator({
     [remainingLiters, currentEthanolPct, tankCapacity, target, tolerance, dilutantEthFraction, avgConsumption, inputOdo, e85EthFraction],
   )
 
+  // Autonomie d'un réservoir PLEIN d'E85 (conso E10 mesurée + surconsommation
+  // du boîtier) : le nombre de km faisables avec un plein full-éthanol.
+  const rangeE85Km = useMemo(() => {
+    if (!avgConsumption || tankCapacity == null) return null
+    const consoE85 = avgConsumption * (1 + (conversion.overconsumption_pct ?? 0) / 100)
+    return Math.round((tankCapacity * 100) / consoE85)
+  }, [avgConsumption, tankCapacity, conversion.overconsumption_pct])
+
+  // Seuils km de référence au grade d'été (85 %) : en hiver le grade actuel
+  // est sous la cible max (odoA/odoB = null, « Toujours possible ») — la
+  // référence été garde les seuils visibles toute l'année.
+  const summerRef = useMemo(() => {
+    if (tankCapacity == null || !avgConsumption) return null
+    if (e85EthFraction > (target + tolerance) / 100) return null // été : les seuils live valent déjà
+    return computeThresholds(
+      remainingLiters,
+      currentEthanolPct / 100,
+      tankCapacity,
+      target,
+      tolerance,
+      dilutantEthFraction,
+      avgConsumption,
+      inputOdo,
+      0.85,
+    )
+  }, [tankCapacity, avgConsumption, e85EthFraction, target, tolerance, remainingLiters, currentEthanolPct, dilutantEthFraction, inputOdo])
+
   const winterRec = useMemo(
     () =>
       tankCapacity == null
@@ -244,6 +271,11 @@ export function BlendCalculator({
             <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
               Sous la limite de {target + tolerance}%
             </p>
+            {summerRef?.odoA != null && (
+              <p className="mt-1 text-[11px] text-emerald-600 dark:text-emerald-500">
+                Au grade d'été (85 %) : jusqu'au km {summerRef.odoA.toLocaleString('fr-FR')}
+              </p>
+            )}
           </>
         ) : odoA !== null ? (
           <>
@@ -285,6 +317,11 @@ export function BlendCalculator({
             </p>
           </>
         )}
+        {rangeE85Km != null && (
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Plein E85 : ~{rangeE85Km.toLocaleString('fr-FR')} km d'autonomie
+          </p>
+        )}
       </div>
 
       {/* Card B: Optimal blend threshold */}
@@ -299,7 +336,19 @@ export function BlendCalculator({
           Dilution {dilutantLabel}
         </p>
         {pureE85AlwaysSafe ? (
-          <p className="text-sm font-medium text-muted-foreground">Inutile avec le grade actuel</p>
+          <>
+            <p className="text-sm font-medium text-muted-foreground">Inutile avec le grade actuel</p>
+            {summerRef &&
+              (summerRef.odoBNow ? (
+                <p className="mt-1 text-[11px] text-blue-600 dark:text-blue-400">
+                  Au grade d'été (85 %) : maintenant
+                </p>
+              ) : summerRef.odoB !== null ? (
+                <p className="mt-1 text-[11px] text-blue-600 dark:text-blue-400">
+                  Au grade d'été (85 %) : à partir du km {summerRef.odoB.toLocaleString('fr-FR')}
+                </p>
+              ) : null)}
+          </>
         ) : odoBNow ? (
           <>
             <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">Maintenant</p>

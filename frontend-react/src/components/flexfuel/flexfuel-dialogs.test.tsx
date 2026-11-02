@@ -288,6 +288,20 @@ describe('BlendCalculator', () => {
     expect(screen.getByText('Diluant')).toBeInTheDocument()
     expect(screen.queryByText(/Renseignez la capacité du réservoir/)).toBeNull()
   })
+
+  it('shows the full-E85 range and the summer-grade dilution threshold (winter state)', () => {
+    const entries = [
+      { ...latestEntry1, fueling_date: '2025-01-05', odometer_reading: 50000 },
+      { ...latestEntry1, id: 2, fueling_date: '2025-01-20', odometer_reading: 50500 },
+    ] as FuelEntry[]
+    render(<BlendCalculator conversion={conversion1} vehicle={vehicleFull1} entries={entries} embedded />)
+    // Range of a full E85 tank — always visible
+    expect(screen.getByText(/Plein E85 : ~[\d\s]+ km d'autonomie/)).toBeInTheDocument()
+    // Winter (grade 75 % ≤ 82 %): the km thresholds are null, so the summer
+    // reference (grade 85 %) must show both odometers instead of hiding them
+    // (card A: « jusqu'au km » odoA, card B: « à partir du km » odoB)
+    expect(screen.getAllByText(/Au grade d'été \(85 %\) : /)).toHaveLength(2)
+  })
 })
 
 describe('BlendCalculatorDialog', () => {

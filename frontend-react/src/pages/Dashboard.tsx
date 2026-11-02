@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Plus, Car, RefreshCw, Fuel, Snowflake, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -21,6 +22,7 @@ import { MaintenanceAddDialog } from '@/components/maintenance/MaintenanceAddDia
 import { MaintenanceViewDialog } from '@/components/maintenance/MaintenanceViewDialog'
 import { BlendCalculatorDialog } from '@/components/flexfuel/BlendCalculatorDialog'
 import { PumpFillDialog } from '@/components/flexfuel/PumpFillDialog'
+import { seedE10BasePriceIfNeeded } from '@/lib/e10-seed'
 
 export function Dashboard() {
   const { data: vehicles, isLoading, error, refetch } = useVehicles()
@@ -39,6 +41,21 @@ export function Dashboard() {
   const [blendCalcVehicleId, setBlendCalcVehicleId] = useState<number | null>(null)
   const [pumpFillVehicleId, setPumpFillVehicleId] = useState<number | null>(null)
   const [fabSheetOpen, setFabSheetOpen] = useState(false)
+
+  // First launch (local mode): seed a base E10 price (cheapest Paris station)
+  // so E85 rentability has a reference from day one.
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    let cancelled = false
+    void seedE10BasePriceIfNeeded().then((seeded) => {
+      if (seeded && !cancelled) {
+        queryClient.invalidateQueries({ queryKey: ['e10ReferencePrices'] })
+      }
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [queryClient])
 
   const handleFabClick = () => {
     if (!vehicles || vehicles.length === 0) return

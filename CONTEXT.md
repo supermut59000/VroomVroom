@@ -35,7 +35,15 @@ Last updated: 2026-11-01
 - **Permission GPS manquante dans l'APK** : le manifest Capacitor ne déclarait AUCUNE permission de localisation → « GPS indisponible » permanent (dans le navigateur, c'est Chrome qui demande ; en APK, la WebView ne peut demander que ce qui est déclaré). `cap sync` ne régénère PAS le manifest (fichier user-owned) → ajout manuel de `ACCESS_COARSE_LOCATION` + `ACCESS_FINE_LOCATION` dans `android/app/src/main/AndroidManifest.xml` (+ `android.permissions` dans capacitor.config.ts pour mémoire). Vérifié sur émulateur : badge « GPS actif », 36 stations Lyon chargées, filtre « Avec E85 » 36→13 avec prix E85 par station.
 - **Tests E2E émulateur (données réelles Corsa)** : BlendCalculator (chargement, « Pleins futurs » 4 paliers × 300 km, diluant E10→SP98), flow « À la pompe » complet (compteur 1300 → réservoir 20 L → « 30.0 L E85 plein direct » → Enregistrer → Pleins 3, Total 116 €, assurance 13 700 km), alerte froid (Lyon → 0.2 °C prévu, « plein E10 conseillé (E85 ≤ 75 % en cette période) »).
 - **Don** : `DONATION_URL = https://paypal.me/wiwibaguette` dans `SettingsDialog.tsx` (panneau vérifié sur émulateur).
-- Suites : 347 vitest verts après nettoyage des fichiers de dump temporaires. Non relancé : `npm run test:full`.
+
+### Demande utilisateur (suite même journée) — calculateur km, prix E10, message froid, doc
+
+- **BlendCalculator** (le point « il ne dit pas les km ») : en hiver le grade 75 % ≤ cible+tol 82 % → `pureE85AlwaysSafe` → odoA/odoB = null → aucun km affiché (c'est aussi le comportement de la version serveur, même composant). Ajoutés, toujours visibles : « **Plein E85 : ~X km d'autonomie** » (capacité ÷ conso E10 × (1+surconsommation boîtier)) et les **seuils de référence grade été 85 %** (« jusqu'au km X » odoA / « à partir du km Y » odoB) via un 2e appel `computeThresholds` à 0.85. Vérifié sur émulateur (Corsa) : 417 km / 1 650 / 1 775.
+- **Seed prix E10 à la première ouverture** (`src/lib/e10-seed.ts`, appelé depuis le Dashboard) : mode local + liste E10 vide + pas de flag → prix le plus bas d'une station Paris (gouv.fr, même dataset que les stations) enregistré avec note « Prix de base (première ouverture) » ; idempotent, silencieux hors-ligne, 4 tests. Vérifié sur émulateur : 1,990 €/L seedé au restart.
+- **Message alerte froid** : « {ville} {h} : {t} °C prévu : **ajoutez de l'E10 pour faciliter les démarrages à froid** » (+ « grade E85 ≤ 75 % en cette période » en hiver) — i18n + cold-alert.ts + 2 tests mis à jour.
+- **Data de référence** : les exports CSV de l'utilisateur (147 pleins / 21 maintenances, Corsa E, 27 884 → 76 284 km) servis de test en harness : conso post-conversion 8,56 L/100, plein E85 ≈ 487 km avec SES données. Pas d'import CSV dans l'app (limitation documentée).
+- **Doc** : `docs/app-android-utilisation.md` — walkthrough avec 12 captures d'écran + **liste complète des permissions extraites de l'APK** (INTERNET, COARSE/FINE_LOCATION, POST_NOTIFICATIONS, RECEIVE_BOOT_COMPLETED, WAKE_LOCK, SCHEDULE_EXACT_ALARM, receiver interne) + texte à déclarer sur le Play Store.
+- Suites : **352 vitest verts** + tsc -b. Non relancé : `npm run test:full`.
 
 ---
 

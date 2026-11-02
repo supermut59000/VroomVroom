@@ -105,6 +105,6 @@ describe('ColdAlertDialog', () => {
     await user.type(input, ' (59000)')
 
     await user.click(screen.getByRole('button', { name: /Tester maintenant/ }))
-    expect(await screen.findByText(/-2 °C prévu, plein E10 conseillé/)).toBeInTheDocument()
+    expect(await screen.findByText(/-2 °C prévu : ajoutez de l'E10 pour faciliter les démarrages à froid/)).toBeInTheDocument()
   })
 })
