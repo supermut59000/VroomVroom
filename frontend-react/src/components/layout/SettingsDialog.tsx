@@ -21,6 +21,7 @@ import {
   saveModeConfig,
   clearModeConfig,
 } from '@/lib/local/config'
+import { normalizeServerUrl } from '@/lib/api'
 
 // Donation link (PayPal.Me) — the panel shows the link when set.
 const DONATION_URL = 'https://paypal.me/wiwibaguette'
@@ -92,11 +93,11 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     }
   }
 
-  const testConnection = async () => {
+  const testConnection = async (): Promise<void> => {
     setTesting(true)
     setTestResult(null)
     try {
-      const base = serverUrl.trim().replace(/\/$/, '')
+      const base = normalizeServerUrl(serverUrl)
       const res = await fetch(`${base}/vehicles/`, {
         headers: apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : undefined,
       })
@@ -104,6 +105,8 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
         setTestResult({ ok: false, msg: 'Clé API refusée (401/403)' })
       } else if (res.ok) {
         setTestResult({ ok: true, msg: 'Connexion réussie' })
+      } else if (res.status === 404) {
+        setTestResult({ ok: false, msg: '404 : API introuvable à cette URL (vérifie le domaine et le chemin /api/v1)' })
       } else {
         setTestResult({ ok: false, msg: `Réponse inattendue (${res.status})` })
       }

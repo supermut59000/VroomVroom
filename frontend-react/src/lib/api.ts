@@ -13,10 +13,17 @@ type Api = {
 
 // The mode (local | server) is read per request: it can be saved at first
 // launch (ModeSetup) AFTER this module has loaded.
+/** Pasted server URLs often omit the /api/v1 prefix (→ 404): normalize it. */
+export function normalizeServerUrl(url: string): string {
+  const base = url.trim().replace(/\/+$/, '')
+  return base.endsWith('/api/v1') ? base : `${base}/api/v1`
+}
+
 function getApiUrl(cfg: ReturnType<typeof loadModeConfig> = loadModeConfig()): string {
-  // Server mode: the URL pasted at setup wins.
+  // Server mode: the URL pasted at setup wins (normalized — /api/v1 auto-appended
+  // if missing, so pasting the bare domain still works).
   if (cfg?.mode === 'server' && cfg.serverUrl) {
-    return cfg.serverUrl
+    return normalizeServerUrl(cfg.serverUrl)
   }
   // Allow override via env variable
   if (import.meta.env.VITE_API_URL) {

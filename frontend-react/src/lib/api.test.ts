@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { api, ApiError, API_URL } from '@/lib/api'
+import { api, ApiError, API_URL, normalizeServerUrl } from '@/lib/api'
 
 function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -14,6 +14,18 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllEnvs()
+})
+
+describe('normalizeServerUrl', () => {
+  it('appends /api/v1 when the pasted URL omits it (the 404 pitfall)', () => {
+    expect(normalizeServerUrl('https://api.example.fr')).toBe('https://api.example.fr/api/v1')
+    expect(normalizeServerUrl('https://api.example.fr/')).toBe('https://api.example.fr/api/v1')
+  })
+
+  it('keeps URLs that already end with /api/v1', () => {
+    expect(normalizeServerUrl('https://api.example.fr/api/v1')).toBe('https://api.example.fr/api/v1')
+    expect(normalizeServerUrl('https://api.example.fr/api/v1/')).toBe('https://api.example.fr/api/v1')
+  })
 })
 
 describe('api client', () => {
