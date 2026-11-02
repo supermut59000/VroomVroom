@@ -87,4 +87,37 @@ describe('local-api router', () => {
       localRequest('GET', '/flexfuel/vehicles/1/conversion'),
     ).rejects.toMatchObject({ status: 404 })
   })
+
+  // Regression: the per-vehicle sub-routes (s[1] = 'vehicle') used to be
+  // nested inside the numeric entry-id guard, so they 404'd and every screen
+  // reading them (BlendCalculator, charts, à la pompe) spun forever.
+  it('serves the per-vehicle fuel-entry sub-routes (not 404)', async () => {
+    await svc.createVehicle({
+      brand: 'Peugeot', model: '208', year: 2019, license_plate: 'AB-123-CD',
+      fuel_type: 'essence', initial_odometer: 10000, tank_capacity: 50,
+    })
+    await localRequest('POST', '/fuel-entries/', {
+      vehicle_id: 1, fuel_type: 'essence', liters: 40, price_per_liter: 1.6,
+      odometer_reading: 10500, fueling_date: '2026-01-01', is_full_tank: true,
+      station_name: 'Total Ville',
+    })
+    const list = await localRequest<unknown[]>('GET', '/fuel-entries/vehicle/1?per_page=500')
+    expect(Array.isArray(list)).toBe(true)
+    expect(list).toHaveLength(1)
+    const latest = await localRequest<{ odometer_reading: number }>(
+      'GET', '/fuel-entries/vehicle/1/latest',
+    )
+    expect(latest.odometer_reading).toBe(10500)
+    const stats = await localRequest<{ total_entries: number }>(
+      'GET', '/fuel-entries/vehicle/1/statistics',
+    )
+    expect(stats.total_entries).toBe(1)
+    const history = await localRequest<{ vehicle_id: number; data_points: unknown[] }>(
+      'GET', '/fuel-entries/vehicle/1/consumption-history',
+    )
+    expect(history.vehicle_id).toBe(1)
+    expect(Array.isArray(history.data_points)).toBe(true)
+    const stations = await localRequest<string[]>('GET', '/fuel-entries/stations')
+    expect(stations).toContain('Total Ville')
+  })
 })

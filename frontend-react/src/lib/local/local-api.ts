@@ -140,39 +140,42 @@ export async function localRequest<T = unknown>(
         if (!ok) notFound('Entry not found')
         return undefined as T
       }
-      if (s[1] === 'vehicle' && s.length >= 3) {
-        const vid = id(2)
-        if (method === 'GET' && s.length === 3) {
-          const all = await svc.listFuelEntriesByVehicle(vid)
-          const perPage = Number(q.get('per_page') ?? 100)
-          const limited = perPage >= all.length ? all : all.slice(0, perPage)
-          return limited as unknown as T
-        }
-        if (method === 'GET' && s[3] === 'latest') {
-          const e = await svc.latestFuelEntry(vid)
-          if (!e) notFound('No fuel entries found for this vehicle')
-          return e as T
-        }
-        if (method === 'GET' && s[3] === 'statistics')
-          return svc.fuelStatistics(vid) as Promise<T>
-        if (method === 'GET' && s[3] === 'consumption-history')
-          return svc.consumptionHistory(vid) as Promise<T>
-        if (method === 'GET' && s[3] === 'nearest-station') {
-          const st = await svc.nearestStation(
-            vid,
-            Number(q.get('lat')),
-            Number(q.get('lon')),
-            Number(q.get('radius_m') ?? 250),
-          )
-          if (!st) notFound('No station within radius')
-          return st as T
-        }
+    }
+    // Per-vehicle sub-routes: s[1] is the literal 'vehicle', not an entry id —
+    // they must live OUTSIDE the numeric id(1) guard above (regression: they
+    // 404'd and every screen reading them spun on "Chargement…" forever).
+    if (s[1] === 'vehicle' && s.length >= 3) {
+      const vid = id(2)
+      if (method === 'GET' && s.length === 3) {
+        const all = await svc.listFuelEntriesByVehicle(vid)
+        const perPage = Number(q.get('per_page') ?? 100)
+        const limited = perPage >= all.length ? all : all.slice(0, perPage)
+        return limited as unknown as T
       }
-      if (method === 'GET' && s[1] === 'stations') {
-        return svc.distinctStationNames(
-          q.get('vehicle_id') ? Number(q.get('vehicle_id')) : undefined,
-        ) as Promise<T>
+      if (method === 'GET' && s[3] === 'latest') {
+        const e = await svc.latestFuelEntry(vid)
+        if (!e) notFound('No fuel entries found for this vehicle')
+        return e as T
       }
+      if (method === 'GET' && s[3] === 'statistics')
+        return svc.fuelStatistics(vid) as Promise<T>
+      if (method === 'GET' && s[3] === 'consumption-history')
+        return svc.consumptionHistory(vid) as Promise<T>
+      if (method === 'GET' && s[3] === 'nearest-station') {
+        const st = await svc.nearestStation(
+          vid,
+          Number(q.get('lat')),
+          Number(q.get('lon')),
+          Number(q.get('radius_m') ?? 250),
+        )
+        if (!st) notFound('No station within radius')
+        return st as T
+      }
+    }
+    if (method === 'GET' && s[1] === 'stations') {
+      return svc.distinctStationNames(
+        q.get('vehicle_id') ? Number(q.get('vehicle_id')) : undefined,
+      ) as Promise<T>
     }
   }
 
