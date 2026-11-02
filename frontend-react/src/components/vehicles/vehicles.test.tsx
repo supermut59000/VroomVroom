@@ -354,8 +354,7 @@ describe('VehicleGrid', () => {
     renderWithProviders(
       <TooltipProvider><VehicleGrid vehicles={[vehicleList1, v2]} offlineQueue={queue}
         onDetails={vi.fn()} onEdit={vi.fn()} onFuelAdd={vi.fn()} onFuelView={vi.fn()}
-        onMaintenanceAdd={vi.fn()} onMaintenanceView={vi.fn()} onBlendCalc={vi.fn()}
-        onPumpFill={vi.fn()} /></TooltipProvider>,
+        onMaintenanceAdd={vi.fn()} onMaintenanceView={vi.fn()} onBlendCalc={vi.fn()} /></TooltipProvider>,
     )
     await waitFor(() => expect(screen.getByText(/AB-123-CD/)).toBeInTheDocument())
     expect(screen.getByText(/XY-999-ZZ/)).toBeInTheDocument()

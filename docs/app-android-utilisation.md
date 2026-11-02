@@ -34,49 +34,35 @@ coût du mois. Tout est persisté dans IndexedDB et survit aux redémarrages.*
 
 ## 3. Module E85
 
-### 3.1 Écran « À la pompe » (bouton goutte vert)
-
-![À la pompe](assets/06-a-la-pompe.png)
-*État du réservoir déduit du dernier plein (50 L − 300 km × 10 L/100 = 20 L restants),
-recommandation « 30,0 L E85 : plein direct » (grade d'hiver 75 % ≤ cible 77 % + tolérance),
-prix pré-rempli (dernier prix E85), compteur pré-rempli.*
-
-![Plein enregistré](assets/07-plein-enregistre.png)
-*Après « Enregistrer ces pleins » : toast, carte à jour (Pleins 3, Total 116 €,
-assurance recalculée à 13 700 km). Le mélange E10+E85 est enregistré en 2 entrées
-(booster partiel + plein) d'un seul coup.*
-
-### 3.2 Calculateur de mélange (bouton fiole vert)
+### 3.1 Calculateur de mélange (bouton fiole vert)
 
 ![Calculateur](assets/08-calculateur.png)
 *Sur données réelles (Corsa, réservoir plein 50 L à 75 % d'éthanol, conso 10 L/100,
 surconsommation boîtier 20 %) :*
 - **« Plein E85 : ~417 km d'autonomie »** — nombre de km faisables avec un plein full-éthanol
   (50 L ÷ 12 L/100 = conso E10 × 1,20).
-- **« Grade E85 — {saison} ({période}) : min – max % d'éthanol »** — la saison
-  courante avec sa **fourchette** (les stations ne sont pas obligatoirement au taux
-  nominal). Les 4 saisons : **Été** 1/5–30/9 : 85–85 % · **Intersaisons** 1/10–31/10
-  et 16/3–30/4 : 65–75 % · **Hiver** 1/11–15/3 : 60–75 %.
-- Cartes : « E85 PUR » (Jusqu'au km X / Fenêtre passée / Toujours possible) et
-  « DILUTION E10 » (Maintenant / À partir du km Y / Inutile) — avec la cible
-  saison, les seuils sont actifs **toute l'année** (capture ci-contre : hiver,
-  réservoir à 75 % ≥ limite 68 % → « Fenêtre passée » + dilution « Maintenant »).
+- **Grade E85 saisonnier à bornes** (pied de carte : « E85 (Hiver, 1er nov – 15 mars)
+  : 60 – 75 % ») — la saison courante avec sa **fourchette** (les stations ne sont
+  pas obligatoirement au taux nominal). Les 4 saisons : **Été** 1/5–30/9 : 85–85 % ·
+  **Intersaisons** 1/10–31/10 et 16/3–30/4 : 65–75 % · **Hiver** 1/11–15/3 : 60–75 %.
+- Cartes à bornes : « Toujours possible / Grade saison : 60 – 75 % / Max 75 % sous la
+  limite de 82 % » et « Inutile : max saison 75 % ≤ limite 82 % » — les bornes
+  expliquent pourquoi, au lieu de rien dire.
+- **En été** (max 85 % > limite 82 %) : les km de seuils reviennent — « Jusqu'au km X »
+  (dernier km à plein E85 pur sous la limite) et « À partir du km Y » (km à atteindre
+  pour pouvoir diluer au taux nécessaire, 5 L de diluant → cible exacte).
 - Sélecteur de diluant (E10/SP98), calcul pour un odomètre précis (+50/+100/+200),
   simulation « Pleins futurs » par paliers.
 - Tous les calculs de sécurité utilisent le **max** de la saison (surestimer
-  l'éthanol = recommander plus d'essence, jamais moins).
-- **Cible adaptée à la saison** : le taux cible est saisi sur l'échelle de l'été
-  (85 % = max d'été) ; l'app le décale de (max_saison − 85). Ex. 75 % saisi →
-  « Cible saison : 65 % (été : 75 %) » en hiver ; les calculs utilisent la cible
-  saison (tolérance absolue). Le réglage enregistré ne change jamais. Modèle
-  documenté dans `docs/plan-grade-e85-saisonnier.md`.
+  l'éthanol = recommander plus d'essence, jamais moins). Modèle documenté dans
+  `docs/plan-grade-e85-saisonnier.md`.
 
 Ces seuils utilisent exactement les mêmes fonctions que la version serveur
 (`computeThresholds` / `computeWinterRec` de `lib/blend-math.ts`) : le calculateur
 est le même composant React dans les deux versions, seul le transport des données
 diffère (API locale vs serveur), vérifié par diff différentiel (0 écart sur 19 endpoints).
 
-### 3.3 Prix E10 de référence (seed automatique)
+### 3.2 Prix E10 de référence (seed automatique)
 
 ![Prix E10](assets/10-prix-e10.png)
 *À la première ouverture (mode local, aucune référence E10), l'app enregistre
@@ -85,13 +71,13 @@ data.economie.gouv.fr) — ici 1,990 €/L du jour. La rentabilité E85 a donc u
 référence dès le premier plein. Les prix observés ensuite s'ajoutent manuellement
 (ou sont capturés automatiquement quand tu enregistres un plein E10).*
 
-### 3.4 Détails du véhicule — autonomie
+### 3.3 Détails du véhicule — autonomie
 
 ![Détails](assets/09-details-autonomie.png)
 *Autonomie estimée par saison (villes/route), projection « Si 100 % Essence /
 Si 100 % E85 » (ex. ~450 km plein E85), mix réel de la saison, suivi assurance.*
 
-### 3.5 Alerte froid (bouton flocon du header)
+### 3.4 Alerte froid (bouton flocon du header)
 
 ![Alerte froid](assets/11-alerte-froid.png)
 *Prévision open-meteo par commune : si la température du matin passe sous le seuil
@@ -101,7 +87,7 @@ démarrages à froid** » (+ « grade E85 60 – 75 % en cette période » en hi
 1er novembre – 15 mars). L'alerte nécessite l'app ouverte depuis la veille
 (limitation Android des notifications planifiées sans accès en arrière-plan).*
 
-### 3.6 Stations E85 (bouton pompe du header)
+### 3.5 Stations E85 (bouton pompe du header)
 
 ![Stations E85](assets/12-stations-e85.png)
 *Prix officiels des stations autour de ta position (GPS) ou d'une ville, rayon
@@ -143,15 +129,13 @@ l'app restent sur le téléphone (mode local) ou partent vers ton propre serveur
 ## 5. Ce qui est vérifié / limitations
 
 Vérifié sur émulateur (captures ci-dessus) : onboarding, CRUD véhicule + 4 pleins,
-stats live (bug d'invalidation corrigé), calculateur (seuils km + autonomie), flow
-pompe complet, seed E10, alerte froid (flux open-meteo), stations + filtre E85 +
-temps de trajet, panneau don, déverrouillage serveur, persistance IndexedDB.
-352 tests unitaires/front + 226 tests backend, et un diff différentiel
+stats live (bug d'invalidation corrigé), calculateur (seuils km + autonomie),
+seed E10, alerte froid (flux open-meteo), stations + filtre E85 + temps de
+trajet, panneau don, déverrouillage serveur, persistance IndexedDB.
+355 tests unitaires/front + 226 tests backend, et un diff différentiel
 backend-réel ↔ port-local : 0 écart de valeur sur 19 endpoints.
 
 Limitations connues :
-- Écran « À la pompe » **en ligne uniquement** (la file hors-ligne du classic
-  « Ajouter un plein » gère le hors-ligne).
 - L'alerte froid planifiée exige l'app ouverte depuis la veille (contrainte
   Android ; pas de foreground service par design).
 - Le datalist de villes du WebView d'émulateur est capricieux (sélection au

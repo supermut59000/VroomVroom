@@ -21,7 +21,6 @@ import { FuelViewDialog } from '@/components/fuel/FuelViewDialog'
 import { MaintenanceAddDialog } from '@/components/maintenance/MaintenanceAddDialog'
 import { MaintenanceViewDialog } from '@/components/maintenance/MaintenanceViewDialog'
 import { BlendCalculatorDialog } from '@/components/flexfuel/BlendCalculatorDialog'
-import { PumpFillDialog } from '@/components/flexfuel/PumpFillDialog'
 import { seedE10BasePriceIfNeeded } from '@/lib/e10-seed'
 
 export function Dashboard() {
@@ -39,7 +38,6 @@ export function Dashboard() {
   const [maintenanceAddVehicleId, setMaintenanceAddVehicleId] = useState<number | null>(null)
   const [maintenanceViewVehicleId, setMaintenanceViewVehicleId] = useState<number | null>(null)
   const [blendCalcVehicleId, setBlendCalcVehicleId] = useState<number | null>(null)
-  const [pumpFillVehicleId, setPumpFillVehicleId] = useState<number | null>(null)
   const [fabSheetOpen, setFabSheetOpen] = useState(false)
 
   // First launch (local mode): seed a base E10 price (cheapest Paris station)
@@ -164,7 +162,6 @@ export function Dashboard() {
         onMaintenanceAdd={setMaintenanceAddVehicleId}
         onMaintenanceView={setMaintenanceViewVehicleId}
         onBlendCalc={setBlendCalcVehicleId}
-        onPumpFill={setPumpFillVehicleId}
       />
 
       {/* Dialogs */}
@@ -201,11 +198,6 @@ export function Dashboard() {
         vehicleId={blendCalcVehicleId}
         onClose={() => setBlendCalcVehicleId(null)}
       />
-      <PumpFillDialog
-        vehicleId={pumpFillVehicleId}
-        onClose={() => setPumpFillVehicleId(null)}
-      />
-
       {/* Floating Action Button — quick fuel add */}
       <button
         onClick={handleFabClick}

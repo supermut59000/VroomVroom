@@ -29,7 +29,6 @@ import {
   e85EthanolFraction,
   e85Season,
   formatE85Range,
-  seasonalTarget,
 } from '@/lib/blend-math'
 import type { DilutantType } from '@/lib/blend-math'
 import { buildBlendPayloads } from '@/lib/pump-fill'
@@ -75,10 +74,7 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
 
   const tankCapacity = vehicle?.tank_capacity ?? null
   const conversionDate = conversion?.conversion_date ?? null
-  const targetSummer = conversion?.target_ethanol_pct ?? 77
-  // Cible saisie sur l'échelle de l'été, adaptée à la saison (65 % en hiver
-  // si 75 % saisi) — la tolérance reste absolue.
-  const target = seasonalTarget(targetSummer, e85Season())
+  const target = conversion?.target_ethanol_pct ?? 77
   const tolerance = conversion?.ethanol_tolerance_pct ?? 5
 
   // Same derivation as BlendCalculator (fill-to-fill tank state, remaining
@@ -251,7 +247,6 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Grade E85 ({season.label}, {season.periode}) : {formatE85Range(season)} d'éthanol
-                {target !== targetSummer && <> · cible {target}%</>}
               </p>
             </div>
 

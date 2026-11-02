@@ -40,7 +40,7 @@ export function BlendCalculatorDialog({ vehicleId, onClose }: BlendCalculatorDia
 
         {conversion && (
           <p className="text-xs text-muted-foreground -mt-2 mb-1">
-            Cible {conversion.target_ethanol_pct}% (été) &nbsp;· {vehicle?.tank_capacity ?? '?'} L
+            Cible {conversion.target_ethanol_pct}% &nbsp;· {vehicle?.tank_capacity ?? '?'} L
           </p>
         )}
 

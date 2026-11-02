@@ -50,13 +50,6 @@ export function formatE85Range(season: E85Season): string {
     : `${Math.round(season.min * 100)} – ${Math.round(season.max * 100)} %`
 }
 
-/** Target entered on the summer scale (85 % = summer max), adapted to the
- *  season: cible + (max_saison − 85). 75 saisi → 75 en été, 65 en
- *  intersaisons/hiver (max 75 %). The stored value never changes. */
-export function seasonalTarget(inputPct: number, season: E85Season): number {
-  return Math.round((inputPct + (season.max - 0.85) * 100) * 10) / 10
-}
-
 export const ETHANOL_FRACTION: Record<string, number> = {
   essence: 0.10,
   sp98: 0.05,

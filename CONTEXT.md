@@ -61,28 +61,11 @@ obligatoirement au taux nominal). Plan validé dans `docs/plan-grade-e85-saisonn
 - UI : ligne « **Grade E85 — {saison} ({période}) : min – max % d'éthanol** » en haut
   du calculateur + dans la carte « À la pompe » ; cartes bornées (« Grade saison :
   60 – 75 % », « Inutile : max saison 75% ≤ limite 82% ») ; footer borné. `summerRef`
-  supprimé. (Sous-section suivante : la cible saison rend les seuils actifs toute
-  l'année.)
+  supprimé. Km de seuils actifs seulement quand max saison > limite (été).
 - Alerte froid : `isWinterWindow` = saison `hiver` (31/10 n'est plus « hiver ») ;
   message « (grade E85 60 – 75 % en cette période) ».
 - Tests : bornes des 4 saisons (9 dates), wrapper, format, calculateur hiver/été avec
   `vi.setSystemTime` (deterministe), pompe, froid. **355 vitest verts + tsc -b.**
-
-### Cible adaptée à la saison (suite, même jour)
-
-L'utilisateur veut saisir sa cible **sur l'échelle de l'été** (85 % = max d'été) :
-« si je mets 75, en hiver c'est 65 car le max est 75, donc 10 % d'éthanol en
-moins ». Règle confirmée (2 questions, 2/2 recommandations validées) :
-- `seasonalTarget(inputPct, season)` = input + (max_saison − 85) ; le réglage
-  enregistré (target_ethanol_pct de la conversion) ne change jamais.
-- **Tous les calculs** (calculateur, pompe, seuils km, dilution, dépassement) +
-  affichages de limite utilisent la cible saison ; tolérance absolue (±5 pts).
-  Affichages : « Cible saison : 67% (été : 77%) » (calculateur), « · cible 67% »
-  (pompe), « Cible 77% (été) » (en-tête), indice formulaire de conversion.
-- Conséquence voulue : avec 77/5, limite d'hiver = 72 % < max E85 hiver 75 % →
-  km de seuils + dilution affichés en hiver comme en été. Réservoir pauvre en
-  éthanol (10 %) : plein direct E85 reste OK en hiver (36 % après plein) — test
-  pompe inchangé. **356 vitest verts + tsc -b.**
 
 ---
 
@@ -1090,6 +1073,21 @@ Normalising the already-averaged value assumes all segments had the same E85 fra
 The `e85_fraction` reported in `SeasonStats` is the **average** fraction across segments in that season, shown in the UI as "Mix réel cette saison : X% E85 / Y% E10".
 
 ---
+
+### Retraits demandés (même journée, après la cible saison)
+
+- **Cible saison retirée** (revert à l'état `8b8bfb2` des fichiers E85) : la saisie
+  « sur l'échelle été » (75 → 65 en hiver) est retirée ; la tolérance/cible restent
+  absolues. Le **grade saisonnier à bornes** (4 saisons, min–max, `e85Season`,
+  calculs au max) est **conservé** (l'utilisateur l'aimait). La demande de seuil km
+  de dilution « comme la conso moyenne » restait ambiguë → fallback autorisé par
+  l'utilisateur = retour aux commits d'avant.
+- **Bouton « À la pompe » retiré** (VehicleCard/Grid/Dashboard) : « ca sert a rien »
+  (l'écran PumpFillDialog reste dans le repo, tests verts, mais plus de bouton).
+- **Ligne « Grade E85 — … » en haut du form calculateur retirée** : le grade borné
+  reste visible en pied de carte (« E85 (Hiver, 1er nov – 15 mars) : 60 – 75 % »)
+  et dans les cartes.
+- Doc Android : sections pompe supprimées (06/07), renumérotation 3.1–3.5.
 
 ## Pending / Ideas for Future Sessions
 
