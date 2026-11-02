@@ -66,8 +66,14 @@ surconsommation boîtier 20 %) :*
 - Sélecteur de diluant (E10/SP98), calcul pour un odomètre précis (+50/+100/+200),
   simulation « Pleins futurs » par paliers.
 - Tous les calculs de sécurité utilisent le **max** de la saison (surestimer
-  l'éthanol = recommander plus d'essence, jamais moins). Modèle documenté dans
-  `docs/plan-grade-e85-saisonnier.md`.
+  l'éthanol = recommander plus d'essence, jamais moins).
+- **Cible adaptée à la saison** : le taux cible est saisi sur l'échelle de l'été
+  (85 % = max d'été) ; l'app le décale de (max_saison − 85). Ex. 77 % saisi →
+  77 % en été, **67 % en intersaisons/hiver** (limite 72 % avec tolérance ±5).
+  Conséquence : l'E85 hivernal (jusqu'à 75 %) peut dépasser la limite d'hiver →
+  les km de seuils et la recommandation de dilution s'affichent **toute l'année**.
+  Le réglage enregistré ne change jamais (il garde sa valeur « été »). Modèle
+  documenté dans `docs/plan-grade-e85-saisonnier.md`.
 
 Ces seuils utilisent exactement les mêmes fonctions que la version serveur
 (`computeThresholds` / `computeWinterRec` de `lib/blend-math.ts`) : le calculateur

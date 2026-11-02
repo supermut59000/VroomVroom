@@ -18,6 +18,7 @@ import {
   e85EthanolFraction,
   e85Season,
   formatE85Range,
+  seasonalTarget,
   simulateFutureFills,
 } from '@/lib/blend-math'
 import type { DilutantType } from '@/lib/blend-math'
@@ -51,7 +52,10 @@ export function BlendCalculator({
   // Aliased condition so the memos below narrow tankCapacity to number.
   const hasTankCapacity = tankCapacity != null
   const conversionDate = conversion.conversion_date
-  const target = conversion.target_ethanol_pct
+  // Cible saisie sur l'échelle de l'été (85 % = max d'été) : tous les calculs
+  // et affichages ci-dessous utilisent la cible adaptée à la saison.
+  const targetSummer = conversion.target_ethanol_pct
+  const target = seasonalTarget(targetSummer, season)
   const tolerance = conversion.ethanol_tolerance_pct
 
   const avgConsumption = useMemo(
@@ -400,6 +404,9 @@ export function BlendCalculator({
       <div className="rounded-md bg-muted/40 px-3 py-2 text-xs">
         <span className="font-semibold">Grade E85 — {season.label} ({season.periode})</span>
         <span className="text-muted-foreground"> : {formatE85Range(season)} d'éthanol</span>
+        {target !== targetSummer && (
+          <span className="font-semibold"> · Cible saison : {target}% (été : {targetSummer}%)</span>
+        )}
       </div>
       {/* Dilutant selector */}
       <div className="flex items-center justify-between gap-2">
@@ -545,7 +552,7 @@ export function BlendCalculator({
           Mélange E85
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Cible {target}% &nbsp;· {tankCapacity} L &nbsp;· {avgConsumption.toFixed(1)} L/100km
+          Cible {targetSummer}% (été) &nbsp;· {tankCapacity} L &nbsp;· {avgConsumption.toFixed(1)} L/100km
         </p>
       </CardHeader>
       <CardContent>{content}</CardContent>

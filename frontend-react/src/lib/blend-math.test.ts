@@ -7,6 +7,7 @@ import {
   e85EthanolFraction,
   e85Season,
   formatE85Range,
+  seasonalTarget,
   fuelEthanolFraction,
   simulateFutureFills,
 } from './blend-math'
@@ -64,6 +65,13 @@ describe('seasonal E85 grade (4 periods, bounded)', () => {
     expect(formatE85Range(e85Season('2026-06-01'))).toBe('85 %')
     expect(formatE85Range(e85Season('2026-10-15'))).toBe('65 – 75 %')
     expect(formatE85Range(e85Season('2026-12-01'))).toBe('60 – 75 %')
+  })
+
+  it('adapts the summer-scale target to the season (−10 pts when the max is 75 %)', () => {
+    expect(seasonalTarget(75, e85Season('2026-06-01'))).toBe(75)   // été
+    expect(seasonalTarget(75, e85Season('2026-10-15'))).toBe(65)   // intersaison
+    expect(seasonalTarget(75, e85Season('2026-12-01'))).toBe(65)   // hiver
+    expect(seasonalTarget(77, e85Season('2027-03-16'))).toBe(67)   // intersaison printemps
   })
 
   it('distinguishes SP98-E5 from E10', () => {

@@ -156,7 +156,7 @@ export function FlexfuelConversionDialog({
             <div className="space-y-2">
               <Label htmlFor="conv-ethanol-target">Taux éthanol cible (%)</Label>
               <Input id="conv-ethanol-target" type="number" step="0.1" min="0" max="100" {...form.register('target_ethanol_pct')} />
-              <p className="text-xs text-muted-foreground">Ex: 77% = 5L E10 + 40L E85 dans un réservoir 45L.</p>
+              <p className="text-xs text-muted-foreground">Ex: 77% = 5L E10 + 40L E85 dans un réservoir 45L. Saisie sur l'échelle de l'été (85 % max) : adaptée à la saison (−10 pts en intersaisons/hiver, max 75 %).</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="conv-ethanol-tol">Tolérance (%)</Label>
