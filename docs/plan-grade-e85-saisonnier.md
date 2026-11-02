@@ -32,7 +32,7 @@ composant) — mais ce n'est pas ce que tu veux lire.
 | Hiver | 1 nov – 15 mars | **60 %** (max 40 % essence) | **75 %** |
 | Intersaison (printemps) | 16 mars – 30 avril | **65 %** | **75 %** |
 
-Intervalle confirmés (questions posées, 4/4 recommandations validées) :
+Intervalles confirmés (4/4 recommandations validées par l'utilisateur) :
 - **Été = [85, 85]** : taux fixe.
 - **Intersaisons = [65, 75]** : « si ça passe de 85 à 75, adapte 75 → 65 ».
 - **Hiver = [60, 75]** : 60 % minimum (40 % essence max), max 75 %.
@@ -97,6 +97,17 @@ ex. « 30,0 L E85 : plein direct (grade 65–75 % ≤ cible 82 %) ».
    message avec l'intervalle réel (« grade E85 60–75 % en cette période »).
 5. Tests — bornes de saison (30 avril/1 mai, 30 sept/1 oct, 31 oct/1 nov,
    15 mars/16 mars), affichage calculateur + pompe, message froid.
+
+## Addendum — cible adaptée à la saison (confirmée même jour)
+
+Le taux cible est saisi **sur l'échelle de l'été** (85 % = max d'été) :
+`seasonalTarget(input, season) = input + (max_saison − 85)`. Ex. 75 saisi → 75 en
+été, **65 en intersaisons/hiver**. Le réglage enregistré ne change jamais ; la
+tolérance reste absolue. Tous les calculs (seuils km, dilution, dépassement) et
+les limites affichées utilisent la cible saison → avec 75/3, limite d'hiver 68 %
+< max E85 hiver 75 % : les km de seuils et la dilution s'affichent toute l'année
+(capture réelle : « Fenêtre passée » + « Maintenant »). Implémenté dans
+`a58b431` + `f3f3a5c`.
 
 ## Ce qui ne change PAS
 
