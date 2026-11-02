@@ -32,7 +32,7 @@ export function useColdAlert(): { message: string | null } {
         if (advice.level === 'cold' && !wasNotifiedFor(occurrence)) {
           markNotifiedFor(occurrence)
           notifyColdAlert({
-            title: 'VroomVroom — alerte froid',
+            title: 'VroomVroom : alerte froid',
             body: advice.message,
             at: occurrence,
           })

@@ -153,7 +153,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
 
     if (!isOnline) {
       addToQueue({ kind: 'fuel-create', data: payload })
-      toast.info('Plein enregistré hors-ligne — sera synchronisé au retour de la connexion')
+      toast.info('Plein enregistré hors-ligne, sera synchronisé au retour de la connexion')
       form.reset()
       geo.reset()
       onClose()
@@ -179,7 +179,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
           await createE10Price.mutateAsync({
             reference_date: data.fueling_date,
             price_per_liter: e10Price,
-            notes: `Auto — ${data.station_name || 'station proche'}`,
+            notes: `Auto : ${data.station_name || 'station proche'}`,
           })
           toast.info(`Prix E10 de référence enregistré : ${e10Price.toFixed(3)} €/L`)
         } catch {
@@ -200,7 +200,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
         toast.error(e.message)
       } else {
         addToQueue({ kind: 'fuel-create', data: payload })
-        toast.info('Serveur injoignable — plein mis en file d\'attente, synchronisation automatique')
+        toast.info('Serveur injoignable : plein mis en file d\'attente, synchronisation automatique')
         form.reset()
         geo.reset()
         onClose()
@@ -227,7 +227,7 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
           <DialogTitle>Ajouter un plein</DialogTitle>
           {vehicle && (
             <p className="text-sm text-muted-foreground">
-              {vehicle.brand} {vehicle.model} ({vehicle.year}) — {vehicle.license_plate}
+              {vehicle.brand} {vehicle.model} ({vehicle.year}) · {vehicle.license_plate}
             </p>
           )}
         </DialogHeader>

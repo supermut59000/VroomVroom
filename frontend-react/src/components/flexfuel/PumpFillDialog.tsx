@@ -220,7 +220,7 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
             {t.pump.title}
             {vehicle && (
               <span className="text-sm font-normal text-muted-foreground">
-                — {vehicle.brand} {vehicle.model}
+                · {vehicle.brand} {vehicle.model}
               </span>
             )}
           </DialogTitle>

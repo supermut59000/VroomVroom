@@ -130,7 +130,7 @@ describe('StationPricesDialog', () => {
     renderWithProviders(<StationPricesDialog open onClose={() => {}} />)
     await heading()
     expect(
-      await screen.findByText(/GPS indisponible — recherchez une ville ci-dessus/),
+      await screen.findByText(/GPS indisponible : recherchez une ville ci-dessus/),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Réessayer/ })).toBeInTheDocument()
   })

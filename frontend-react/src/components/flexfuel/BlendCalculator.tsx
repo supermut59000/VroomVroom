@@ -323,7 +323,7 @@ export function BlendCalculator({
             </p>
           </>
         ) : (
-          <p className="text-sm font-medium text-muted-foreground">—</p>
+          <p className="text-sm font-medium text-muted-foreground">–</p>
         )}
       </div>
     </div>
@@ -342,7 +342,7 @@ export function BlendCalculator({
           {winterRec.e85Liters.toFixed(1)} L E85 pur
         </p>
         <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
-          Résultat : {winterRec.resultPct.toFixed(1)}% — cible ≤ {target + tolerance}%
+          Résultat : {winterRec.resultPct.toFixed(1)}% (cible ≤ {target + tolerance}%)
         </p>
         {winterRec.kmSafe !== null && winterRec.kmRelative !== null && (
           <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-500">
@@ -361,14 +361,14 @@ export function BlendCalculator({
       <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
         {aboveLimit && (
           <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-2">
-            Taux actuel ({currentEthanolPct.toFixed(0)}%) au-dessus de la limite — dilution nécessaire
+            Taux actuel ({currentEthanolPct.toFixed(0)}%) au-dessus de la limite, dilution nécessaire
           </p>
         )}
         <p className="text-lg font-bold text-blue-800 dark:text-blue-300">
           {winterRec.dilutantLiters.toFixed(1)} L {dilutantLabel}&nbsp;+&nbsp;{winterRec.e85Liters.toFixed(1)} L E85
         </p>
         <p className={`mt-1 text-sm ${resultColor}`}>
-          Résultat : {winterRec.resultPct.toFixed(1)}% — cible ≤ {target + tolerance}%
+          Résultat : {winterRec.resultPct.toFixed(1)}% (cible ≤ {target + tolerance}%)
         </p>
       </div>
     )

@@ -89,7 +89,7 @@ export function MaintenanceAddDialog({ vehicleId, onClose }: MaintenanceAddDialo
         toast.error(e.message)
       } else {
         addToQueue({ kind: 'maintenance-create', data: payload })
-        toast.info('Serveur injoignable — maintenance mise en file d\'attente, synchronisation automatique')
+        toast.info('Serveur injoignable : maintenance mise en file d\'attente, synchronisation automatique')
         form.reset()
         onClose()
       }
@@ -105,7 +105,7 @@ export function MaintenanceAddDialog({ vehicleId, onClose }: MaintenanceAddDialo
           <DialogTitle>Ajouter une maintenance</DialogTitle>
           {vehicle && (
             <p className="text-sm text-muted-foreground">
-              {vehicle.brand} {vehicle.model} — {vehicle.license_plate}
+              {vehicle.brand} {vehicle.model} · {vehicle.license_plate}
             </p>
           )}
         </DialogHeader>

@@ -104,7 +104,7 @@ export function FuelViewDialog({ vehicleId, onClose }: FuelViewDialogProps) {
             </DialogTitle>
             {vehicle && (
               <p className="text-sm text-muted-foreground">
-                {vehicle.brand} {vehicle.model} — {vehicle.license_plate}
+                {vehicle.brand} {vehicle.model} · {vehicle.license_plate}
               </p>
             )}
           </DialogHeader>
@@ -273,7 +273,7 @@ export function FuelViewDialog({ vehicleId, onClose }: FuelViewDialogProps) {
               {(() => {
                 const entry = entries?.find((e) => e.id === pendingDeleteId)
                 return entry
-                  ? `Plein du ${new Date(entry.fueling_date).toLocaleDateString('fr-FR')} — ${entry.liters} L`
+                  ? `Plein du ${new Date(entry.fueling_date).toLocaleDateString('fr-FR')} · ${entry.liters} L`
                   : ''
               })()}
             </AlertDialogDescription>

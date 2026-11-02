@@ -130,7 +130,7 @@ describe('FuelAddDialog', () => {
   it('opens with the vehicle header, auto-filled date, and latest odometer hint', async () => {
     renderFuel()
     expect(await screen.findByRole('heading', { name: 'Ajouter un plein' })).toBeInTheDocument()
-    expect(await screen.findByText(/Peugeot 208 \(2019\) — AB-123-CD/)).toBeInTheDocument()
+    expect(await screen.findByText(/Peugeot 208 \(2019\) · AB-123-CD/)).toBeInTheDocument()
     expect(screen.getByLabelText(/Compteur \*/)).toBeInTheDocument()
     // date defaults to today
     const dateInput = fuelFields().date

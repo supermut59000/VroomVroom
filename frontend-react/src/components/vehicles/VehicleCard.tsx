@@ -120,7 +120,7 @@ export function VehicleCard({
                 <span className="font-medium">
                   {stats.last_odometer
                     ? `${Math.round(stats.last_odometer).toLocaleString('fr-FR')} km`
-                    : '—'}
+                    : '–'}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">
@@ -134,7 +134,7 @@ export function VehicleCard({
                 <span className="font-medium">
                   {stats.average_consumption
                     ? `${stats.average_consumption.toFixed(1)} L/100`
-                    : '—'}
+                    : '–'}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm">

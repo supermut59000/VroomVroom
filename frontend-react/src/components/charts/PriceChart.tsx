@@ -124,7 +124,7 @@ export function PriceChart({ entries, splitByFuelType = false }: PriceChartProps
                 const item = props.payload as Row
                 const label = FUEL_LABEL[name] ?? name
                 return [
-                  `${value} €/L — ${item.liters}L — ${item.total}€${item.station ? ` (${item.station})` : ''}`,
+                  `${value} €/L · ${item.liters} L · ${item.total} €${item.station ? ` (${item.station})` : ''}`,
                   label,
                 ]
               }}

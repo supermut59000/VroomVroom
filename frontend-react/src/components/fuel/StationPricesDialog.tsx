@@ -275,7 +275,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
         {geo.status === 'error' && origin?.mode !== 'city' && (
           <div className="flex items-center gap-2">
             <p className="text-sm text-muted-foreground">
-              GPS indisponible — recherchez une ville ci-dessus.
+              GPS indisponible : recherchez une ville ci-dessus.
             </p>
             <Button variant="outline" size="sm" onClick={geo.capture}>
               <Navigation className="mr-1 h-3.5 w-3.5" />
@@ -335,9 +335,9 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
         {!loading && view === 'list' && sorted.length > 0 && (
           <div className="flex-1 overflow-y-auto">
             <p className="mb-2 text-xs text-muted-foreground">
-              {sorted.length} stations dans un rayon de {radiusKm} km — {fuelLabel}
-              {routesLoading && ' — calcul des temps de trajet…'}
-              {routesUnavailable && ' — temps de trajet indisponibles'}
+              {sorted.length} stations dans un rayon de {radiusKm} km · {fuelLabel}
+              {routesLoading && ' · calcul des temps de trajet…'}
+              {routesUnavailable && ' · temps de trajet indisponibles'}
             </p>
             <div className="space-y-1">
               {sorted.map((s) => {

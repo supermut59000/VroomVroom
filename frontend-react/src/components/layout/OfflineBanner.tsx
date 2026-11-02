@@ -11,7 +11,7 @@ export function OfflineBanner() {
       {!isOnline && (
         <div className="flex items-center justify-center gap-2 bg-orange-500 px-4 py-2 text-sm font-medium text-white">
           <WifiOff className="h-4 w-4" />
-          Mode hors-ligne — Les modifications seront synchronisées au retour de la connexion
+          Mode hors-ligne : les modifications seront synchronisées au retour de la connexion
         </div>
       )}
       {queue.length > 0 && (

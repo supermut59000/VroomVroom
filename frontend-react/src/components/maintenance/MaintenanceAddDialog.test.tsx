@@ -48,7 +48,7 @@ describe('MaintenanceAddDialog', () => {
   it('opens with the vehicle header and default type Vidange', async () => {
     renderMaint()
     expect(await screen.findByRole('heading', { name: 'Ajouter une maintenance' })).toBeInTheDocument()
-    expect(await screen.findByText(/Peugeot 208 — AB-123-CD/)).toBeInTheDocument()
+    expect(await screen.findByText(/Peugeot 208 · AB-123-CD/)).toBeInTheDocument()
     const fields = maintFields()
     expect(fields.type.value).toBe('Vidange')
     expect(fields.date.value).toBeTruthy()

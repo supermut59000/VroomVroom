@@ -127,7 +127,7 @@ export function PeriodStatsDialog({ vehicleId, open, onOpenChange }: PeriodStats
               />
               <Kpi
                 label="Consommation"
-                value={stats.avg_consumption != null ? `${stats.avg_consumption.toFixed(2)} L/100` : '—'}
+                value={stats.avg_consumption != null ? `${stats.avg_consumption.toFixed(2)} L/100` : '–'}
                 sub="pondérée distance"
               />
               <Kpi
@@ -137,7 +137,7 @@ export function PeriodStatsDialog({ vehicleId, open, onOpenChange }: PeriodStats
               />
               <Kpi
                 label="Prix moyen"
-                value={stats.avg_price_per_liter != null ? `${stats.avg_price_per_liter.toFixed(3)} €/L` : '—'}
+                value={stats.avg_price_per_liter != null ? `${stats.avg_price_per_liter.toFixed(3)} €/L` : '–'}
                 sub={
                   stats.fuel_breakdown.length > 1
                     ? stats.fuel_breakdown
@@ -179,12 +179,12 @@ export function PeriodStatsDialog({ vehicleId, open, onOpenChange }: PeriodStats
             <div className="grid grid-cols-2 gap-3">
               <Kpi
                 label="Dépenses / 100 km"
-                value={stats.fuel_cost_per_100km != null ? eur(stats.fuel_cost_per_100km, 2) : '—'}
+                value={stats.fuel_cost_per_100km != null ? eur(stats.fuel_cost_per_100km, 2) : '–'}
                 sub="carburant · km observés"
               />
               <Kpi
                 label="Coût / jour"
-                value={stats.cost_per_day != null ? eur(stats.cost_per_day, 2) : '—'}
+                value={stats.cost_per_day != null ? eur(stats.cost_per_day, 2) : '–'}
                 sub="carburant + maintenance"
               />
               <Kpi

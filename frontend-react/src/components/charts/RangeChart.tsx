@@ -89,7 +89,7 @@ export function RangeChart({ dataPoints, tankCapacity }: RangeChartProps) {
             <Tooltip
               formatter={(value: number, _name: string, props) => {
                 const item = props.payload as Row
-                return [`${value} km — ${item.consumption.toFixed(2)} L/100km`, 'Autonomie']
+                return [`${value} km · ${item.consumption.toFixed(2)} L/100km`, 'Autonomie']
               }}
             />
             <ReferenceLine y={average} stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" />

@@ -111,7 +111,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     } catch {
       setTestResult({
         ok: false,
-        msg: 'Connexion impossible (URL ou CORS — l’API doit autoriser ce navigateur)',
+        msg: 'Connexion impossible (URL ou CORS, l’API doit autoriser ce navigateur)',
       })
     } finally {
       setTesting(false)
@@ -235,7 +235,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                 {GUIDE.map((item) => (
                   <li key={item.title} className="text-sm">
                     <span className="font-medium">{item.title}</span>
-                    <span className="text-muted-foreground"> — {item.text}</span>
+                    <span className="text-muted-foreground"> : {item.text}</span>
                   </li>
                 ))}
               </ul>
@@ -276,7 +276,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
 
           {/* About */}
           <section className="border-t pt-3">
-            <p className="text-sm">VroomVroom — suivi de carburant et E85</p>
+            <p className="text-sm">VroomVroom : suivi de carburant et E85</p>
             <button
               type="button"
               onClick={onVersionTap}

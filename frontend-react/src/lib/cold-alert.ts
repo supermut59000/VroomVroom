@@ -111,10 +111,10 @@ export function coldAdvice(
   if (tempC > cfg.thresholdC) {
     return {
       level: 'ok',
-      message: `${cityLabel} ${cfg.time} : ${tempC} °C prévu — pas d'alerte`,
+      message: `${cityLabel} ${cfg.time} : ${tempC} °C prévu, pas d'alerte`,
     }
   }
-  const base = `${cityLabel} ${cfg.time} : ${tempC} °C prévu — plein E10 conseillé`
+  const base = `${cityLabel} ${cfg.time} : ${tempC} °C prévu, plein E10 conseillé`
   return {
     level: 'cold',
     message: isWinterWindow() ? `${base} (E85 ≤ 75 % en cette période)` : base,

@@ -88,7 +88,7 @@ export const t = {
     addSuccess: 'Plein ajouté avec succès',
     updateSuccess: 'Plein mis à jour',
     deleteSuccess: 'Plein supprimé',
-    offlineQueued: 'Plein enregistré hors-ligne — sera synchronisé au retour de la connexion',
+    offlineQueued: 'Plein enregistré hors-ligne, sera synchronisé au retour de la connexion',
     fuelTypeMismatch:
       'Le type sélectionné ({selected}) diffère du carburant enregistré du véhicule ({vehicle}).',
     odometerLower:
@@ -159,7 +159,7 @@ export const t = {
     breakEvenReached: 'Atteint',
     breakEvenPending: 'Non atteint',
     monthlyAvg: 'Économies moyennes/mois',
-    skippedFills: '{n} plein(s) ignoré(s) — prix E10 manquant à la date du plein',
+    skippedFills: '{n} plein(s) ignoré(s) : prix E10 manquant à la date du plein',
   },
 
   // ── Station prices ──────────────────────────────────────────────────────
@@ -188,11 +188,11 @@ export const t = {
     save: 'Enregistrer',
     saved: 'Alerte froid enregistrée',
     needsCity: 'Choisissez une ville pour activer l\'alerte',
-    notificationDenied: 'Notifications refusées — l\'alerte restera visible dans l\'application',
+    notificationDenied: 'Notifications refusées, l\'alerte restera visible dans l\'application',
     limitation: 'L\'alerte nécessite que l\'application ait été ouverte depuis la veille.',
-    cold: '{city} {time} : {temp} °C prévu — plein E10 conseillé',
-    coldWinter: '{city} {time} : {temp} °C prévu — plein E10 conseillé (E85 ≤ 75 % en cette période)',
-    ok: '{city} {time} : {temp} °C prévu — pas d\'alerte',
+    cold: '{city} {time} : {temp} °C prévu, plein E10 conseillé',
+    coldWinter: '{city} {time} : {temp} °C prévu, plein E10 conseillé (E85 ≤ 75 % en cette période)',
+    ok: '{city} {time} : {temp} °C prévu, pas d\'alerte',
     unknown: 'Prévision indisponible pour {city} à {time}',
   },
 
@@ -201,29 +201,29 @@ export const t = {
     title: 'À la pompe',
     tank: 'Réservoir',
     remaining: '{liters} L · {pct} % d\'éthanol',
-    noFullFill: 'Aucun plein depuis la conversion — faites un plein pour initialiser le calcul.',
+    noFullFill: 'Aucun plein depuis la conversion : faites un plein pour initialiser le calcul.',
     noTankCapacity: 'Renseignez la capacité du réservoir pour utiliser l\'aide à la pompe.',
     noConversion: 'Aucune conversion FlexFuel enregistrée pour ce véhicule.',
     recommendation: 'À mettre dans le réservoir',
-    tankFull: 'Réservoir presque plein — pas besoin de mettre.',
-    pureE85: '{liters} L E85 — plein direct',
+    tankFull: 'Réservoir presque plein : pas besoin de mettre.',
+    pureE85: '{liters} L E85 : plein direct',
     pureE85Safe: 'OK jusqu\'au km {odo} (dans ~{rel} km)',
     blend: 'Étape 1 : {liters} L {label} · Étape 2 : {e85} L E85',
-    result: 'Résultat : {pct} % d\'éthanol — cible {target} ± {tol} %',
+    result: 'Résultat : {pct} % d\'éthanol (cible {target} ± {tol} %)',
     record: 'Enregistrer ces pleins',
     odometer: 'Compteur',
     e85Price: 'Prix E85 (€/L)',
     dilutantPrice: 'Prix {label} (€/L)',
     dilutantType: 'Diluant',
     success: 'Plein(s) enregistré(s)',
-    error: 'Impossible d\'enregistrer — vérifiez votre connexion',
+    error: 'Impossible d\'enregistrer : vérifiez votre connexion',
     pricesRequired: 'Renseignez au moins le prix E85',
   },
 
   // ── Errors ──────────────────────────────────────────────────────────────
   errors: {
-    networkTimeout: 'La requête a expiré — vérifiez votre connexion',
-    unauthorized: 'Accès non autorisé — clé API invalide',
+    networkTimeout: 'La requête a expiré : vérifiez votre connexion',
+    unauthorized: 'Accès non autorisé : clé API invalide',
     serverError: 'Erreur serveur interne',
     notFound: 'Ressource introuvable',
     unexpectedError: 'Erreur inattendue',
@@ -231,7 +231,7 @@ export const t = {
 
   // ── Offline ─────────────────────────────────────────────────────────────
   offline: {
-    banner: 'Hors ligne — certaines fonctionnalités sont limitées',
+    banner: 'Hors ligne : certaines fonctionnalités sont limitées',
     syncing: 'Synchronisation en cours…',
     syncSuccess: 'Données synchronisées',
   },

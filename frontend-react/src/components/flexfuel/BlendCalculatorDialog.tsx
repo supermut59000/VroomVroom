@@ -32,7 +32,7 @@ export function BlendCalculatorDialog({ vehicleId, onClose }: BlendCalculatorDia
             Mélange E85
             {vehicle && (
               <span className="text-sm font-normal text-muted-foreground">
-                — {vehicle.brand} {vehicle.model}
+                · {vehicle.brand} {vehicle.model}
               </span>
             )}
           </DialogTitle>

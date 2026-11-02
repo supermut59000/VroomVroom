@@ -144,7 +144,7 @@ export function FuelEditDialog({ entry, vehicleId, onClose }: FuelEditDialogProp
             allowOdometerDecrease,
           },
         })
-        toast.info('Serveur injoignable — modification mise en file d\'attente, synchronisation automatique')
+        toast.info('Serveur injoignable : modification mise en file d\'attente, synchronisation automatique')
         onClose()
       }
     }

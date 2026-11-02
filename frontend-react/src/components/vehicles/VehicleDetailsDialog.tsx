@@ -168,7 +168,7 @@ export function VehicleDetailsDialog({
                         ) : stats.insurance_km_remaining != null &&
                           stats.insurance_km_remaining <= stats.current_insurance_km_limit * 0.1 ? (
                           <Badge className="mt-2 border-0 bg-orange-100 text-orange-700">
-                            Attention — proche de la limite
+                            Attention : proche de la limite
                           </Badge>
                         ) : (
                           <Badge className="mt-2 border-0 bg-green-100 text-green-700">
@@ -205,7 +205,7 @@ export function VehicleDetailsDialog({
                       <span className="text-muted-foreground">Conso. moyenne:</span>{' '}
                       {fuelStats.average_consumption
                         ? `${fuelStats.average_consumption.toFixed(2)} L/100km`
-                        : '—'}
+                        : '–'}
                     </div>
                     <div>
                       <span className="text-muted-foreground">Prix moyen:</span>{' '}
@@ -277,7 +277,7 @@ export function VehicleDetailsDialog({
                                     <div className="text-xs text-muted-foreground">{current.e10_consumption.toFixed(1)} L/100</div>
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground py-1">—</div>
+                                  <div className="text-xs text-muted-foreground py-1">–</div>
                                 )}
                               </div>
                               <div className="rounded-md border p-2 text-center">
@@ -288,7 +288,7 @@ export function VehicleDetailsDialog({
                                     <div className="text-xs text-muted-foreground">{current.e85_consumption.toFixed(1)} L/100</div>
                                   </>
                                 ) : (
-                                  <div className="text-xs text-muted-foreground py-1">—</div>
+                                  <div className="text-xs text-muted-foreground py-1">–</div>
                                 )}
                               </div>
                             </div>
@@ -311,7 +311,7 @@ export function VehicleDetailsDialog({
                                 className={`rounded-md border p-2 text-center ${isCurrent ? 'border-primary bg-primary/5 font-semibold' : 'text-muted-foreground'}`}
                               >
                                 <div className="text-[11px]">{SEASON_SHORT[s]}</div>
-                                <div className="mt-0.5">{ss?.range_km != null ? `~${Math.round(ss.range_km)} km` : '—'}</div>
+                                <div className="mt-0.5">{ss?.range_km != null ? `~${Math.round(ss.range_km)} km` : '–'}</div>
                                 <div className="mt-0.5 opacity-70">{ss?.avg_consumption != null ? `${ss.avg_consumption.toFixed(1)} L/100` : ''}</div>
                                 {isFlexFuel && ss?.fill_count != null && (
                                   <div className="mt-0.5 opacity-50">{ss.fill_count} plein{ss.fill_count !== 1 ? 's' : ''}</div>

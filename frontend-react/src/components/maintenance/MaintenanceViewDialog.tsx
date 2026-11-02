@@ -136,7 +136,7 @@ export function MaintenanceViewDialog({ vehicleId, onClose }: MaintenanceViewDia
             </DialogTitle>
             {vehicle && (
               <p className="text-sm text-muted-foreground">
-                {vehicle.brand} {vehicle.model} — {vehicle.license_plate}
+                {vehicle.brand} {vehicle.model} · {vehicle.license_plate}
               </p>
             )}
           </DialogHeader>
@@ -166,7 +166,7 @@ export function MaintenanceViewDialog({ vehicleId, onClose }: MaintenanceViewDia
                 <CardContent className="p-3 text-center">
                   <p className="text-xs text-muted-foreground">Dernière</p>
                   <p className="text-lg font-bold">
-                    {stats.lastDate ? new Date(stats.lastDate).toLocaleDateString('fr-FR') : '—'}
+                    {stats.lastDate ? new Date(stats.lastDate).toLocaleDateString('fr-FR') : '–'}
                   </p>
                 </CardContent>
               </Card>
@@ -306,7 +306,7 @@ export function MaintenanceViewDialog({ vehicleId, onClose }: MaintenanceViewDia
               {(() => {
                 const entry = entries?.find((e) => e.id === pendingDeleteId)
                 return entry
-                  ? `${getMaintenanceLabel(entry.maintenance_type)} du ${new Date(entry.maintenance_date).toLocaleDateString('fr-FR')} — ${entry.cost.toFixed(2)} €`
+                  ? `${getMaintenanceLabel(entry.maintenance_type)} du ${new Date(entry.maintenance_date).toLocaleDateString('fr-FR')} · ${entry.cost.toFixed(2)} €`
                   : ''
               })()}
             </AlertDialogDescription>

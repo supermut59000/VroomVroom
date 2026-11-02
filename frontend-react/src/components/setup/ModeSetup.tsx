@@ -24,7 +24,7 @@ export function ModeSetup({ onDone }: ModeSetupProps) {
           <Car className="mx-auto h-10 w-10 text-primary" />
           <h1 className="text-2xl font-bold tracking-tight">VroomVroom</h1>
           <p className="text-sm text-muted-foreground">
-            Suivi de carburant, E85 et maintenance — pensé pour la pompe.
+            Suivi de carburant, E85 et maintenance, pensé pour la pompe.
           </p>
         </div>
 
@@ -50,7 +50,7 @@ export function ModeSetup({ onDone }: ModeSetupProps) {
           </ul>
           <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
             <Database className="h-4 w-4 shrink-0 text-primary" />
-            Vos données restent sur ce téléphone — aucune inscription, export
+            Vos données restent sur ce téléphone : aucune inscription, export
             CSV à tout moment.
           </div>
           <Button type="button" className="w-full" onClick={start}>

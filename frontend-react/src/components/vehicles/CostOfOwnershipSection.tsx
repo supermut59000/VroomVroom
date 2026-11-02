@@ -105,7 +105,7 @@ export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProp
         <div className="rounded-md bg-muted/50 p-3 text-center">
           <p className="text-xs text-muted-foreground">Coût / km (tout inclus)</p>
           <p className="text-lg font-bold">
-            {metrics.allInCostPerKm != null ? `${metrics.allInCostPerKm.toFixed(2)} €` : '—'}
+            {metrics.allInCostPerKm != null ? `${metrics.allInCostPerKm.toFixed(2)} €` : '–'}
           </p>
         </div>
         <div className="rounded-md bg-muted/50 p-3 text-center">

@@ -61,7 +61,7 @@ describe('PumpFillDialog', () => {
     const odo = byLabel('Compteur')
     await user.clear(odo)
     await user.type(odo, '20400')
-    expect(await screen.findByText('20.0 L E85 — plein direct')).toBeInTheDocument()
+    expect(await screen.findByText('20.0 L E85 : plein direct')).toBeInTheDocument()
     // liters pre-filled from the recommendation (no user input)
     expect(byLabel('E85 (L)').value).toBe('20.0')
 

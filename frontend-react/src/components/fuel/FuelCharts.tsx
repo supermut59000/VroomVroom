@@ -98,7 +98,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
         <DialogHeader>
           <DialogTitle>
             Graphiques
-            {vehicle && ` — ${vehicle.brand} ${vehicle.model}`}
+            {vehicle && ` · ${vehicle.brand} ${vehicle.model}`}
           </DialogTitle>
         </DialogHeader>
 
@@ -209,7 +209,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
                       <p className="text-lg font-bold">
                         {rentability.monthly_average_savings
                           ? `${Math.round(rentability.monthly_average_savings).toLocaleString('fr-FR')} €`
-                          : '—'}
+                          : '–'}
                       </p>
                     </div>
                   </div>

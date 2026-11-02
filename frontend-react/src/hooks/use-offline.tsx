@@ -155,7 +155,7 @@ export function OfflineProvider({ children }: { children: ReactNode }) {
         // otherwise a rotated API key or dead server retries forever invisibly.
         if (consecutiveFailures.current === ESCALATION_THRESHOLD) {
           toast.error(
-            `${transientFailures.length} élément${transientFailures.length > 1 ? 's' : ''} toujours en attente après ${ESCALATION_THRESHOLD} tentatives — vérifiez le serveur ou la clé API. La synchronisation continue automatiquement.`,
+            `${transientFailures.length} élément${transientFailures.length > 1 ? 's' : ''} toujours en attente après ${ESCALATION_THRESHOLD} tentatives : vérifiez le serveur ou la clé API. La synchronisation continue automatiquement.`,
             { duration: 15000 },
           )
         }

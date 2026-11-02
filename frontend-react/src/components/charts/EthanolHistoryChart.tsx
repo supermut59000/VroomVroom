@@ -141,7 +141,7 @@ export function EthanolHistoryChart({ conversion, vehicle, entries }: EthanolHis
       <CardHeader>
         <CardTitle className="text-base">Taux éthanol dans le réservoir</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Cible {target}% ± {tolerance}% — estimé après chaque plein complet
+          Cible {target}% ± {tolerance}% (estimé après chaque plein complet)
         </p>
       </CardHeader>
       <CardContent>
