@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VroomVroom — Politique de confidentialité</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6; color: #1a1a1a; background: #ffffff;
+    max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 4rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e5e5e5; background: #111111; }
+  }
+  h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
+  h2 { font-size: 1.15rem; margin-top: 2rem; border-bottom: 1px solid rgba(128,128,128,.3); padding-bottom: .3rem; }
+  p.date { color: #6b7280; margin-top: 0; }
+  ul, ol { padding-left: 1.4rem; }
+  a { color: #0070e0; }
+  code { background: rgba(128,128,128,.15); padding: .1rem .35rem; border-radius: 4px; font-size: .9em; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .95em; }
+  th, td { border: 1px solid rgba(128,128,128,.35); padding: .5rem .6rem; text-align: left; vertical-align: top; }
+  th { background: rgba(128,128,128,.1); }
+</style>
+</head>
+<body>
+<h1>VroomVroom — Politique de confidentialité</h1>
+<p class="date">Dernière mise à jour : 3 novembre 2026 · Application <code>fr.ouiouibaguette.vroomvroom</code></p>
+
+<p>VroomVroom est une application de suivi de carburant (consommation, coûts, E85/flexfuel) et de maintenance de véhicules. Cette page explique quelles données l'application traite, pourquoi, et comment vous gardez le contrôle.</p>
+
+<h2>1. Données traitées par l'application</h2>
+<p>L'application ne propose pas de compte et ne collecte aucune donnée « sur vous » en dehors de ce que vous saisissez volontairement :</p>
+<ul>
+  <li><strong>Informations véhicules</strong> : marque, modèle, année, plaque d'immatriculation, type de carburant, capacité du réservoir, date/prix d'achat, suivi d'assurance kilométrique, compteur, description ;</li>
+  <li><strong>Entrées de carburant</strong> : date, compteur kilométrique, litres, prix, station (nom facultatif), type de carburant (E10, SP98, E85, diesel, GPL) ;</li>
+  <li><strong>Entrées de maintenance</strong> : date, kilométrage, type, coût, notes ;</li>
+  <li><strong>Paramètres E85</strong> : date de conversion, coût du kit, surconsommation estimée, pourcentage cible ;</li>
+  <li><strong>Position GPS (facultative)</strong> : uniquement lorsque vous utilisez un bouton « position actuelle » (liste des stations proches, localisation d'un plein) ou activez l'alerte de démarrage à froid sur un lieu donné ;</li>
+  <li><strong>Paramètres de l'application</strong> : mode de stockage des données, préférences d'affichage.</li>
+</ul>
+
+<h2>2. Où vos données sont stockées</h2>
+<ul>
+  <li><strong>Mode local (par défaut)</strong> : toutes vos données restent <strong>uniquement sur votre appareil</strong> (stockage local du système, IndexedDB). Rien n'est envoyé sur aucun serveur de notre part.</li>
+  <li><strong>Mode serveur (option avancée)</strong> : si vous le configurez, vos données sont stockées sur <strong>votre propre serveur</strong> (votre infrastructure), avec une clé d'API que vous générez. Nous n'avons alors aucun accès à vos données.</li>
+</ul>
+<p>Les données ne sont jamais vendues, louées ni utilisées à des fins de publicité.</p>
+
+<h2>3. Services tiers consultés (et données envoyées)</h2>
+<p>Pour certaines fonctionnalités, l'application interroge des services tiers. Seules les données strictement nécessaires à la requête sont transmises, jamais de données personnelles :</p>
+<table>
+  <tr><th>Service</th><th>Données transmises</th><th>Fonction</th></tr>
+  <tr><td><code>data.economie.gouv.fr</code> (open data France)</td><td>Position GPS (lat/long) + rayon</td><td>Prix des carburants des stations à proximité</td></tr>
+  <tr><td><code>geo.api.gouv.fr</code> (open data France)</td><td>Position GPS (lat/long)</td><td>Résolution d'adresses (recherche de station)</td></tr>
+  <tr><td><code>open-meteo.com</code></td><td>Position GPS (lat/long) du lieu choisi</td><td>Prévision météo pour l'alerte de démarrage à froid</td></tr>
+  <tr><td>Serveur de routage (auto-hébergé)</td><td>Positions d'origine et de destination</td><td>Distances et durées de trajet en voiture ; adresse configurable par l'utilisateur, par défaut inatteignable hors du réseau privé</td></tr>
+</table>
+<p>L'application ne contient <strong>aucun analytics, aucun pixel publicitaire, aucun SDK de suivi tiers</strong> (pas de Firebase, Google Analytics, etc.).</p>
+
+<h2>4. Données sensibles</h2>
+<p>L'application ne traite aucune donnée sensible au sens du RGPD (santé, opinions, données biométriques…). La position géographique est un donnée facultative, utilisée uniquement pour les fonctions décrites au §3, et jamais stockée hors de votre appareil (mode local) ou de votre serveur (mode serveur).</p>
+
+<h2>5. Mineurs</h2>
+<p>L'application n'est pas destinée aux enfants de moins de 13 ans et ne cherche pas à collecter leurs données.</p>
+
+<h2>6. Durée de conservation et vos droits</h2>
+<ul>
+  <li>En mode local, vos données restent sur votre appareil tant que vous les conservez : vous pouvez les <strong>modifier, exporter (CSV) ou supprimer</strong> à tout moment, entrée par entrée, par véhicule, ou en réinitialisant l'application (réinstall / stockage app).</li>
+  <li>En mode serveur, les données sont conservées sur votre serveur ; vous en avez l'intégralité du contrôle (export, suppression, suppression du serveur).</li>
+  <li>Pour toute demande (accès, rectification, suppression, portabilité), contactez-nous à l'adresse ci-dessous ; nous y répondrons sans délai injustifié.</li>
+</ul>
+
+<h2>7. Contact</h2>
+<p>Pour toute question sur cette politique ou le traitement de vos données :</p>
+<p><a href="mailto:reslingermathis@gmail.com">reslingermathis@gmail.com</a></p>
+
+<h2>8. Modifications de cette politique</h2>
+<p>Cette politique peut être mise à jour (la date en tête de page indique la dernière révision). Les modifications substantielles seront signalées dans l'application.</p>
+</body>
+</html>
