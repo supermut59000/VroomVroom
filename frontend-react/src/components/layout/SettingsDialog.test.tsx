@@ -36,6 +36,12 @@ describe('SettingsDialog', () => {
     expect(screen.getByText('paypal.me/wiwibaguette')).toBeInTheDocument()
   })
 
+  it('links the public privacy policy in the about section', () => {
+    renderWithProviders(<SettingsDialog open onClose={vi.fn()} />)
+    const policy = screen.getByRole('link', { name: /politique de confidentialité/i })
+    expect(policy).toHaveAttribute('href', 'https://supermut59000.github.io/VroomVroom/confidentialite.html')
+  })
+
   it('unlocks the server section after 10 rapid taps on the version', async () => {
     renderWithProviders(<SettingsDialog open onClose={vi.fn()} />)
     const version = screen.getByRole('button', {

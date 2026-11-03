@@ -304,6 +304,14 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
             >
               Version {APP_VERSION}
             </button>
+            <a
+              href="https://supermut59000.github.io/VroomVroom/confidentialite.html"
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-primary underline"
+            >
+              Politique de confidentialité
+            </a>
           </section>
 
           {/* Reset */}
