@@ -27,10 +27,13 @@ describe('SettingsDialog', () => {
     expect(screen.getByText(/méthode plein-à-plein/i)).toBeInTheDocument()
   })
 
-  it('expands the donation panel', async () => {
+  it('expands the donation panel with the PayPal button', async () => {
     renderWithProviders(<SettingsDialog open onClose={vi.fn()} />)
     await userEvent.click(screen.getByRole('button', { name: /faire un don/i }))
     expect(screen.getByText(/5 étoiles sur google play/i)).toBeInTheDocument()
+    const paypal = screen.getByRole('link', { name: /faire un don paypal/i })
+    expect(paypal).toHaveAttribute('href', 'https://paypal.me/wiwibaguette')
+    expect(screen.getByText('paypal.me/wiwibaguette')).toBeInTheDocument()
   })
 
   it('unlocks the server section after 10 rapid taps on the version', async () => {

@@ -6,6 +6,8 @@ import {
   CheckCircle2,
   XCircle,
   HeartHandshake,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import {
   Dialog,
@@ -254,24 +256,39 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               onClick={() => setDonateOpen((o) => !o)}
             >
               <HeartHandshake className="mr-1 h-4 w-4" />
-              {donateOpen ? '▲' : '▼'} Faire un don
+              Faire un don
+              {donateOpen ? <ChevronUp className="ml-1 h-4 w-4" /> : <ChevronDown className="ml-1 h-4 w-4" />}
             </Button>
             {donateOpen && (
-              <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+              <div className="mt-2 space-y-2 text-sm text-muted-foreground">
                 <p>L’app est gratuite. Pour soutenir le développement :</p>
                 <p>
                   · 5 étoiles sur Google Play (le meilleur soutien)
                   <br />
                   · Partager l’app autour de vous
-                  <br />
-                  · {DONATION_URL ? (
-                    <a href={DONATION_URL} target="_blank" rel="noreferrer" className="text-primary underline">
-                      Faire un don
-                    </a>
-                  ) : (
-                    'Don en ligne : lien bientôt disponible'
-                  )}
                 </p>
+                {DONATION_URL ? (
+                  <>
+                    <a
+                      href={DONATION_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold text-white shadow-sm"
+                      style={{ background: 'linear-gradient(135deg, #003087 0%, #0070e0 55%, #009cde 100%)' }}
+                    >
+                      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" aria-hidden>
+                        <g fill="#ffffff">
+                          <path opacity="0.55" transform="translate(-2,-2)" d="M8.9 6h4.2c1.9 0 3.2.5 3.9 1.5.6.8.8 1.9.5 3.2-.5 2.9-2.6 4.5-6 4.5H9.6L9 20H6.9L8.9 6z" />
+                          <path d="M8.9 6h4.2c1.9 0 3.2.5 3.9 1.5.6.8.8 1.9.5 3.2-.5 2.9-2.6 4.5-6 4.5H9.6L9 20H6.9L8.9 6z" />
+                        </g>
+                      </svg>
+                      Faire un don PayPal
+                    </a>
+                    <p className="text-center text-xs">paypal.me/wiwibaguette</p>
+                  </>
+                ) : (
+                  <p>Don en ligne : lien bientôt disponible</p>
+                )}
               </div>
             )}
           </section>
