@@ -24,3 +24,14 @@ package `fr.ouiouibaguette.vroomvroom`.
 Permissions à déclarer (détail dans `../app-android-utilisation.md` §4) :
 position (stations GPS + position des pleins), notifications (alerte froid /
 rappels), réseau (prix gouv.fr, météo open-meteo, routage, mode serveur).
+
+## Signature Play Store (2026-11-03)
+
+AAB de publication : `dist/VroomVroom-v1.0.0.aab` (versionCode 1).
+Keystore d'upload hors repo : `~/.keys/vroomvroom-upload.jks` (alias
+`vroomvroom-upload`, RSA 4096, ~27 ans), mots de passe dans
+`~/.keys/vroomvroom-upload.credentials` (600). Config : `android/key.properties`
+(gitignoré) — sans ce fichier, les builds release retombent sur la clé debug.
+Rebuild : `./gradlew bundleRelease` dans `frontend-react/android/`.
+Empreinte SHA-256 (certificat public, à coller dans la Play Console) :
+`A1:BB:1B:65:BC:3A:99:F2:2A:BA:46:55:EC:99:10:C7:F3:B1:2D:8D:9D:5D:14:35:59:D3:8C:1A:B2:87:02:E6`
