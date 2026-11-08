@@ -28,3 +28,14 @@ export function isTutorialPending(): boolean {
 export function startTutorial(): void {
   window.dispatchEvent(new Event(TOUR_START_EVENT))
 }
+
+// Drapeau module : le tutoriel est actif. Le dialog « Ajouter un plein »
+// désactive son auto-focus (sinon le 1er champ prend le focus et le clavier
+// s'ouvre → la page bouge sous la bulle du tutoriel).
+let tourActive = false
+export function setTourActive(active: boolean): void {
+  tourActive = active
+}
+export function isTourActive(): boolean {
+  return tourActive
+}

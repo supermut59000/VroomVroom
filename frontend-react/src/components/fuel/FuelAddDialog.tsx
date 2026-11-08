@@ -32,6 +32,7 @@ import {
   useStationSuggestions,
   useAllFuelEntries,
 } from '@/hooks/use-fuel-entries'
+import { isTourActive } from '@/lib/tutorial'
 import {
   useFlexfuelConversion,
   useCreateE10ReferencePrice,
@@ -61,9 +62,13 @@ type FormData = z.infer<typeof schema>
 interface FuelAddDialogProps {
   vehicleId: number | null
   onClose: () => void
+  // Non-modal pendant le tutoriel : un dialog Radix modal rend le reste de la
+  // page `inert` → l'overlay du guide et son bouton « Suivant » ne seraient
+  // plus cliquables.
+  modal?: boolean
 }
 
-export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
+export function FuelAddDialog({ vehicleId, onClose, modal = true }: FuelAddDialogProps) {
   const { data: vehicle } = useVehicle(vehicleId)
   const { data: latestEntry } = useLatestFuelEntry(vehicleId)
   const { data: stations } = useStationSuggestions(vehicleId)
@@ -221,8 +226,15 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
   const open = vehicleId !== null
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-lg">
+    <Dialog open={open} modal={modal} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        className="flex max-h-[90vh] flex-col sm:max-w-lg"
+        // Pendant le tutoriel : pas d'auto-focus du premier champ (le clavier
+        // s'ouvrirait et ferait bouger la page sous la bulle du guide).
+        onOpenAutoFocus={(e) => {
+          if (isTourActive()) e.preventDefault()
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Ajouter un plein</DialogTitle>
           {vehicle && (

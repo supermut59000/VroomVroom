@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import {
   clearTutorialPending,
@@ -7,6 +8,7 @@ import {
   TOUR_FUEL_CLOSED_EVENT,
   TOUR_OPEN_FUEL_EVENT,
   TOUR_START_EVENT,
+  setTourActive,
 } from '@/lib/tutorial'
 
 interface TourStep {
@@ -73,15 +75,20 @@ export function TourGuide() {
 
   const begin = useCallback(() => {
     clearTutorialPending()
+    setTourActive(true)
     setRect(null)
     setStep(0)
   }, [])
 
   const finish = useCallback(() => {
+    setTourActive(false)
     window.dispatchEvent(new Event(TOUR_CLOSE_FUEL_EVENT))
     setRect(null)
     setStep(null)
   }, [])
+
+  // Le drapeau doit retomber à false si le composant est démonté en plein guide.
+  useEffect(() => () => setTourActive(false), [])
 
   // Auto-démarrage après l'onboarding (le dashboard a besoin d'un instant
   // pour monter le FAB).
@@ -108,11 +115,17 @@ export function TourGuide() {
   useEffect(() => {
     if (step === null) return
     const s = STEPS[step]
-    if (s.openFuelDialog) window.dispatchEvent(new Event(TOUR_OPEN_FUEL_EVENT))
     lastRectRef.current = null
     setRect(null)
     let tries = 0
     const tick = () => {
+      // Étapes du dialog (step >= 1) : garder le clavier fermé. Radix
+      // auto-focus le premier champ à l'ouverture → clavier → la page
+      // bouge et la bulle (bouton Suivant) se déplace sous le doigt.
+      if (step >= 1) {
+        const ae = document.activeElement as HTMLElement | null
+        if (ae && ae !== document.body && ae.tagName !== 'HTML') ae.blur()
+      }
       const el = document.querySelector(s.target) as HTMLElement | null
       if (!el) {
         tries += 1
@@ -141,7 +154,15 @@ export function TourGuide() {
       }
       timerRef.current = window.setTimeout(tick, 200)
     }
-    tick()
+    if (s.openFuelDialog) {
+      // L'étape ouvre le formulaire plein : on attend la fin de son animation
+      // d'entrée avant de suivre la cible, sinon la bulle se déplace sous le
+      // doigt et le tap suivant rate.
+      window.dispatchEvent(new Event(TOUR_OPEN_FUEL_EVENT))
+      timerRef.current = window.setTimeout(tick, 450)
+    } else {
+      tick()
+    }
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current)
     }
@@ -151,26 +172,19 @@ export function TourGuide() {
   const s = STEPS[step]
   const last = step === STEPS.length - 1
   const vw = window.innerWidth
-  const vh = window.innerHeight
   const pad = 6
-  const bubbleW = Math.min(vw - 24, 320)
-  const estBubbleH = 170
-  let bubbleTop: number | undefined
-  let bubbleBottom: number | undefined
-  if (rect) {
-    const bottom = rect.top + rect.height
-    const spaceBelow = vh - (bottom + pad + 12)
-    if (spaceBelow >= estBubbleH) {
-      bubbleTop = bottom + pad + 12
-    } else {
-      bubbleBottom = vh - (rect.top - pad - 12)
-    }
-  }
-  const bubbleLeft = rect
-    ? Math.min(Math.max(12, rect.left + rect.width / 2 - bubbleW / 2), vw - bubbleW - 12)
-    : (vw - bubbleW) / 2
+  // Bulle fixée en bas au centre (position stable) : le bouton « Suivant »
+  // est toujours au même endroit → le doigt ne le rate plus entre les étapes.
+  // Le projecteur suit lui la cible de chaque étape (rect).
+  const bubbleW = Math.min(vw - 24, 360)
 
-  return (
+  // Portal dans <body> : le dialog « Ajouter un plein » est aussi portalisé
+  // dans <body> (z-50). Si l'overlay restait dans l'arbre React, son z-[200]
+  // serait piégé dans un contexte de pile inférieur et le dialog (ou son
+  // overlay) recevrait les taps par-dessus la bulle → « Suivant » mort.
+  // Dans le même contexte (body), 200 > 50 gagne à la fois visuellement et
+  // au hit-testing.
+  return createPortal(
     <div className="fixed inset-0 z-[200]" role="dialog" aria-label="Tutoriel">
       {rect && (
         <div
@@ -185,8 +199,9 @@ export function TourGuide() {
         />
       )}
       <div
+        key={step}
         className="absolute rounded-xl border bg-card p-4 shadow-xl"
-        style={{ width: bubbleW, left: bubbleLeft, top: bubbleTop, bottom: bubbleBottom }}
+        style={{ width: bubbleW, left: (vw - bubbleW) / 2, bottom: 110 }}
       >
         <p className="text-sm font-semibold text-card-foreground">{s.title}</p>
         <p className="mt-1 text-xs text-muted-foreground">{s.text}</p>
@@ -212,6 +227,7 @@ export function TourGuide() {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

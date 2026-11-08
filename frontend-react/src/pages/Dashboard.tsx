@@ -39,6 +39,9 @@ export function Dashboard() {
   const [detailsVehicleId, setDetailsVehicleId] = useState<number | null>(null)
   const [editVehicleId, setEditVehicleId] = useState<number | null>(null)
   const [fuelAddVehicleId, setFuelAddVehicleId] = useState<number | null>(null)
+  // true uniquement quand le tutoriel a ouvert le dialog → modal={false}
+  // (un dialog Radix modal rend l'overlay du guide `inert`).
+  const [fuelTourMode, setFuelTourMode] = useState(false)
   const [fuelViewVehicleId, setFuelViewVehicleId] = useState<number | null>(null)
   const [maintenanceAddVehicleId, setMaintenanceAddVehicleId] = useState<number | null>(null)
   const [maintenanceViewVehicleId, setMaintenanceViewVehicleId] = useState<number | null>(null)
@@ -73,9 +76,15 @@ export function Dashboard() {
   // lui-même (le guide retombe alors sur l'étape du bouton).
   useEffect(() => {
     const openFuel = () => {
-      if (vehicles && vehicles.length > 0) setFuelAddVehicleId(vehicles[0].id)
+      if (vehicles && vehicles.length > 0) {
+        setFuelTourMode(true)
+        setFuelAddVehicleId(vehicles[0].id)
+      }
     }
-    const closeFuel = () => setFuelAddVehicleId(null)
+    const closeFuel = () => {
+      setFuelTourMode(false)
+      setFuelAddVehicleId(null)
+    }
     window.addEventListener(TOUR_OPEN_FUEL_EVENT, openFuel)
     window.addEventListener(TOUR_CLOSE_FUEL_EVENT, closeFuel)
     return () => {
@@ -200,7 +209,9 @@ export function Dashboard() {
       />
       <FuelAddDialog
         vehicleId={fuelAddVehicleId}
+        modal={!fuelTourMode}
         onClose={() => {
+          setFuelTourMode(false)
           setFuelAddVehicleId(null)
           window.dispatchEvent(new Event(TOUR_FUEL_CLOSED_EVENT))
         }}

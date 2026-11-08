@@ -64,6 +64,28 @@ describe('ModeSetup (first launch)', () => {
     expect(screen.getByRole('button', { name: /ajouter ma voiture/i })).toBeInTheDocument()
   })
 
+  it('« Passer » (bienvenue) : mode local sauvegardé, sans véhicule ni tutoriel', async () => {
+    const user = userEvent.setup()
+    const onDone = vi.fn()
+    renderWithProviders(<ModeSetup onDone={onDone} />)
+    await user.click(screen.getByRole('button', { name: /^passer$/i }))
+    expect(onDone).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(localStorage.getItem('vv_mode')!)).toEqual({ mode: 'local' })
+    expect(localStorage.getItem('vroomvroom-tutorial-pending')).toBeNull()
+    expect(await db.all<Vehicle>('vehicles')).toHaveLength(0)
+  })
+
+  it('« Passer pour plus tard » (voiture) : quitte l’onboarding sans créer de véhicule', async () => {
+    const user = userEvent.setup()
+    const onDone = vi.fn()
+    renderWithProviders(<ModeSetup onDone={onDone} />)
+    await user.click(screen.getByRole('button', { name: /c’est parti/i }))
+    await user.click(screen.getByRole('button', { name: /passer pour plus tard/i }))
+    expect(onDone).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(localStorage.getItem('vv_mode')!)).toEqual({ mode: 'local' })
+    expect(await db.all<Vehicle>('vehicles')).toHaveLength(0)
+  })
+
   it('mentions the guide in settings', () => {
     renderWithProviders(<ModeSetup onDone={vi.fn()} />)
     expect(screen.getByText(/guide complet est dans les paramètres/i)).toBeInTheDocument()

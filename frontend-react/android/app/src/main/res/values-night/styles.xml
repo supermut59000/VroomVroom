@@ -8,5 +8,7 @@
         <item name="windowNoTitle">true</item>
         <item name="android:windowBackground">#252525</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- Icones de la barre de statut claires (horloge lisible sur la bande sombre). -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

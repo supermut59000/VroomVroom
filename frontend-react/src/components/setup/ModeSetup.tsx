@@ -41,6 +41,13 @@ export function ModeSetup({ onDone }: ModeSetupProps) {
   const [plate, setPlate] = useState('')
   const [odometer, setOdometer] = useState('')
 
+  // Passer l'onboarding : l'app démarre en mode local, sans véhicule et
+  // sans tutoriel (le guide reste relançable depuis les paramètres).
+  const skip = () => {
+    saveModeConfig({ mode: 'local' })
+    onDone()
+  }
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!brand.trim() || !model.trim() || !year || !fuelType || !plate.trim()) {
@@ -112,6 +119,13 @@ export function ModeSetup({ onDone }: ModeSetupProps) {
             <Button type="button" className="w-full" onClick={() => setPhase('vehicle')}>
               C’est parti
             </Button>
+            <button
+              type="button"
+              onClick={skip}
+              className="w-full text-center text-xs text-muted-foreground underline"
+            >
+              Passer
+            </button>
           </div>
         </div>
       </div>
@@ -206,6 +220,13 @@ export function ModeSetup({ onDone }: ModeSetupProps) {
           <Button type="submit" className="w-full" disabled={createVehicle.isPending}>
             {createVehicle.isPending ? 'Ajout…' : 'Ajouter ma voiture'}
           </Button>
+          <button
+            type="button"
+            onClick={skip}
+            className="w-full text-center text-xs text-muted-foreground underline"
+          >
+            Passer pour plus tard
+          </button>
         </form>
 
         <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">

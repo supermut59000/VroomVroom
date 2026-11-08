@@ -19,6 +19,8 @@
              Android, y compris 15/16 qui forcent l'edge-to-edge. -->
         <item name="android:windowBackground">#EEEEEE</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
+        <!-- Icones de la barre de statut sombres (horloge lisible sur la bande grise). -->
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
 
