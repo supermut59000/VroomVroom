@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mode sombre : meme definition que values/styles.xml, avec un fond de
+         fenetre sombre (oklch 0.145 0 0 de l'app) pour que la bande sous la
+         barre de statut soit invisible. -->
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowBackground">#252525</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+</resources>
