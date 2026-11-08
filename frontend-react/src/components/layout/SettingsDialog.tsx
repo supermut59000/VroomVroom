@@ -27,7 +27,7 @@ import { normalizeServerUrl } from '@/lib/api'
 
 // Donation link (PayPal.Me) — the panel shows the link when set.
 const DONATION_URL = 'https://paypal.me/wiwibaguette'
-const APP_VERSION = '1.0.0'
+const APP_VERSION = '1.0.1'
 const UNLOCK_KEY = 'vv_server_unlocked'
 
 interface SettingsDialogProps {
