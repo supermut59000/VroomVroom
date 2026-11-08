@@ -9,6 +9,7 @@ import { Dashboard } from '@/pages/Dashboard'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { OfflineProvider } from '@/hooks/use-offline'
 import { ModeSetup } from '@/components/setup/ModeSetup'
+import { TourGuide } from '@/components/tutorial/TourGuide'
 import { loadModeConfig } from '@/lib/local/config'
 import type { ModeConfig } from '@/lib/local/config'
 
@@ -40,6 +41,7 @@ export default function App() {
                   <Dashboard />
                 </ErrorBoundary>
               </main>
+              <TourGuide />
             </div>
           )}
           <Toaster richColors position="top-right" />

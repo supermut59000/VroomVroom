@@ -18,16 +18,13 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import {
-  loadModeConfig,
-  saveModeConfig,
-  clearModeConfig,
-} from '@/lib/local/config'
+import { loadModeConfig, saveModeConfig } from '@/lib/local/config'
 import { normalizeServerUrl } from '@/lib/api'
+import { startTutorial } from '@/lib/tutorial'
 
 // Donation link (PayPal.Me) — the panel shows the link when set.
 const DONATION_URL = 'https://paypal.me/wiwibaguette'
-const APP_VERSION = '1.0.1'
+const APP_VERSION = '1.0.2'
 const UNLOCK_KEY = 'vv_server_unlocked'
 
 interface SettingsDialogProps {
@@ -137,9 +134,10 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     window.location.reload()
   }
 
-  const resetMode = () => {
-    clearModeConfig()
-    window.location.reload()
+  const launchTutorial = () => {
+    onClose()
+    // L'overlay doit démarrer une fois les paramètres fermés.
+    requestAnimationFrame(() => startTutorial())
   }
 
   return (
@@ -308,19 +306,19 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
               href="https://supermut59000.github.io/VroomVroom/confidentialite.html"
               target="_blank"
               rel="noreferrer"
-              className="text-xs text-primary underline"
+              className="block text-xs text-primary underline"
             >
               Politique de confidentialité
             </a>
           </section>
 
-          {/* Reset */}
+          {/* Tutoriel */}
           <section className="border-t pt-3">
-            <Button type="button" variant="ghost" size="sm" onClick={resetMode}>
-              Rechoisir le mode de démarrage
+            <Button type="button" variant="ghost" size="sm" onClick={launchTutorial}>
+              Tutoriel
             </Button>
             <p className="mt-1 text-xs text-muted-foreground">
-              Le changement de mode ne fusionne pas les données.
+              Relance le guide pas à pas : enregistrer un plein à la station.
             </p>
           </section>
         </div>

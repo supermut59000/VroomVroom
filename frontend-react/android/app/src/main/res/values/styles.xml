@@ -12,11 +12,12 @@
     <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
-        <!-- Barre de statut transparente : le contenu (fitsSystemWindows dans
-             activity_main.xml) reste dessous, et la bande du haut affiche la
-             couleur de fond de l'app -> seamless sur tous les Android,
-             y compris 15/16 qui forcent l'edge-to-edge. -->
-        <item name="android:windowBackground">@android:color/white</item>
+        <!-- Barre de statut transparente : le contenu est repousse dessous
+             (inset programmatique dans MainActivity), et la bande du haut
+             affiche le gris du fond de l'app en light mode (#EEEEEE,
+             identique a la variable CSS du fond) - seamless sur tous les
+             Android, y compris 15/16 qui forcent l'edge-to-edge. -->
+        <item name="android:windowBackground">#EEEEEE</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 

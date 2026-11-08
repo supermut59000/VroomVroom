@@ -10,6 +10,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useVehicles } from '@/hooks/use-vehicles'
+import {
+  TOUR_CLOSE_FUEL_EVENT,
+  TOUR_FUEL_CLOSED_EVENT,
+  TOUR_OPEN_FUEL_EVENT,
+} from '@/lib/tutorial'
 import { useOffline } from '@/hooks/use-offline'
 import { useColdAlert } from '@/hooks/use-cold-alert'
 import { VehicleGrid } from '@/components/vehicles/VehicleGrid'
@@ -63,6 +68,21 @@ export function Dashboard() {
       setFabSheetOpen(true)
     }
   }
+  // Tutoriel à bulles : le guide demande d'ouvrir / de fermer le formulaire
+  // « Ajouter un plein » ; on émet un événement quand l'utilisateur le ferme
+  // lui-même (le guide retombe alors sur l'étape du bouton).
+  useEffect(() => {
+    const openFuel = () => {
+      if (vehicles && vehicles.length > 0) setFuelAddVehicleId(vehicles[0].id)
+    }
+    const closeFuel = () => setFuelAddVehicleId(null)
+    window.addEventListener(TOUR_OPEN_FUEL_EVENT, openFuel)
+    window.addEventListener(TOUR_CLOSE_FUEL_EVENT, closeFuel)
+    return () => {
+      window.removeEventListener(TOUR_OPEN_FUEL_EVENT, openFuel)
+      window.removeEventListener(TOUR_CLOSE_FUEL_EVENT, closeFuel)
+    }
+  }, [vehicles])
 
   const handleFabVehicleSelect = (vehicleId: number) => {
     setFabSheetOpen(false)
@@ -180,7 +200,10 @@ export function Dashboard() {
       />
       <FuelAddDialog
         vehicleId={fuelAddVehicleId}
-        onClose={() => setFuelAddVehicleId(null)}
+        onClose={() => {
+          setFuelAddVehicleId(null)
+          window.dispatchEvent(new Event(TOUR_FUEL_CLOSED_EVENT))
+        }}
       />
       <FuelViewDialog
         vehicleId={fuelViewVehicleId}
@@ -203,6 +226,7 @@ export function Dashboard() {
         onClick={handleFabClick}
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
         aria-label="Ajouter un plein"
+        data-tour="add-fuel-fab"
       >
         <div className="relative">
           <Fuel className="h-6 w-6" />

@@ -384,7 +384,11 @@ export function FuelAddDialog({ vehicleId, onClose }: FuelAddDialogProps) {
             <Button type="button" variant="outline" onClick={onClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={createFuelEntry.isPending}>
+            <Button
+              type="submit"
+              disabled={createFuelEntry.isPending}
+              data-tour="fuel-submit"
+            >
               {createFuelEntry.isPending ? 'Ajout...' : 'Ajouter'}
             </Button>
           </DialogFooter>
