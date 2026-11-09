@@ -24,7 +24,7 @@ import { startTutorial } from '@/lib/tutorial'
 
 // Donation link (PayPal.Me) — the panel shows the link when set.
 const DONATION_URL = 'https://paypal.me/wiwibaguette'
-const APP_VERSION = '1.0.3'
+const APP_VERSION = '1.0.4'
 const UNLOCK_KEY = 'vv_server_unlocked'
 
 interface SettingsDialogProps {
