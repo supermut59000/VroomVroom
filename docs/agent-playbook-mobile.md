@@ -405,6 +405,14 @@ C'est ce qui a permis d'identifier le vrai message CORS alors que l'UI affichait
 9. **Français dans l'UI** : tous les libellés sont en français (`src/lib/i18n.ts`).
 10. **Thème** : `next-themes`, `defaultTheme="system"`, clé `vroomvroom-theme`. La bande de statut
     native suit le thème système ; le correctif §5.2 la fait suivre le thème de l'app.
+11. **Jamais `git add -A` sur la branche gh-pages** (incident 2026-11-09) : `.env.docker`,
+    `key.properties` (mot de passe du keystore), `backend/.venv`, `node_modules` et tout
+    `frontend-react/` (38 000 fichiers) ont été commités sur la branche publique. La branche a
+    depuis un `.gitignore` restrictif (`*` + exceptions index.html/confidentialite.html/*.apk),
+    mais toujours n'ajouter QUE les fichiers explicites. Bonus de l'incident : le checkout
+    retour master a supprimé du disque les fichiers ignorés locaux (node_modules, key.properties,
+    dist/) — key.properties et .env.docker ont été restaurés depuis l'historique gh-pages.
+    Si un secret part sur une branche publique : retirer du tip + faire tourner le secret.
 
 ---
 
@@ -482,7 +490,7 @@ BT=$(ls -d $HOME/.local/android-tools/sdk/build-tools/*/ | sort | tail -1)
 cd ~/Work/VroomVroom && git stash push -q -m wip && git checkout -q --detach github/gh-pages \
   && cp dist/VroomVroom-vX.Y.Z.apk . && \
   sed -i 's|href="VroomVroom-vOLD.apk"|href="VroomVroom-vX.Y.Z.apk"|g' index.html && \
-  git add -A && git commit -qm "APK vX.Y.Z" && git push github HEAD:gh-pages && \
+  git add VroomVroom-vX.Y.Z.apk index.html && git commit -qm "APK vX.Y.Z" && git push github HEAD:gh-pages && \
   git checkout -q master && git stash pop -q
 curl -s -o /dev/null -w "%{http_code}\n" -I https://supermut59000.github.io/VroomVroom/VroomVroom-vX.Y.Z.apk
 

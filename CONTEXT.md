@@ -3,6 +3,13 @@
 This file is meant to be fed to an AI at the start of a new session to restore full context.
 Last updated: 2026-11-09
 ---
+## Session log — 2026-11-09 (release) — v1.0.9/vc12 livrée
+- **APK + AAB signés** : `dist/VroomVroom-v1.0.9.apk` (3,8 Mo) / `.aab` (3,7 Mo), même clé upload (SHA-256 a1bb1b65…) → mise à jour en place possible.
+- **APK en ligne** : `https://supermut59000.github.io/VroomVroom/VroomVroom-v1.0.9.apk` (HTTP 200) ; AAB à uploader par l'utilisateur sur la piste de test fermée Play Console.
+- Commit master `4ae05e4` (code) + commit docs playbook (piège #11). Push master + gh-pages OK.
+- **INCIDENT (à corriger côté utilisateur)** : un `git add -A` sur gh-pages a commité `.env.docker` (mot de passe MariaDB `mathis`) et `key.properties` (mot de passe du keystore upload) sur la branche PUBLIQUE. Retirés du tip (commits b6443109 + 13469f7a) mais **restés dans l'historique public**. → À faire par l'utilisateur : (1) changer le mot de passe MariaDB sur le serveur + le `.env.docker` local ; (2) recommandé : régénérer le keystore upload (`~/.keys/vroomvroom-upload.jks`) AVANT le 1er upload Play (personne n'a encore la clé sur Play) puis `key.properties` à jour.
+- État disque après incident : node_modules + backend/.venv recréés, key.properties/.env.docker restaurés, dist/ recréé. Émulateur : v1.0.9 installé, AVD vroomvroom36 en fenêtre.
+
 ## Session log — 2026-11-09 (suite) — Palette officielle Zinc jour/nuit (skill impeccable)
 - **Brief utilisateur** (hex exacts, **sans indigo** — écarté expressément) : fond zinc (#f4f4f5 jour / #09090b nuit), surfaces #fbfbfb / #18181b, bordures #e4e4e7 / #27272a, texte #18181b / #fbfbfb, secondaire #52525b / #a1a1aa ; primaire **neutre zinc** #18181b / #fbfbfb (dérivée) ; sémantique : éthanol #22c55e/#4ade80, plein partiel #f97316/#fb923c ; 4 couleurs graphiques #3b82f6 / #8b5cf6 / #06b6d4 / #ec4899 ; erreur #ef4444 (conservée, marquée D).
 - **Fichier palette créé : `docs/palette.md`** — source de vérité, chaque valeur marquée B (brief) ou D (dérivée : indigo nuit #6366f1, graphiques nuit éclaircis #60a5fa/#a78bfa/#22d3ee/#f472b6, secondary/muted/accent).
