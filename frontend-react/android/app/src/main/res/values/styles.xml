@@ -17,10 +17,11 @@
              affiche le gris du fond de l'app en light mode (#EEEEEE,
              identique a la variable CSS du fond) - seamless sur tous les
              Android, y compris 15/16 qui forcent l'edge-to-edge. -->
-        <item name="android:windowBackground">#EEEEEE</item>
+        <item name="android:windowBackground">#BDBDBD</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <!-- Icones de la barre de statut sombres (horloge lisible sur la bande grise). -->
-        <item name="android:windowLightStatusBar">true</item>
+        <!-- Horloge et icones BLANCHES dans les deux modes (choix utilisateur) :
+             lisibles sur le gris moyen light comme sur le noir dark. -->
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 
 
