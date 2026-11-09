@@ -1,4 +1,0 @@
-#Mon Nov 09 22:46:11 CET 2026
-base.0=/home/supermut59000/Work/VroomVroom/frontend-react/android/app/build/intermediates/dex/release/mergeDexRelease/classes.dex
-path.0=classes.dex
-renamed.0=classes.dex
