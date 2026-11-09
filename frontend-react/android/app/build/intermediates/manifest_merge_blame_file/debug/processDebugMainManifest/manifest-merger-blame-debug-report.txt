@@ -1,0 +1,223 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="fr.ouiouibaguette.vroomvroom"
+4    android:versionCode="3"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="36" />
+10
+11    <!-- Permissions -->
+12
+13    <uses-permission android:name="android.permission.INTERNET" />
+13-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:40:5-67
+13-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:40:22-64
+14    <!--
+15         Geolocation: station search + fill GPS capture (WebView prompts only
+16         for permissions declared here)
+17    -->
+18    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+18-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:43:5-81
+18-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:43:22-78
+19    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+19-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:44:5-79
+19-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:44:22-76
+20    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+20-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:5-81
+20-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:7:22-78
+21    <uses-permission android:name="android.permission.WAKE_LOCK" />
+21-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:5-68
+21-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:8:22-65
+22    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+22-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:5-77
+22-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:9:22-74
+23    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+23-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:10:5-79
+23-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:10:22-76
+24
+25    <permission
+25-->[androidx.core:core:1.17.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:22:5-24:47
+26        android:name="fr.ouiouibaguette.vroomvroom.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+26-->[androidx.core:core:1.17.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:23:9-81
+27        android:protectionLevel="signature" />
+27-->[androidx.core:core:1.17.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:24:9-44
+28
+29    <uses-permission android:name="fr.ouiouibaguette.vroomvroom.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+29-->[androidx.core:core:1.17.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:26:5-97
+29-->[androidx.core:core:1.17.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:26:22-94
+30
+31    <application
+31-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:4:5-36:19
+32        android:allowBackup="true"
+32-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:5:9-35
+33        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+33-->[androidx.core:core:1.17.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/11094a199bb7945826b161d8a9c17beb/transformed/core-1.17.0/AndroidManifest.xml:28:18-86
+34        android:debuggable="true"
+35        android:extractNativeLibs="false"
+36        android:icon="@mipmap/ic_launcher"
+36-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:6:9-43
+37        android:label="@string/app_name"
+37-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:7:9-41
+38        android:roundIcon="@mipmap/ic_launcher_round"
+38-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:8:9-54
+39        android:supportsRtl="true"
+39-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:9:9-35
+40        android:theme="@style/AppTheme" >
+40-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:10:9-40
+41        <activity
+41-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:12:9-25:20
+42            android:name="fr.ouiouibaguette.vroomvroom.MainActivity"
+42-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:14:13-41
+43            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+43-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:13:13-148
+44            android:exported="true"
+44-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:18:13-36
+45            android:label="@string/title_activity_main"
+45-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:15:13-56
+46            android:launchMode="singleTask"
+46-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:17:13-44
+47            android:theme="@style/AppTheme.NoActionBarLaunch" >
+47-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:16:13-62
+48            <intent-filter>
+48-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:20:13-23:29
+49                <action android:name="android.intent.action.MAIN" />
+49-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:21:17-69
+49-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:21:25-66
+50
+51                <category android:name="android.intent.category.LAUNCHER" />
+51-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:22:17-77
+51-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:22:27-74
+52            </intent-filter>
+53        </activity>
+54
+55        <provider
+56            android:name="androidx.core.content.FileProvider"
+56-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:28:13-62
+57            android:authorities="fr.ouiouibaguette.vroomvroom.fileprovider"
+57-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:29:13-64
+58            android:exported="false"
+58-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:30:13-37
+59            android:grantUriPermissions="true" >
+59-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:31:13-47
+60            <meta-data
+60-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:32:13-34:64
+61                android:name="android.support.FILE_PROVIDER_PATHS"
+61-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:33:17-67
+62                android:resource="@xml/file_paths" />
+62-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:34:17-51
+63        </provider>
+64
+65        <receiver android:name="com.capacitorjs.plugins.localnotifications.TimedNotificationPublisher" />
+65-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:13:9-106
+65-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:13:19-103
+66        <receiver android:name="com.capacitorjs.plugins.localnotifications.NotificationDismissReceiver" />
+66-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:9-107
+66-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:14:19-104
+67        <receiver
+67-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:15:9-24:20
+68            android:name="com.capacitorjs.plugins.localnotifications.LocalNotificationRestoreReceiver"
+68-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:16:13-103
+69            android:directBootAware="true"
+69-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:17:13-43
+70            android:exported="false" >
+70-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:18:13-37
+71            <intent-filter>
+71-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:19:13-23:29
+72                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+72-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:20:17-86
+72-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:20:25-83
+73                <action android:name="android.intent.action.BOOT_COMPLETED" />
+73-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:21:17-79
+73-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:21:25-76
+74                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+74-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:22:17-82
+74-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:22:25-79
+75            </intent-filter>
+76        </receiver>
+77
+78        <provider
+78-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:26:9-34:20
+79            android:name="com.capacitorjs.plugins.localnotifications.LocalNotificationsAssetProvider"
+79-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:27:13-102
+80            android:authorities="fr.ouiouibaguette.vroomvroom.localnotifications.fileprovider"
+80-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:28:13-83
+81            android:exported="false"
+81-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:29:13-37
+82            android:grantUriPermissions="true" >
+82-->[:capacitor-local-notifications] /home/supermut59000/Work/VroomVroom/frontend-react/node_modules/@capacitor/local-notifications/android/build/intermediates/merged_manifest/debug/processDebugManifest/AndroidManifest.xml:30:13-47
+83            <meta-data
+83-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:32:13-34:64
+84                android:name="android.support.FILE_PROVIDER_PATHS"
+84-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:33:17-67
+85                android:resource="@xml/localnotifications_provider_paths" />
+85-->/home/supermut59000/Work/VroomVroom/frontend-react/android/app/src/main/AndroidManifest.xml:34:17-51
+86        </provider>
+87        <provider
+87-->[androidx.emoji2:emoji2:1.3.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+88            android:name="androidx.startup.InitializationProvider"
+88-->[androidx.emoji2:emoji2:1.3.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+89            android:authorities="fr.ouiouibaguette.vroomvroom.androidx-startup"
+89-->[androidx.emoji2:emoji2:1.3.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+90            android:exported="false" >
+90-->[androidx.emoji2:emoji2:1.3.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+91            <meta-data
+91-->[androidx.emoji2:emoji2:1.3.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+92                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+92-->[androidx.emoji2:emoji2:1.3.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+93                android:value="androidx.startup" />
+93-->[androidx.emoji2:emoji2:1.3.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/353d69426d62513a7e19e841051a3a44/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+94            <meta-data
+94-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/supermut59000/.gradle/caches/8.14.3/transforms/14a3b51da1167f75215e7e32d2231e74/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:29:13-31:52
+95                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+95-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/supermut59000/.gradle/caches/8.14.3/transforms/14a3b51da1167f75215e7e32d2231e74/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:30:17-78
+96                android:value="androidx.startup" />
+96-->[androidx.lifecycle:lifecycle-process:2.6.2] /home/supermut59000/.gradle/caches/8.14.3/transforms/14a3b51da1167f75215e7e32d2231e74/transformed/lifecycle-process-2.6.2/AndroidManifest.xml:31:17-49
+97            <meta-data
+97-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+98                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+98-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+99                android:value="androidx.startup" />
+99-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+100        </provider>
+101
+102        <receiver
+102-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+103            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+103-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+104            android:directBootAware="false"
+104-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+105            android:enabled="true"
+105-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+106            android:exported="true"
+106-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+107            android:permission="android.permission.DUMP" >
+107-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+108            <intent-filter>
+108-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+109                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+109-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+109-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+110            </intent-filter>
+111            <intent-filter>
+111-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+112                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+112-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+112-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+113            </intent-filter>
+114            <intent-filter>
+114-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+115                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+115-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+115-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+116            </intent-filter>
+117            <intent-filter>
+117-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+118                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+118-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+118-->[androidx.profileinstaller:profileinstaller:1.4.0] /home/supermut59000/.gradle/caches/8.14.3/transforms/f95ab50c54d3211c648684c462933e30/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:25-92
+119            </intent-filter>
+120        </receiver>
+121    </application>
+122
+123</manifest>

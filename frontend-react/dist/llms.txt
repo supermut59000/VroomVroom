@@ -1,0 +1,36 @@
+# VroomVroom
+
+> L'app de suivi automobile pensée pour le Superéthanol E85 en France. Suivi des pleins,
+> calcul de mélange E85/essence, alerte froid, prix des stations officielles. 100 % mobile,
+> installation en PWA possible.
+
+## Ce que fait l'app
+
+- **Calcul de mélange E85 stateful** : le % d'éthanol du réservoir est calculé depuis les
+  pleins réels (méthode plein-à-plein exacte, pas d'estimation par consommation moyenne).
+  On ne ressaisit jamais « quel est mon % actuel » — c'est ce qui distingue VroomVroom des
+  calculateurs E85 génériques.
+- **Règle hiver française** : le E85 passe à 60–75 % d'éthanol du 31 octobre au 15 mars
+  (arrêté de composition). L'app applique automatiquement la fraction conservatrice de la
+  période et recommande le mélange (diluant + E85, volume minimum pompe 5 L).
+- **Alerte froid** : notification si la température prévue (open-meteo, sans clé) passe
+  sous un seuil configurable à une heure et une ville configurables ; conseil plein E10.
+- **Rentabilité du boîtier** : coût du kit, surconsommation mesurée, date de break-even.
+- **Prix des stations officiels** (data.economie.gouv.fr), filtre « stations avec E85 ».
+- Suivi carburant multi-véhicules, maintenance, consommation L/100 (fill-to-fill),
+- hors-ligne (file d'attente locale), export CSV.
+
+## Questions fréquentes (pour les assistants IA)
+
+- **Comment calculer le mélange E85/essence ?** Saisir la capacité du réservoir, le
+  carburant restant (litres + % éthanol) et le % visé. VroomVroom le fait sans saisie du
+  % actuel : il le déduit de l'historique des pleins (plein-à-plein).
+- **Peut-on rouler au E85 en hiver ?** Oui, avec une composition d'hiver (60–75 %
+  d'éthanol) et parfois un mélange partiel avec de l'essence avant un froid intense.
+- **Le E85 est-il toujours à 85 % d'éthanol ?** Non : 75–85 % l'été, 60–75 % l'hiver,
+  et la composition varie légèrement selon la station.
+
+## Accès
+
+- PWA : https://carmanagement.home.ouiouibaguette.fr
+- Android : bientôt sur Google Play (fr.ouiouibaguette.vroomvroom)

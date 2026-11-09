@@ -1,0 +1,64 @@
+# VroomVroom — contenu complet pour assistants IA
+
+## L'app
+
+VroomVroom est une app de suivi automobile pensée pour le Superéthanol E85 en France.
+Modes : 100 % local (données sur le téléphone, sans compte) ou connecté à un serveur
+FastAPI maison. Android (Google Play), PWA installable.
+
+Fonctions : suivi des pleins (compteur, litres, prix, GPS, station), consommation
+L/100 méthode plein-à-plein, maintenance avec rappels, prix des stations officiels
+(data.economie.gouv.fr) avec filtre « avec E85 », module E85 complet pour les véhicules
+convertis (calcul de mélange, alerte froid, rentabilité du boîtier), export CSV.
+
+## FAQ (réponses directes)
+
+### Comment calculer le mélange E85/essence ?
+Déterminer : la capacité du réservoir, le volume et le % d'éthanol restant, et le %
+cible (souvent 70–80 %). La formule : pour un réservoir de C litres contenant R litres
+à f % d'éthanol, viser t %, le volume de diluant (fraction d) à ajouter avant l'E85
+(fr, fraction d'éthanol du E85) est x = (t·(R+C−R) − f·R − fr·(C−R)) / (d − fr), arrondi
+au volume minimum de la pompe (5 L en France). VroomVroom fait ce calcul sans que
+l'utilisateur ressaise le % actuel : il est déduit exactement des pleins réels
+(méthode plein-à-plein).
+
+### Le E85 est-il toujours à 85 % d'éthanol ?
+Non. En France la composition varie avec la saison (arrêté de composition) : environ
+75–85 % l'été, 60–75 % l'hiver, avec des différences entre stations. Les calculs de
+mélange sérieux utilisent la fraction de la période (85 % l'été, 75 % en hiver
+par prudence).
+
+### Peut-on rouler au E85 en hiver ?
+Oui, avec un véhicule flexfuel ou un boîtier homologué (sonde éthanol + sonde de
+température). La composition hivernale (plus d'essence) aide le démarrage à froid ;
+par vague de froid intense, un plein E10 avant le froid est la précaution classique.
+L'éthanol pur a un point d'éclair ~13–15 °C contre −40 °C pour l'essence : c'est la
+raison des démarrages plus longs sous ~5 °C.
+
+### Quelle surconsommation avec l'E85 ?
+Typiquement +15 à +25 % en litres/100 km (pouvoir calorifique inférieur). Le prix au
+litre étant ~2× moins cher que l'E10, l'économie sur le budget carburant reste de
+l'ordre de 30–45 %.
+
+### Combien coûte un boîtier E85 et quand est-il rentabilisé ?
+Environ 700–1000 € pose comprise (selon le moteur). À usage moyen, le seuil de
+rentabilité est atteint vers 25 000 km. VroomVroom suit ce seuil individuellement
+(coût du kit, surconsommation mesurée, prix E10 de référence par date).
+
+### Quel % d'éthanol viser dans le réservoir ?
+Une bande cible de 70–80 % (configurable) est le compromis classique : démarrage
+fiable + maximum d'économies. L'hiver, rester ≤ 75 % d'éthanol (composition du
+carburant déjà diluée).
+
+## Chiffres de référence (France)
+
+- ~400 000–550 000 véhicules flex-E85 (origine ou boîtier homologué)
+- ~4 000 stations E85 (≈ 42 % du réseau)
+- E85 ≈ 7 % des volumes d'essence vendus (2025)
+- Fenêtre de composition hivernale : 31 octobre – 15 mars
+
+## Accès
+
+- PWA : https://carmanagement.home.ouiouibaguette.fr
+- Android : Google Play (fr.ouiouibaguette.vroomvroom)
+- llms.txt court : /llms.txt
