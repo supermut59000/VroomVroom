@@ -8,6 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [CONTEXT.md](CONTEXT.md) — current app context, recent decisions, and active feature state
 - [SUMMARY.md](SUMMARY.md) — high-level summary of the project and its current status
 
+**Working on the Android app, the mobile UI, or hunting a bug? Also read**
+[docs/agent-playbook-mobile.md](docs/agent-playbook-mobile.md) — build/publish pipeline,
+emulator verification loop, and the catalogue of bugs already diagnosed and fixed
+(insets/status bar, tutorial, theming, CORS/server mode, native datalist, pagination).
+
 ## Project Overview
 
 VroomVroom is a **vehicle management web application** for tracking vehicles, fuel consumption, mileage, and maintenance in a homelab environment. Full-stack: FastAPI backend + React 19 frontend, designed as a mobile-friendly PWA.
