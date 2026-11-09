@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { MapPin, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { t } from '@/lib/i18n'
@@ -19,30 +19,35 @@ const GEO_API = 'https://geo.api.gouv.fr/communes'
 interface CommuneSelectorProps {
   value: string
   onChange: (value: string) => void
-  /** Called when the typed value exactly matches a datalist suggestion. */
+  /** Called when a suggestion is picked (or the typed value matches one exactly). */
   onSelect: (commune: Commune) => void
   placeholder?: string
-  /** Datalist id — keep unique per mounted instance. */
+  /** Conservé pour compatibilité d'appel (l'ancienne datalist en avait besoin). */
   listId?: string
 }
 
-/** City search bar — native datalist over geo.api.gouv.fr (commune name or postal code).
- *  Same pattern as the station name autocomplete in FuelAddDialog.
- *  Extracted from StationPricesDialog so ColdAlertDialog reuses it. */
+/** City search bar — custom themed dropdown over geo.api.gouv.fr (commune name
+ *  or postal code).
+ *
+ *  Previously a native <datalist>: its popup is drawn by the WebView and cannot
+ *  be styled, so it showed up white (with rendering artifacts) on top of the
+ *  dark theme. This renders its own list with theme tokens instead. */
 export function CommuneSelector({
   value,
   onChange,
   onSelect,
   placeholder,
-  listId = 'commune-suggestions',
 }: CommuneSelectorProps) {
   const [suggestions, setSuggestions] = useState<Commune[]>([])
   const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const rootRef = useRef<HTMLDivElement | null>(null)
 
   const fetchSuggestions = useCallback(async (q: string) => {
     if (q.length < 2) {
       setSuggestions([])
+      setOpen(false)
       return
     }
     setLoading(true)
@@ -61,38 +66,88 @@ export function CommuneSelector({
       if (!res.ok) throw new Error()
       const data: Commune[] = await res.json()
       setSuggestions(data)
+      setOpen(data.length > 0)
     } catch {
       setSuggestions([])
+      setOpen(false)
     } finally {
       setLoading(false)
     }
   }, [])
 
+  // Fermeture au toucher en dehors de la liste.
+  useEffect(() => {
+    if (!open) return
+    const onDocPointerDown = (e: PointerEvent) => {
+      const root = rootRef.current
+      if (root && !root.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDocPointerDown)
+    return () => document.removeEventListener('pointerdown', onDocPointerDown)
+  }, [open])
+
+  const pick = (c: Commune) => {
+    const label = communeLabel(c)
+    onChange(label)
+    onSelect(c)
+    setOpen(false)
+    setSuggestions([])
+  }
+
   return (
-    <div className="relative flex items-center">
-      <MapPin className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <div ref={rootRef} className="relative flex items-center">
+      <MapPin className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         className="pl-8 pr-8"
         placeholder={placeholder ?? t.stations.cityPlaceholder}
-        list={listId}
         value={value}
+        autoComplete="off"
         onChange={(e) => {
-          onChange(e.target.value)
-          // If the typed value exactly matches a datalist option, use those coords
-          const match = suggestions.find((c) => communeLabel(c) === e.target.value)
-          if (match) onSelect(match)
+          const v = e.target.value
+          onChange(v)
+          // Valeur tapée identique à une suggestion : on prend ses coordonnées
+          // et on referme la liste (elle n'apporte plus rien).
+          const match = suggestions.find((c) => communeLabel(c) === v)
+          if (match) {
+            onSelect(match)
+            setOpen(false)
+          }
           if (timer.current) clearTimeout(timer.current)
-          timer.current = setTimeout(() => fetchSuggestions(e.target.value), 300)
+          timer.current = setTimeout(() => fetchSuggestions(v), 300)
+        }}
+        onFocus={() => {
+          if (suggestions.length > 0) setOpen(true)
         }}
       />
       {loading && (
-        <Loader2 className="absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+        <Loader2 className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
       )}
-      <datalist id={listId}>
-        {suggestions.map((c) => (
-          <option key={c.nom + (c.codesPostaux[0] ?? '')} value={communeLabel(c)} />
-        ))}
-      </datalist>
+
+      {open && suggestions.length > 0 && (
+        <ul
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-50 mt-1 max-h-56 overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg"
+        >
+          {suggestions.map((c) => (
+            <li key={c.nom + (c.codesPostaux[0] ?? '')}>
+              <button
+                type="button"
+                role="option"
+                aria-selected={false}
+                className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground active:bg-accent"
+                // pointerdown : fiable sur Android (le blur de l'input ne mange
+                // pas le tap) et évite la fermeture avant le clic.
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  pick(c)
+                }}
+              >
+                {communeLabel(c)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }

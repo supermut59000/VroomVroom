@@ -135,7 +135,7 @@ describe('StationPricesDialog', () => {
     expect(screen.getByRole('button', { name: /Réessayer/ })).toBeInTheDocument()
   })
 
-  it('city autocomplete: typing fetches communes and fills the datalist', async () => {
+  it('city autocomplete: typing fetches communes and shows themed suggestions', async () => {
     const user = userEvent.setup()
     const router = installFetchRouter(stationRoutes())
     renderWithProviders(<StationPricesDialog open onClose={() => {}} />)
@@ -149,12 +149,10 @@ describe('StationPricesDialog', () => {
     const geoCall = router.calls.find((c) => c.url.includes('geo.api.gouv.fr'))
     expect(geoCall).toBeDefined()
     expect(geoCall!.url).toContain('nom=Testville')
-    // datalist <option> elements don't expose role=option in jsdom
-    const datalist = document.querySelector('datalist#commune-suggestions')
-    const option = [...datalist!.querySelectorAll('option')].find(
-      (o) => o.value === 'Testville (59000)',
-    )
-    expect(option).toBeDefined()
+    // Custom themed dropdown (the native datalist was unstylable: white popup
+    // with artifacts over the dark theme).
+    const option = screen.getByRole('option', { name: 'Testville (59000)' })
+    expect(option).toBeInTheDocument()
   })
 
   it('no stations in radius: empty-state message', async () => {

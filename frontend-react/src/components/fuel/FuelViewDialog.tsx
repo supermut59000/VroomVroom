@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { BarChart3, Pencil, Trash2, Fuel, Download } from 'lucide-react'
+import { BarChart3, ChevronLeft, ChevronRight, Pencil, Trash2, Fuel, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -239,25 +239,32 @@ export function FuelViewDialog({ vehicleId, onClose }: FuelViewDialogProps) {
 
           {/* Pagination */}
           {perPage !== -1 && totalPages > 1 && (
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between gap-2 pt-2">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => p - 1)}
+                aria-label="Page précédente"
+                className="gap-1 whitespace-nowrap"
               >
-                Précédent
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Précédent</span>
               </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {page} / {totalPages} ({sortedEntries.length} entrées)
+              <span className="whitespace-nowrap text-xs text-muted-foreground sm:text-sm">
+                {page} / {totalPages}
+                <span className="hidden sm:inline"> ({sortedEntries.length} entrées)</span>
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
+                aria-label="Page suivante"
+                className="gap-1 whitespace-nowrap"
               >
-                Suivant
+                <span className="hidden sm:inline">Suivant</span>
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           )}
