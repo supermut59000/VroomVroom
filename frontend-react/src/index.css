@@ -47,9 +47,9 @@
 
 :root {
     --radius: 0.625rem;
-    /* Gris moyen assumé : les cartes blanches ressortent ET l'horloge
-       blanche de la barre de statut reste lisible sur la bande. */
-    --background: #BDBDBD;
+    /* Gris d'origine (le fond « avant ») : cartes blanches dessus, et
+       l'horloge noire de la barre de statut reste bien lisible. */
+    --background: oklch(0.95 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
@@ -64,9 +64,9 @@
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: #A8A8A8;
-    --input: #A8A8A8;
-    --ring: oklch(0.55 0 0);
+    --border: oklch(0.86 0 0);
+    --input: oklch(0.86 0 0);
+    --ring: oklch(0.65 0 0);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);

@@ -3,19 +3,18 @@ import { useTheme } from 'next-themes'
 import { Capacitor } from '@capacitor/core'
 import { StatusBar, StatusBarStyle } from '@capacitor/status-bar'
 
-// Couleurs identiques au --background de l'app (src/index.css) :
-// light = #BDBDBD (gris moyen), dark = #252525.
-const LIGHT_BG = '#BDBDBD'
-const DARK_BG = '#252525'
-
 /**
- * Pilote la barre de statut Android selon le thème de l'APP (et non du système) :
- * - horloge/icônes TOUJOURS BLANCHES (choix utilisateur) : lisibles sur le gris
- *   moyen en light comme sur le noir en dark
- * - couleur de fond = le fond de l'app (utile < Android 15 ; sur 15+ l'app se
- *   dessine edge-to-edge derrière la barre de statut de toute façon)
+ * Pilote les icônes de la barre de statut Android selon le thème de l'APP.
  *
- * À rendre dans un enfant de <ThemeProvider>.
+ * ATTENTION (piège Capacitor) : l'énumération désigne la COULEUR DU FOND, pas
+ * celle du texte :
+ *   - StatusBarStyle.Dark  = « Light text for dark backgrounds »  → fond SOMBRE
+ *   - StatusBarStyle.Light = « Dark text for light backgrounds »  → fond CLAIR
+ * D'où le mapping ci-dessous (l'inverse serait illisible : icônes claires sur
+ * fond clair, icônes sombres sur fond sombre).
+ *
+ * La bande elle-même affiche le fond de l'app (edge-to-edge web, voir
+ * MainActivity + App.tsx) : gris clair en light, noir en dark.
  */
 export function StatusBarSync() {
   const { theme, resolvedTheme } = useTheme()
@@ -25,10 +24,10 @@ export function StatusBarSync() {
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
-    // Icônes blanches dans les deux modes (le gris light est assez sombre
-    // pour rester lisible ; le noir dark aussi).
-    StatusBar.setStyle({ style: StatusBarStyle.Light }).catch(() => {})
-    StatusBar.setBackgroundColor({ color: dark ? DARK_BG : LIGHT_BG }).catch(() => {})
+    StatusBar.setStyle({
+      // App sombre → icônes/texte clairs ; app claire → icônes/texte sombres.
+      style: dark ? StatusBarStyle.Dark : StatusBarStyle.Light,
+    }).catch(() => {})
   }, [dark])
 
   return null
