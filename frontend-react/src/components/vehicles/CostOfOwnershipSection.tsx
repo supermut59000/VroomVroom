@@ -11,10 +11,10 @@ interface CostOfOwnershipSectionProps {
 // Use CSS custom properties so colors adapt to light/dark theme automatically.
 // The values reference Tailwind/shadcn CSS vars defined in index.css.
 const COLORS = {
-  purchase: 'var(--color-chart-purchase, hsl(220 8.9% 46.1%))',
-  fuel: 'var(--color-chart-fuel, hsl(217 91% 60%))',
-  maintenance: 'var(--color-chart-maintenance, hsl(25 95% 53%))',
-  fixed: 'var(--color-chart-fixed, hsl(270 60% 55%))',
+  purchase: 'var(--color-chart-purchase, #b39ddb)',
+  fuel: 'var(--color-chart-fuel, #7baaf7)',
+  maintenance: 'var(--color-chart-maintenance, #4db6ac)',
+  fixed: 'var(--color-chart-fixed, #f48fb1)',
 }
 
 export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProps) {
@@ -92,23 +92,23 @@ export function CostOfOwnershipSection({ vehicleId }: CostOfOwnershipSectionProp
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-md bg-muted/50 p-3 text-center">
+        <div className="rounded-md bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground">Coût total</p>
           <p className="text-lg font-bold">
             {metrics.totalCost.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} &euro;
           </p>
         </div>
-        <div className="rounded-md bg-muted/50 p-3 text-center">
+        <div className="rounded-md bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground">Coût / mois</p>
           <p className="text-lg font-bold">{metrics.costPerMonth.toFixed(0)} &euro;</p>
         </div>
-        <div className="rounded-md bg-muted/50 p-3 text-center">
+        <div className="rounded-md bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground">Coût / km (tout inclus)</p>
           <p className="text-lg font-bold">
             {metrics.allInCostPerKm != null ? `${metrics.allInCostPerKm.toFixed(2)} €` : '–'}
           </p>
         </div>
-        <div className="rounded-md bg-muted/50 p-3 text-center">
+        <div className="rounded-md bg-card p-3 text-center">
           <p className="text-xs text-muted-foreground">Projection annuelle</p>
           <p className="text-lg font-bold">
             {metrics.projectedYearly.toLocaleString('fr-FR', { maximumFractionDigits: 0 })} &euro;

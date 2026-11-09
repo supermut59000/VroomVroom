@@ -184,7 +184,7 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     <div className="rounded-md bg-muted/50 p-3 text-center">
                       <p className="text-xs text-muted-foreground">Économie totale</p>
-                      <p className="text-lg font-bold text-emerald-600">
+                      <p className="text-lg font-bold text-[var(--tag-ethanol-text)]">
                         {Math.round(rentability.total_savings).toLocaleString('fr-FR')} €
                       </p>
                     </div>
@@ -217,9 +217,9 @@ export function FuelCharts({ vehicleId, open, onClose }: FuelChartsProps) {
                     <Badge variant="outline">{rentability.total_e85_fills} pleins E85</Badge>
                     <Badge variant="outline">Surconsommation {rentability.overconsumption_pct}%</Badge>
                     {rentability.break_even_reached ? (
-                      <Badge className="border-0 bg-emerald-100 text-emerald-700">Rentabilisé</Badge>
+                      <Badge className="border-0 bg-[var(--tag-ethanol-bg)] text-[var(--tag-ethanol-text)]">Rentabilisé</Badge>
                     ) : (
-                      <Badge className="border-0 bg-orange-100 text-orange-700">
+                      <Badge className="border-0 bg-[var(--tag-partial-bg)] text-[var(--tag-partial-text)]">
                         En cours d'amortissement
                       </Badge>
                     )}

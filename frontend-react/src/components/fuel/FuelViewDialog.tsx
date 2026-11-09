@@ -193,7 +193,9 @@ export function FuelViewDialog({ vehicleId, onClose }: FuelViewDialogProps) {
                 onSwipeRight={() => setEditEntry(entry)}
                 onSwipeLeft={() => setPendingDeleteId(entry.id)}
               >
-                <Card className={!entry.is_full_tank ? 'border-l-4 border-l-yellow-400' : ''}>
+                {/* La touche de couleur du plein partiel vient de la bande
+                    latérale (docs/palette.md) ; la puce « Partiel » reste neutre. */}
+                <Card className={!entry.is_full_tank ? 'border-l-4 border-l-[var(--partial)]' : ''}>
                   <CardContent className="flex items-center justify-between p-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
@@ -201,7 +203,7 @@ export function FuelViewDialog({ vehicleId, onClose }: FuelViewDialogProps) {
                           {new Date(entry.fueling_date).toLocaleDateString('fr-FR')}
                         </span>
                         {!entry.is_full_tank && (
-                          <Badge variant="outline" className="text-xs">Partiel</Badge>
+                          <Badge variant="outline" className="text-xs text-muted-foreground">Partiel</Badge>
                         )}
                         <Badge className={`${FUEL_TYPE_COLORS[entry.fuel_type].bg} ${FUEL_TYPE_COLORS[entry.fuel_type].text} border-0 text-xs`}>
                           {FUEL_ENTRY_TYPE_LABELS[entry.fuel_type]}

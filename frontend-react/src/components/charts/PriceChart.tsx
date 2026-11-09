@@ -39,14 +39,16 @@ export const FUEL_LABEL: Record<string, string> = {
   hybride: 'Hybride',
 }
 
+// Couleurs des séries par type de carburant — toutes issues de la palette
+// (docs/palette.md §5 ; 7 types, 7 teintes distinguables dont hybride = neutre)
 export const FUEL_COLOR: Record<string, string> = {
-  e85: 'hsl(142, 71%, 45%)',
-  essence: 'hsl(25, 95%, 53%)',
-  sp98: 'hsl(217, 91%, 60%)',
-  diesel: 'hsl(0, 72%, 51%)',
-  gpl: 'hsl(280, 70%, 55%)',
-  electrique: 'hsl(217, 91%, 60%)',
-  hybride: 'hsl(173, 58%, 39%)',
+  e85: 'var(--ethanol)',
+  essence: 'var(--c-blue)',
+  sp98: 'var(--partial)',
+  diesel: 'var(--c-lilas)',
+  gpl: 'var(--c-rose)',
+  electrique: 'var(--c-teal)',
+  hybride: 'var(--muted-foreground)',
 }
 
 export function PriceChart({ entries, splitByFuelType = false }: PriceChartProps) {
@@ -138,7 +140,7 @@ export function PriceChart({ entries, splitByFuelType = false }: PriceChartProps
                   type="monotone"
                   dataKey={ft}
                   name={ft}
-                  stroke={FUEL_COLOR[ft] ?? 'hsl(0, 0%, 50%)'}
+                  stroke={FUEL_COLOR[ft] ?? 'var(--muted-foreground)'}
                   strokeWidth={2}
                   dot={{ r: 4 }}
                   activeDot={{ r: 6 }}
@@ -150,7 +152,7 @@ export function PriceChart({ entries, splitByFuelType = false }: PriceChartProps
                 <ReferenceLine
                   key={`avg-${ft}`}
                   y={averages[ft]}
-                  stroke={FUEL_COLOR[ft] ?? 'hsl(0, 0%, 50%)'}
+                  stroke={FUEL_COLOR[ft] ?? 'var(--muted-foreground)'}
                   strokeDasharray="5 5"
                 />
               ))}
@@ -159,7 +161,7 @@ export function PriceChart({ entries, splitByFuelType = false }: PriceChartProps
                 type="monotone"
                 dataKey={fuelTypes[0]}
                 name={fuelTypes[0]}
-                stroke="hsl(25, 95%, 53%)"
+                stroke="var(--partial)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 6 }}
@@ -169,7 +171,7 @@ export function PriceChart({ entries, splitByFuelType = false }: PriceChartProps
             {!showSplit && (
               <ReferenceLine
                 y={averages[fuelTypes[0]] ?? 0}
-                stroke="hsl(0, 72%, 51%)"
+                stroke="var(--destructive)"
                 strokeDasharray="5 5"
               />
             )}

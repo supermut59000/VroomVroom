@@ -82,10 +82,11 @@ export function SwipeableCard({
     <div className={cn('relative overflow-hidden rounded-xl', className)}>
       {/* Action backgrounds — mobile only */}
       <div className="absolute inset-0 flex sm:hidden">
-        {/* Right swipe → edit (left panel) */}
-        <div className="flex w-1/2 items-center gap-2 bg-muted pl-4">
-          <Pencil className="h-4 w-4 text-foreground" />
-          <span className="text-sm font-medium">{leftLabel}</span>
+        {/* Right swipe → edit (left panel) : bleu cendré de la palette
+            (docs/palette.md) — bg-muted était invisible sur la carte. */}
+        <div className="flex w-1/2 items-center gap-2 bg-[var(--c-blue)] pl-4">
+          <Pencil className="h-4 w-4 text-zinc-900" />
+          <span className="text-sm font-medium text-zinc-900">{leftLabel}</span>
         </div>
         {/* Left swipe → delete (right panel) */}
         <div className="flex w-1/2 items-center justify-end gap-2 bg-destructive pr-4">

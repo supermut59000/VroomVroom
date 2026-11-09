@@ -164,16 +164,16 @@ export function DistanceChart({ entries }: DistanceChartProps) {
               />
               <ReferenceLine
                 y={avgKm}
-                stroke="hsl(217, 91%, 60%)"
+                stroke="var(--c-blue)"
                 strokeDasharray="4 4"
                 label={{
                   value: `moy. ${avgKm} km`,
                   position: 'right',
                   fontSize: 10,
-                  fill: 'hsl(217, 91%, 60%)',
+                  fill: 'var(--c-blue)',
                 }}
               />
-              <Bar dataKey="km" fill="hsl(270, 60%, 55%)" radius={[4, 4, 0, 0]} name="km" />
+              <Bar dataKey="km" fill="var(--c-lilas)" radius={[4, 4, 0, 0]} name="km" />
             </BarChart>
           </ResponsiveContainer>
         ) : (
@@ -197,7 +197,7 @@ export function DistanceChart({ entries }: DistanceChartProps) {
                   dataKey={ft}
                   stackId="liters"
                   name={ft}
-                  fill={FUEL_COLOR[ft] ?? 'hsl(0, 0%, 50%)'}
+                  fill={FUEL_COLOR[ft] ?? 'var(--muted-foreground)'}
                 />
               ))}
             </BarChart>

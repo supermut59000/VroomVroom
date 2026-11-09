@@ -346,15 +346,15 @@ export function MonthlyCostChart({ entries, maintenances }: MonthlyCostChartProp
             {lastRealMonth && (
               <ReferenceLine
                 x={lastRealMonth}
-                stroke="hsl(0, 0%, 65%)"
+                stroke="var(--muted-foreground)"
                 strokeDasharray="3 3"
-                label={{ value: 'prévision ▸', position: 'insideTopRight', fontSize: 10, fill: 'hsl(0, 0%, 55%)' }}
+                label={{ value: 'prévision ▸', position: 'insideTopRight', fontSize: 10, fill: 'var(--muted-foreground)' }}
               />
             )}
-            <Bar dataKey="Carburant" stackId="a" fill="hsl(217, 91%, 60%)" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="Maintenance" stackId="a" fill="hsl(25, 95%, 53%)" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="CarburantProj" stackId="a" fill="hsl(217, 91%, 60%)" fillOpacity={0.35} radius={[0, 0, 0, 0]} />
-            <Bar dataKey="MaintenanceProj" stackId="a" fill="hsl(25, 95%, 53%)" fillOpacity={0.35} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Carburant" stackId="a" fill="var(--c-blue)" radius={[0, 0, 0, 0]} />
+            <Bar dataKey="Maintenance" stackId="a" fill="var(--c-teal)" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="CarburantProj" stackId="a" fill="var(--c-blue)" fillOpacity={0.35} radius={[0, 0, 0, 0]} />
+            <Bar dataKey="MaintenanceProj" stackId="a" fill="var(--c-teal)" fillOpacity={0.35} radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

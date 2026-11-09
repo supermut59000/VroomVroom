@@ -157,7 +157,7 @@ export function ConsumptionChart({
                 type="monotone"
                 dataKey="e85"
                 name="E85"
-                stroke="hsl(142, 71%, 45%)"
+                stroke="var(--ethanol)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 8, strokeWidth: 2 }}
@@ -169,7 +169,7 @@ export function ConsumptionChart({
                 type="monotone"
                 dataKey="essence"
                 name="Essence (E10/SP98)"
-                stroke="hsl(25, 95%, 53%)"
+                stroke="var(--partial)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 8, strokeWidth: 2 }}
@@ -177,12 +177,12 @@ export function ConsumptionChart({
               />
             )}
             {showSplit && (
-              <ReferenceLine y={avg.e85} stroke="hsl(142, 71%, 45%)" strokeDasharray="5 5" />
+              <ReferenceLine y={avg.e85} stroke="var(--ethanol)" strokeDasharray="5 5" />
             )}
             {showSplit && (
               <ReferenceLine
                 y={avg.essence}
-                stroke="hsl(25, 95%, 53%)"
+                stroke="var(--partial)"
                 strokeDasharray="5 5"
               />
             )}
@@ -192,7 +192,7 @@ export function ConsumptionChart({
                 type="monotone"
                 dataKey="measured"
                 name="Consommation"
-                stroke="hsl(173, 58%, 39%)"
+                stroke="var(--c-teal)"
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 activeDot={{ r: 8, strokeWidth: 2 }}
@@ -201,7 +201,7 @@ export function ConsumptionChart({
             {!showSplit && avgDisplayed != null && (
               <ReferenceLine
                 y={avgDisplayed}
-                stroke="hsl(0, 72%, 51%)"
+                stroke="var(--destructive)"
                 strokeDasharray="5 5"
               />
             )}

@@ -1,7 +1,24 @@
 # VroomVroom — Vision & Technical Context
 
 This file is meant to be fed to an AI at the start of a new session to restore full context.
-Last updated: 2026-11-01
+Last updated: 2026-11-09
+---
+## Session log — 2026-11-09 (suite) — Palette officielle Zinc jour/nuit (skill impeccable)
+- **Brief utilisateur** (hex exacts, **sans indigo** — écarté expressément) : fond zinc (#f4f4f5 jour / #09090b nuit), surfaces #fbfbfb / #18181b, bordures #e4e4e7 / #27272a, texte #18181b / #fbfbfb, secondaire #52525b / #a1a1aa ; primaire **neutre zinc** #18181b / #fbfbfb (dérivée) ; sémantique : éthanol #22c55e/#4ade80, plein partiel #f97316/#fb923c ; 4 couleurs graphiques #3b82f6 / #8b5cf6 / #06b6d4 / #ec4899 ; erreur #ef4444 (conservée, marquée D).
+- **Fichier palette créé : `docs/palette.md`** — source de vérité, chaque valeur marquée B (brief) ou D (dérivée : indigo nuit #6366f1, graphiques nuit éclaircis #60a5fa/#a78bfa/#22d3ee/#f472b6, secondary/muted/accent).
+- **Appliqué** : `index.css` (:root + .dark réécrits, nouveaux tokens `--ethanol`/`--partial` + utilities `bg-ethanol`/`bg-partial` via @theme inline) ; badge E85 (`FUEL_TYPE_COLORS` : puce pleine verte, texte #18181b — corrige aussi le badge illisible en sombre) ; badge « Partiel » (FuelViewDialog, puce pleine orange) ; fallbacks donut Coût de possession (4 couleurs du brief).
+- **Détecteur impeccable** (1 passage) : 1 warning « side-tab » `border-l-4 border-l-yellow-400` sur les cartes plein partiel → supprimé (redondant avec la puce Partiel).
+- **Vérifié émulateur** : 363 vitest verts, pixels exacts (fond #f4f4f5, carte #fbfbfb, nuit #09090b/#18181b), captures jour + nuit OK.
+- Suggestion faite : `/impeccable init` (pas de PRODUCT.md). Impeccable v4.8.1 dispo (mise à jour à demander).
+- **Itération pastel (demande utilisateur)** : l'indigo est écarté (primaire neutre zinc #18181b/#fbfbfb) ; sémantique pastel : éthanol #81c784/#a5d6a7, partiel #ffb74d/#ffcc80 ; 4 pastels graphiques #7baaf7/#b39ddb/#4db6ac/#f48fb1 (nuit éclaircies D) ; pastilles tags fond teinté+texte (brief pour ethanol/partiel, D pour les 4 infos) ; **plein partiel = bande latérale gauche colorée, puce « Partiel » neutre** (choix utilisateur, réintègre la border-l-4 supprimée par le détecteur — brief wins) ; audit complet : plus aucune couleur de hue Tailwind ni hsl/hex en dur dans les composants (toasts sonner mappés, FUEL_COLOR + charts sur variables, map markers, boutons Play/Google Maps documentés comme exceptions de marque) ; `docs/palette.md` réécrit (règle : toute couleur visible vient du fichier palette).
+- **SwipeableCard** : le panneau « Modifier » était `bg-muted` (invisible sur la carte zinc) → `bg-[var(--c-blue)]` + texte `#18181b` (panneau « Supprimer » reste `--destructive`) ; concerne l'historique carburant ET la maintenance (même composant). Vérifié sur émulateur (glissement en cours, panneau bleu visible).
+
+## Session log — 2026-11-09 — Quirk UI : blur du bandeau status-bar au scroll
+- **Demande** : au scroll (plusieurs véhicules), le contenu passe flouté derrière le header « VroomVroom » mais PAS derrière la bande de la barre de statut (horloge) — il fallait le même effet là-haut, avec l'horloge/icônes OS qui restent nettes.
+- **Fix** : bande + header fusionnés en **un seul élément de verre** (`Header.tsx` : `sticky top-0` + `pt-[var(--sat,env(safe-area-inset-top,0px))]` + mêmes classes `bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60`) ; `App.tsx` : suppression du `paddingTop` racine et d'un premier essai (div bande `fixed` séparée). Raison de la fusion : le `backdrop-filter` est rogné à la boîte de l'élément → deux éléments empilés (bande + header) donnaient une **coupure visible du flou à la jonction** (signalée par l'utilisateur). Un seul élément = flou continu du bord haut de l'écran jusqu'au bas du header ; l'horloge/icônes OS (dessinées par Android au-dessus du WebView) restent nettes. Hauteur 0 sur le web (variable absente).
+- **Vérifié sur émulateur Android 16 (AVD vroomvroom36, relancé en fenêtre)** : 363 vitest verts + `bun run build` OK + 2 APK release signés installés (emubuild 15:41, emubuild2 16:08). Preuve du flou dans la bande : `font_scale 1.6` → halos flous (texte + poubelle rouge) sous la bande, icônes OS nettes. Après fusion : capture en scroll montre le flou continu jusqu'au haut de l'écran, plus de coupure.
+- **Validé par l'utilisateur sur l'émulateur** ; livré dans v1.0.9/vc12 (APK + AAB, 2026-11-09).
+- Astuce de reprod sur émulateur (page courte, 2 véhicules) : `adb shell settings put system font_scale 1.35+` rallonge la page pour que le contenu atteigne la bande ; remis à 1.0 après.
 
 **Reference docs:** [docs/architecture.md](docs/architecture.md) — endpoints, schemas, services, formulas | [docs/gap-analysis.md](docs/gap-analysis.md) — improvements & new ideas | [docs/TODO.md](docs/TODO.md) — prioritized checklist
 

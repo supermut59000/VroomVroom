@@ -106,7 +106,7 @@ export function NearbyStationsList({
           title="Afficher seulement les stations avec E85"
           className={`ml-2 rounded-full border px-2 py-0.5 text-xs transition-colors ${
             e85Only
-              ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+              ? 'border-[var(--ethanol)] bg-[var(--ethanol)]/10 text-[var(--tag-ethanol-text)]'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
@@ -154,15 +154,15 @@ export function NearbyStationsList({
                 return (
                 <div
                   key={s.id}
-                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 ${isFavorite(s.id) ? 'bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
+                  className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 ${isFavorite(s.id) ? 'bg-[var(--tag-partial-bg)] dark:bg-[var(--tag-partial-bg)]/20' : ''}`}
                 >
                   <button
                     type="button"
-                    className="shrink-0 text-muted-foreground hover:text-yellow-500 transition-colors mr-1.5"
+                    className="shrink-0 text-muted-foreground hover:text-[var(--partial)] transition-colors mr-1.5"
                     onClick={(e) => { e.stopPropagation(); toggleFav({ id: s.id, name: displayName, lat: s.latitude, lon: s.longitude }) }}
                     title={isFavorite(s.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                   >
-                    <Star className={`h-3.5 w-3.5 ${isFavorite(s.id) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                    <Star className={`h-3.5 w-3.5 ${isFavorite(s.id) ? 'fill-yellow-400 text-[var(--partial)]' : ''}`} />
                   </button>
                   <button
                     type="button"

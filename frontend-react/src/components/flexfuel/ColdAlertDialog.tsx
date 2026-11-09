@@ -72,7 +72,7 @@ export function ColdAlertDialog({ open, onClose }: ColdAlertDialogProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Snowflake className="h-5 w-5 text-blue-500" />
+            <Snowflake className="h-5 w-5 text-[var(--c-blue)]" />
             {t.coldAlert.title}
           </DialogTitle>
           <p className="-mt-2 mb-1 text-xs text-muted-foreground">{t.coldAlert.subtitle}</p>
@@ -104,7 +104,7 @@ export function ColdAlertDialog({ open, onClose }: ColdAlertDialogProps) {
               }}
             />
             {cfg.city && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">
+              <p className="text-xs text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                 {cfg.city.name} ({cfg.city.cp})
               </p>
             )}
@@ -149,7 +149,7 @@ export function ColdAlertDialog({ open, onClose }: ColdAlertDialogProps) {
               <p
                 className={`text-xs ${
                   testResult.level === 'cold'
-                    ? 'text-blue-600 dark:text-blue-400'
+                    ? 'text-[var(--tag-info-text)] dark:text-[var(--c-blue)]'
                     : 'text-muted-foreground'
                 }`}
               >

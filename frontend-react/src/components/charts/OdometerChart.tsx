@@ -138,11 +138,11 @@ export function OdometerChart({ vehicle, entries }: OdometerChartProps) {
             )}
             {limit != null && (
               isExceeded ? (
-                <Badge className="border-0 bg-red-100 text-red-700">
+                <Badge className="border-0 bg-destructive/10 text-destructive">
                   Dépassé de {Math.abs(Math.round(remaining!)).toLocaleString('fr-FR')} km
                 </Badge>
               ) : monthsUntilLimit != null ? (
-                <Badge className="border-0 bg-orange-100 text-orange-700">
+                <Badge className="border-0 bg-[var(--tag-partial-bg)] text-[var(--tag-partial-text)]">
                   Limite dans ~{monthsUntilLimit} mois
                 </Badge>
               ) : remaining != null ? (
@@ -174,20 +174,20 @@ export function OdometerChart({ vehicle, entries }: OdometerChartProps) {
             {limit != null && (
               <ReferenceLine
                 y={limit}
-                stroke="hsl(0, 72%, 51%)"
+                stroke="var(--destructive)"
                 strokeDasharray="5 5"
                 label={{
                   value: `Limite ${Math.round(limit).toLocaleString('fr-FR')} km`,
                   position: 'insideTopRight',
                   fontSize: 10,
-                  fill: 'hsl(0, 72%, 51%)',
+                  fill: 'var(--destructive)',
                 }}
               />
             )}
             <Line
               type="monotone"
               dataKey="odomActual"
-              stroke="hsl(217, 91%, 60%)"
+              stroke="var(--c-blue)"
               strokeWidth={2.5}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}
@@ -197,7 +197,7 @@ export function OdometerChart({ vehicle, entries }: OdometerChartProps) {
             <Line
               type="monotone"
               dataKey="odomProj"
-              stroke="hsl(217, 91%, 60%)"
+              stroke="var(--c-blue)"
               strokeWidth={2}
               strokeDasharray="6 4"
               dot={false}

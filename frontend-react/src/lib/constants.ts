@@ -17,13 +17,14 @@ export const FUEL_ENTRY_TYPE_LABELS: Record<FuelType, string> = {
 }
 
 export const FUEL_TYPE_COLORS: Record<FuelType, { bg: string; text: string }> = {
-  essence: { bg: 'bg-blue-100', text: 'text-blue-700' },
-  sp98: { bg: 'bg-blue-100', text: 'text-blue-700' },
-  diesel: { bg: 'bg-purple-100', text: 'text-purple-700' },
-  electrique: { bg: 'bg-green-100', text: 'text-green-700' },
-  hybride: { bg: 'bg-orange-100', text: 'text-orange-700' },
-  gpl: { bg: 'bg-pink-100', text: 'text-pink-700' },
-  e85: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  // Pastilles pastel (docs/palette.md) : 4 teintes infos + sémantique
+  essence: { bg: 'bg-[var(--tag-info-bg)]', text: 'text-[var(--tag-info-text)]' },
+  sp98: { bg: 'bg-[var(--tag-info-bg)]', text: 'text-[var(--tag-info-text)]' },
+  diesel: { bg: 'bg-[var(--tag-lilas-bg)]', text: 'text-[var(--tag-lilas-text)]' },
+  electrique: { bg: 'bg-[var(--tag-teal-bg)]', text: 'text-[var(--tag-teal-text)]' },
+  hybride: { bg: 'bg-[var(--tag-partial-bg)]', text: 'text-[var(--tag-partial-text)]' },
+  gpl: { bg: 'bg-[var(--tag-rose-bg)]', text: 'text-[var(--tag-rose-text)]' },
+  e85: { bg: 'bg-[var(--tag-ethanol-bg)]', text: 'text-[var(--tag-ethanol-text)]' },
 }
 
 // The DB stores the human-readable label directly (e.g. "Vidange", not "vidange")

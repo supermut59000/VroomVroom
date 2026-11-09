@@ -153,16 +153,16 @@ export function EthanolHistoryChart({ conversion, vehicle, entries }: EthanolHis
             <Tooltip formatter={(value: number) => [`${value}%`, 'Éthanol']} />
             <ReferenceLine
               y={target}
-              stroke="hsl(173, 58%, 39%)"
+              stroke="var(--c-teal)"
               strokeDasharray="5 5"
-              label={{ value: `${target}%`, fontSize: 11, fill: 'hsl(173, 58%, 39%)', position: 'insideTopRight' }}
+              label={{ value: `${target}%`, fontSize: 11, fill: 'var(--c-teal)', position: 'insideTopRight' }}
             />
-            <ReferenceLine y={target + tolerance} stroke="hsl(25, 95%, 53%)" strokeDasharray="3 3" />
-            <ReferenceLine y={target - tolerance} stroke="hsl(25, 95%, 53%)" strokeDasharray="3 3" />
+            <ReferenceLine y={target + tolerance} stroke="var(--partial)" strokeDasharray="3 3" />
+            <ReferenceLine y={target - tolerance} stroke="var(--partial)" strokeDasharray="3 3" />
             <Line
               type="monotone"
               dataKey="ethanolPct"
-              stroke="hsl(142, 71%, 45%)"
+              stroke="var(--ethanol)"
               strokeWidth={2}
               dot={{ r: 4 }}
               activeDot={{ r: 6 }}

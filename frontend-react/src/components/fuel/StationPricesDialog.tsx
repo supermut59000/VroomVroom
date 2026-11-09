@@ -351,16 +351,16 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                 return (
                   <div
                     key={s.id}
-                    className={`flex items-start justify-between rounded-md border px-3 py-2 ${isFavorite(s.id) ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' : ''}`}
+                    className={`flex items-start justify-between rounded-md border px-3 py-2 ${isFavorite(s.id) ? 'border-[var(--partial)]/60 bg-[var(--tag-partial-bg)]' : ''}`}
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
                         <button
                           onClick={() => toggleFav({ id: s.id, name: displayName, lat: s.latitude, lon: s.longitude })}
-                          className="shrink-0 text-muted-foreground hover:text-yellow-500 transition-colors"
+                          className="shrink-0 text-muted-foreground hover:text-[var(--partial)] transition-colors"
                           title={isFavorite(s.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                         >
-                          <Star className={`h-3.5 w-3.5 ${isFavorite(s.id) ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                          <Star className={`h-3.5 w-3.5 ${isFavorite(s.id) ? 'fill-yellow-400 text-[var(--partial)]' : ''}`} />
                         </button>
                         <p className="truncate text-sm font-medium">
                           {knownName ? (
@@ -371,7 +371,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                           ) : displayName}
                         </p>
                         {isCheapest && (
-                          <Badge className="shrink-0 border-0 bg-green-100 px-1.5 text-xs text-green-700">
+                          <Badge className="shrink-0 border-0 bg-[var(--tag-ethanol-bg)] px-1.5 text-xs text-[var(--tag-ethanol-text)]">
                             moins cher
                           </Badge>
                         )}
@@ -393,7 +393,7 @@ export function StationPricesDialog({ open, onClose }: StationPricesDialogProps)
                     </div>
                     <div className="ml-3 shrink-0 text-right">
                       {stationPrice != null ? (
-                        <p className={`text-base font-bold ${isCheapest ? 'text-green-600' : 'text-foreground'}`}>
+                        <p className={`text-base font-bold ${isCheapest ? 'text-[var(--tag-ethanol-text)]' : 'text-foreground'}`}>
                           {stationPrice.toFixed(3)} €/L
                         </p>
                       ) : (

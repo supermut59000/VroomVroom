@@ -149,7 +149,7 @@ export function VehicleCard({
                 <Separator />
                 <div className="text-sm">
                   {vehicle.insurance_unlimited ? (
-                    <Badge className="border-0 bg-blue-100 text-xs text-blue-700">
+                    <Badge className="border-0 bg-[var(--tag-info-bg)] text-xs text-[var(--tag-info-text)]">
                       Kilométrage illimité
                     </Badge>
                   ) : stats.insurance_km_exceeded ? (
@@ -159,11 +159,11 @@ export function VehicleCard({
                   ) : stats.insurance_km_remaining != null &&
                     stats.insurance_km_remaining <=
                       stats.current_insurance_km_limit! * 0.1 ? (
-                    <Badge className="border-0 bg-orange-100 text-xs text-orange-700">
+                    <Badge className="border-0 bg-[var(--tag-partial-bg)] text-xs text-[var(--tag-partial-text)]">
                       {Math.round(stats.insurance_km_remaining).toLocaleString('fr-FR')} km restants
                     </Badge>
                   ) : stats.insurance_km_remaining != null ? (
-                    <Badge className="border-0 bg-green-100 text-xs text-green-700">
+                    <Badge className="border-0 bg-[var(--tag-ethanol-bg)] text-xs text-[var(--tag-ethanol-text)]">
                       {Math.round(stats.insurance_km_remaining).toLocaleString('fr-FR')} km restants
                     </Badge>
                   ) : null}
@@ -182,7 +182,7 @@ export function VehicleCard({
                       variant={r.status === 'overdue' ? 'destructive' : 'outline'}
                       className={
                         r.status === 'upcoming'
-                          ? 'border-0 bg-orange-100 text-xs text-orange-700 dark:bg-orange-950 dark:text-orange-400'
+                          ? 'border-0 bg-[var(--tag-partial-bg)] text-xs text-[var(--tag-partial-text)]'
                           : 'text-xs'
                       }
                     >
@@ -228,7 +228,7 @@ export function VehicleCard({
             <Button variant="ghost" size="icon" className="relative h-10 w-10" onClick={onFuelAdd} aria-label="Ajouter un plein">
               <Fuel className="h-5 w-5" />
               {fuelQueueCount > 0 && (
-                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[10px] font-bold text-white leading-none">
+                <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--partial)] px-0.5 text-[10px] font-bold text-zinc-900 leading-none">
                   {fuelQueueCount}
                 </span>
               )}
@@ -271,7 +271,7 @@ export function VehicleCard({
         {flexfuelConversion && onBlendCalc && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10 text-emerald-600 hover:text-emerald-700" onClick={onBlendCalc} aria-label="Calculateur de mélange E85">
+              <Button variant="ghost" size="icon" className="h-10 w-10 text-[var(--tag-ethanol-text)] hover:text-[var(--ethanol)]" onClick={onBlendCalc} aria-label="Calculateur de mélange E85">
                 <FlaskConical className="h-5 w-5" />
               </Button>
             </TooltipTrigger>

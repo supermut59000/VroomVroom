@@ -29,8 +29,9 @@ function isoDaysAgo(days: number): string {
 const TODAY = () => new Date().toISOString().split('T')[0]
 
 function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  // bg-card (blanc en jour) : le dialog a un fond bg-background gris, bg-muted/50 y était invisible
   return (
-    <div className="rounded-md bg-muted/50 p-3 text-center">
+    <div className="rounded-md bg-card p-3 text-center">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-lg font-bold">{value}</p>
       {sub && <p className="text-[11px] text-muted-foreground">{sub}</p>}
@@ -150,24 +151,24 @@ export function PeriodStatsDialog({ vehicleId, open, onOpenChange }: PeriodStats
 
             {/* Économies E85 */}
             {stats.e85_savings != null && (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-950/30">
+              <div className="rounded-lg border border-[var(--ethanol)]/40 bg-[var(--tag-ethanol-bg)] p-3 dark:border-[var(--ethanol)]/40 dark:bg-[var(--tag-ethanol-bg)]/30">
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 text-sm text-emerald-700 dark:text-emerald-400">
+                  <span className="flex items-center gap-1.5 text-sm text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                     <Leaf className="h-4 w-4" />
                     Économie E85 (vs 100% E10)
                   </span>
-                  <span className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
+                  <span className="text-lg font-bold text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                     {eur(stats.e85_savings, 2)}
                   </span>
                 </div>
                 {stats.e85_share_liters != null && (
-                  <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-500">
+                  <p className="mt-1 text-xs text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                     Mix : {Math.round(stats.e85_share_liters * 100)}% E85 /{' '}
                     {100 - Math.round(stats.e85_share_liters * 100)}% Essence
                   </p>
                 )}
                 {stats.skipped_fills_no_e10_price > 0 && (
-                  <p className="mt-1 text-xs text-orange-600 dark:text-orange-400">
+                  <p className="mt-1 text-xs text-[var(--tag-partial-text)] dark:text-[var(--partial)]">
                     {stats.skipped_fills_no_e10_price} plein{stats.skipped_fills_no_e10_price > 1 ? 's' : ''} ignoré
                     {stats.skipped_fills_no_e10_price > 1 ? 's' : ''} (pas de prix E10 de référence)
                   </p>

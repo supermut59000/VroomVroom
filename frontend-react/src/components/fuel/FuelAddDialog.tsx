@@ -333,7 +333,7 @@ export function FuelAddDialog({ vehicleId, onClose, modal = true }: FuelAddDialo
           </div>
 
           {fuelTypeMismatch && (
-            <p className="rounded-md border border-orange-200 bg-orange-50 px-3 py-2 text-xs text-orange-700 dark:border-orange-900 dark:bg-orange-950 dark:text-orange-400">
+            <p className="rounded-md border border-[var(--tag-partial-text)]/30 bg-[var(--tag-partial-bg)] px-3 py-2 text-xs text-[var(--tag-partial-text)]">
               ⚠ Le type sélectionné ({selectedFuelType}) diffère du carburant enregistré du véhicule ({vehicle?.fuel_type}).
             </p>
           )}

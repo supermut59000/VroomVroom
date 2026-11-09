@@ -185,7 +185,7 @@ export function BlendCalculator({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <FlaskConical className="h-4 w-4 text-emerald-600" />
+            <FlaskConical className="h-4 w-4 text-[var(--tag-ethanol-text)]" />
             Calculateur de mélange E85
           </CardTitle>
         </CardHeader>
@@ -206,7 +206,7 @@ export function BlendCalculator({
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <FlaskConical className="h-4 w-4 text-emerald-600" />
+            <FlaskConical className="h-4 w-4 text-[var(--tag-ethanol-text)]" />
             Calculateur de mélange E85
           </CardTitle>
         </CardHeader>
@@ -224,9 +224,9 @@ export function BlendCalculator({
       <div
         className={`rounded-lg border p-3 ${
           odoA !== null
-            ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/30'
+            ? 'border-[var(--ethanol)]/40 bg-[var(--tag-ethanol-bg)] dark:border-[var(--ethanol)]/40 dark:bg-[var(--tag-ethanol-bg)]/30'
             : limitFill
-              ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/30'
+              ? 'border-[var(--partial)]/40 bg-[var(--tag-partial-bg)] dark:border-[var(--partial)]/40 dark:bg-[var(--tag-partial-bg)]/30'
               : 'border-border bg-muted/30'
         }`}
       >
@@ -235,17 +235,17 @@ export function BlendCalculator({
         </p>
         {odoA !== null ? (
           <>
-            <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-tight">
+            <p className="text-xs text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)] leading-tight">
               Jusqu'au km
             </p>
-            <p className="text-base font-bold text-emerald-800 dark:text-emerald-200">
+            <p className="text-base font-bold text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
               {odoA.toLocaleString('fr-FR')}
             </p>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-0.5">
+            <p className="text-[11px] text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)] mt-0.5">
               dans ~{(odoA - inputOdo).toLocaleString('fr-FR')} km
             </p>
             {limitFill && limitFill.addedKm !== null && (
-              <p className="text-[11px] text-emerald-600 dark:text-emerald-500 mt-1 border-t border-emerald-200 dark:border-emerald-800 pt-1">
+              <p className="text-[11px] text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)] mt-1 border-t border-[var(--ethanol)]/40 dark:border-[var(--ethanol)]/40 pt-1">
                 {limitFill.isFull
                   ? `Plein complet: ${Math.round(limitFill.liters)} L → ${Math.round(limitFill.resultPct)}% · +${limitFill.addedKm} km`
                   : `Max: ${Math.round(limitFill.liters)} L → ${Math.round(limitFill.resultPct)}% · +${limitFill.addedKm} km`}
@@ -254,13 +254,13 @@ export function BlendCalculator({
           </>
         ) : limitFill ? (
           <>
-            <p className="text-xs text-yellow-700 dark:text-yellow-400 leading-tight">
+            <p className="text-xs text-[var(--tag-partial-text)] dark:text-[var(--partial)] leading-tight">
               Partiel possible
             </p>
-            <p className="text-base font-bold text-yellow-800 dark:text-yellow-200">
+            <p className="text-base font-bold text-[var(--tag-partial-text)] dark:text-[var(--partial)]">
               {Math.round(limitFill.liters)} L E85
             </p>
-            <p className="text-[11px] text-yellow-700 dark:text-yellow-500 mt-0.5">
+            <p className="text-[11px] text-[var(--tag-partial-text)] dark:text-[var(--partial)] mt-0.5">
               → {Math.round(limitFill.resultPct)}%
               {limitFill.addedKm !== null && ` · +${limitFill.addedKm} km`}
             </p>
@@ -279,8 +279,8 @@ export function BlendCalculator({
       <div
         className={`rounded-lg border p-3 ${
           odoBNow
-            ? 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950/30'
-            : 'border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20'
+            ? 'border-[var(--c-blue)]/40 bg-[var(--tag-info-bg)] dark:border-[var(--c-blue)]/40 dark:bg-[var(--tag-info-bg)]/30'
+            : 'border-[var(--c-blue)]/40 bg-[var(--tag-info-bg)]/50 dark:border-[var(--c-blue)]/40 dark:bg-[var(--tag-info-bg)]/20'
         }`}
       >
         <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
@@ -288,20 +288,20 @@ export function BlendCalculator({
         </p>
         {odoBNow ? (
           <>
-            <p className="text-base font-bold text-blue-800 dark:text-blue-200 leading-tight">Maintenant</p>
-            <p className="text-[11px] text-blue-600 dark:text-blue-500 mt-0.5">
+            <p className="text-base font-bold text-[var(--tag-info-text)] dark:text-[var(--c-blue)] leading-tight">Maintenant</p>
+            <p className="text-[11px] text-[var(--tag-info-text)] dark:text-[var(--c-blue)] mt-0.5">
               5 L+ {dilutantLabel} → {target}%
             </p>
           </>
         ) : odoB !== null ? (
           <>
-            <p className="text-xs text-blue-700 dark:text-blue-400 leading-tight">
+            <p className="text-xs text-[var(--tag-info-text)] dark:text-[var(--c-blue)] leading-tight">
               À partir du km
             </p>
-            <p className="text-base font-bold text-blue-800 dark:text-blue-200">
+            <p className="text-base font-bold text-[var(--tag-info-text)] dark:text-[var(--c-blue)]">
               {odoB.toLocaleString('fr-FR')}
             </p>
-            <p className="text-[11px] text-blue-600 dark:text-blue-500 mt-0.5">
+            <p className="text-[11px] text-[var(--tag-info-text)] dark:text-[var(--c-blue)] mt-0.5">
               dans ~{(odoB - inputOdo).toLocaleString('fr-FR')} km
             </p>
           </>
@@ -320,15 +320,15 @@ export function BlendCalculator({
     )
   } else if (winterRec.type === 'pure_e85') {
     winterRecCard = (
-      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950/30">
-        <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
+      <div className="rounded-lg border border-[var(--ethanol)]/40 bg-[var(--tag-ethanol-bg)] p-4 dark:border-[var(--ethanol)]/40 dark:bg-[var(--tag-ethanol-bg)]/30">
+        <p className="text-lg font-bold text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
           {Math.round(winterRec.e85Liters)} L E85 pur
         </p>
-        <p className="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+        <p className="mt-1 text-sm text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
           Résultat : {Math.round(winterRec.resultPct)}% (cible ≤ {target + tolerance}%)
         </p>
         {winterRec.kmSafe !== null && winterRec.kmRelative !== null && (
-          <p className="mt-2 text-xs text-emerald-600 dark:text-emerald-500">
+          <p className="mt-2 text-xs text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
             Dilution nécessaire vers le km {winterRec.kmSafe.toLocaleString('fr-FR')} (dans ~
             {winterRec.kmRelative.toLocaleString('fr-FR')} km)
           </p>
@@ -337,17 +337,17 @@ export function BlendCalculator({
     )
   } else {
     const resultColor = winterRec.withinTolerance
-      ? 'text-emerald-600 dark:text-emerald-400'
-      : 'text-orange-500'
+      ? 'text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]'
+      : 'text-[var(--partial)]'
     const aboveLimit = currentEthanolPct > target + tolerance
     winterRecCard = (
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/30">
+      <div className="rounded-lg border border-[var(--c-blue)]/40 bg-[var(--tag-info-bg)] p-4 dark:border-[var(--c-blue)]/40 dark:bg-[var(--tag-info-bg)]/30">
         {aboveLimit && (
-          <p className="text-xs font-medium text-orange-600 dark:text-orange-400 mb-2">
+          <p className="text-xs font-medium text-[var(--tag-partial-text)] dark:text-[var(--partial)] mb-2">
             Taux actuel ({currentEthanolPct.toFixed(0)}%) au-dessus de la limite, dilution nécessaire
           </p>
         )}
-        <p className="text-lg font-bold text-blue-800 dark:text-blue-300">
+        <p className="text-lg font-bold text-[var(--tag-info-text)] dark:text-[var(--c-blue)]">
           {Math.round(winterRec.dilutantLiters)} L {dilutantLabel}&nbsp;+&nbsp;{Math.round(winterRec.e85Liters)} L E85
         </p>
         <p className={`mt-1 text-sm ${resultColor}`}>
@@ -473,7 +473,7 @@ export function BlendCalculator({
                       ? `${Math.round(fill.e85Liters)} L E85 pur`
                       : `${Math.round(fill.dilutantLiters)} L ${dilutantLabel} + ${Math.round(fill.e85Liters)} L E85`}
                   </td>
-                  <td className={`py-1.5 px-2 text-right font-semibold ${fill.withinTolerance ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-500'}`}>
+                  <td className={`py-1.5 px-2 text-right font-semibold ${fill.withinTolerance ? 'text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]' : 'text-[var(--partial)]'}`}>
                     {Math.round(fill.resultPct)}%
                   </td>
                 </tr>
@@ -498,7 +498,7 @@ export function BlendCalculator({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <FlaskConical className="h-4 w-4 text-emerald-600" />
+          <FlaskConical className="h-4 w-4 text-[var(--tag-ethanol-text)]" />
           Mélange E85
         </CardTitle>
         <p className="text-xs text-muted-foreground">

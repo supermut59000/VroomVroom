@@ -129,7 +129,7 @@ export function FlexfuelConversionDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Leaf className="h-5 w-5 text-emerald-600" />
+            <Leaf className="h-5 w-5 text-[var(--tag-ethanol-text)]" />
             {isEdit ? 'Modifier la conversion E85' : 'Ajouter une conversion E85'}
           </DialogTitle>
         </DialogHeader>

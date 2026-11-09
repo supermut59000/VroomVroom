@@ -28,7 +28,7 @@ export function BlendCalculatorDialog({ vehicleId, onClose }: BlendCalculatorDia
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5 text-emerald-600" />
+            <FlaskConical className="h-5 w-5 text-[var(--tag-ethanol-text)]" />
             Mélange E85
             {vehicle && (
               <span className="text-sm font-normal text-muted-foreground">

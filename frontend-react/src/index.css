@@ -30,6 +30,8 @@
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
+    --color-ethanol: var(--ethanol);
+    --color-partial: var(--partial);
     --color-chart-1: var(--chart-1);
     --color-chart-2: var(--chart-2);
     --color-chart-3: var(--chart-3);
@@ -45,87 +47,140 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Palette officielle : voir docs/palette.md (B = brief utilisateur, D = dérivée) */
 :root {
     --radius: 0.625rem;
-    /* Gris d'origine (le fond « avant ») : cartes blanches dessus, et
-       l'horloge noire de la barre de statut reste bien lisible. */
-    --background: oklch(0.95 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.86 0 0);
-    --input: oklch(0.86 0 0);
-    --ring: oklch(0.65 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
+    /* Fondation zinc (jour) */
+    --background: #f4f4f5;
+    --foreground: #18181b;
+    --card: #fbfbfb;
+    --card-foreground: #18181b;
+    --popover: #fbfbfb;
+    --popover-foreground: #18181b;
+    --primary: #18181b; /* zinc-900 D : neutre, les couleurs restent sémantiques */
+    --primary-foreground: #ffffff;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+    --muted: #f4f4f5;
+    --muted-foreground: #52525b;
+    --accent: #f4f4f5;
+    --accent-foreground: #18181b;
+    --destructive: #ef4444;
+    --border: #e4e4e7;
+    --input: #e4e4e7;
+    --ring: #18181b;
+    /* Sémantique pastel (solides) — brief */
+    --ethanol: #81c784;
+    --partial: #ffb74d;
+    /* Solides « infos » (4 teintes pastel des graphiques) — brief */
+    --c-blue: #7baaf7;
+    --c-lilas: #b39ddb;
+    --c-teal: #4db6ac;
+    --c-rose: #f48fb1;
+    /* Pastilles (tags) : fond teinté + texte lisible — brief (ethanol/partial) + D */
+    --tag-ethanol-bg: #e8f5e9;
+    --tag-ethanol-text: #2e7d32;
+    --tag-partial-bg: #fff3e0;
+    --tag-partial-text: #ef6c00;
+    --tag-info-bg: #eef3fd;
+    --tag-info-text: #4763a8;
+    --tag-lilas-bg: #ede7f6;
+    --tag-lilas-text: #5e35b1;
+    --tag-teal-bg: #e0f2f1;
+    --tag-teal-text: #00695c;
+    --tag-rose-bg: #fdeef4;
+    --tag-rose-text: #b03a70;
+    /* Toasts (variables sonner) */
+    --success-bg: #e8f5e9; --success-text: #2e7d32; --success-border: #a5d6a7;
+    --warning-bg: #fff3e0; --warning-text: #ef6c00; --warning-border: #ffb74d;
+    --error-bg: #fef2f2; --error-text: #ef4444; --error-border: #fca5a5;
+    --info-bg: #eef3fd; --info-text: #4763a8; --info-border: #7baaf7;
+    /* Graphiques */
+    --chart-1: #7baaf7;
+    --chart-2: #b39ddb;
+    --chart-3: #4db6ac;
+    --chart-4: #f48fb1;
     --chart-5: oklch(0.769 0.188 70.08);
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
-    /* Chart semantic colors (light) */
-    --color-chart-purchase: hsl(220 8.9% 46.1%);
-    --color-chart-fuel: hsl(217 91% 60%);
-    --color-chart-maintenance: hsl(25 95% 53%);
-    --color-chart-fixed: hsl(270 60% 55%);
+    --sidebar: #fbfbfb;
+    --sidebar-foreground: #18181b;
+    --sidebar-primary: #18181b;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #f4f4f5;
+    --sidebar-accent-foreground: #18181b;
+    --sidebar-border: #e4e4e7;
+    --sidebar-ring: #18181b;
+    /* Chart semantic colors (light) — 4 couleurs du brief */
+    --color-chart-purchase: #b39ddb;
+    --color-chart-fuel: #7baaf7;
+    --color-chart-maintenance: #4db6ac;
+    --color-chart-fixed: #f48fb1;
 }
-
+/* Fondation zinc (nuit) */
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
+    --background: #09090b;
+    --foreground: #fbfbfb;
+    --card: #18181b;
+    --card-foreground: #fbfbfb;
+    --popover: #18181b;
+    --popover-foreground: #fbfbfb;
+    --primary: #fbfbfb; /* zinc-50 D : neutre en nuit */
+    --primary-foreground: #18181b;
+    --secondary: #18181b;
+    --secondary-foreground: #fbfbfb;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --accent: #27272a;
+    --accent-foreground: #fbfbfb;
+    --destructive: #ef4444;
+    --border: #27272a;
+    --input: #27272a;
+    --ring: #fbfbfb;
+    /* Sémantique pastel (solides) — brief nuit */
+    --ethanol: #a5d6a7;
+    --partial: #ffcc80;
+    /* Solides « infos » D : éclaircies pour la nuit */
+    --c-blue: #90c5ff;
+    --c-lilas: #d1c4e9;
+    --c-teal: #80cbc4;
+    --c-rose: #f8bbd0;
+    /* Pastilles nuit D : voile translucide + texte pastel clair */
+    --tag-ethanol-bg: rgba(165, 214, 167, 0.14);
+    --tag-ethanol-text: #a5d6a7;
+    --tag-partial-bg: rgba(255, 204, 128, 0.14);
+    --tag-partial-text: #ffcc80;
+    --tag-info-bg: rgba(123, 170, 247, 0.14);
+    --tag-info-text: #90c5ff;
+    --tag-lilas-bg: rgba(179, 157, 219, 0.16);
+    --tag-lilas-text: #d1c4e9;
+    --tag-teal-bg: rgba(77, 182, 172, 0.14);
+    --tag-teal-text: #80cbc4;
+    --tag-rose-bg: rgba(244, 143, 177, 0.14);
+    --tag-rose-text: #f8bbd0;
+    /* Toasts nuit D */
+    --success-bg: rgba(165, 214, 167, 0.12); --success-text: #a5d6a7; --success-border: rgba(165, 214, 167, 0.35);
+    --warning-bg: rgba(255, 204, 128, 0.12); --warning-text: #ffcc80; --warning-border: rgba(255, 204, 128, 0.35);
+    --error-bg: rgba(239, 68, 68, 0.12); --error-text: #f87171; --error-border: rgba(239, 68, 68, 0.35);
+    --info-bg: rgba(123, 170, 247, 0.12); --info-text: #90c5ff; --info-border: rgba(123, 170, 247, 0.35);
+    /* Graphiques D : versions éclaircies sur fond sombre */
+    --chart-1: #90c5ff;
+    --chart-2: #d1c4e9;
+    --chart-3: #80cbc4;
+    --chart-4: #f8bbd0;
     --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-    /* Chart semantic colors (dark) */
-    --color-chart-purchase: hsl(220 8.9% 62%);
-    --color-chart-fuel: hsl(217 91% 70%);
-    --color-chart-maintenance: hsl(25 95% 65%);
-    --color-chart-fixed: hsl(270 60% 68%);
+    --sidebar: #18181b;
+    --sidebar-foreground: #fbfbfb;
+    --sidebar-primary: #fbfbfb;
+    --sidebar-primary-foreground: #18181b;
+    --sidebar-accent: #27272a;
+    --sidebar-accent-foreground: #fbfbfb;
+    --sidebar-border: #27272a;
+    --sidebar-ring: #fbfbfb;
+    /* Chart semantic colors (dark) — mêmes 4 couleurs, éclaircies */
+    --color-chart-purchase: #d1c4e9;
+    --color-chart-fuel: #90c5ff;
+    --color-chart-maintenance: #80cbc4;
+    --color-chart-fixed: #f8bbd0;
 }
-
 @layer base {
   * {
     @apply border-border outline-ring/50;

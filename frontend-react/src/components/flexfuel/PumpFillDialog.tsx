@@ -216,7 +216,7 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Droplets className="h-5 w-5 text-emerald-600" />
+            <Droplets className="h-5 w-5 text-[var(--tag-ethanol-text)]" />
             {t.pump.title}
             {vehicle && (
               <span className="text-sm font-normal text-muted-foreground">
@@ -251,12 +251,12 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
                 <p className="rounded-md border p-3 text-sm">{t.pump.tankFull}</p>
               )}
               {winterRec?.type === 'pure_e85' && (
-                <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm dark:border-emerald-800 dark:bg-emerald-950">
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-300">
+                <div className="rounded-md border border-[var(--ethanol)]/40 bg-[var(--tag-ethanol-bg)] p-3 text-sm">
+                  <p className="font-semibold text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                     {t.pump.pureE85.replace('{liters}', winterRec.e85Liters.toFixed(1))}
                   </p>
                   {winterRec.kmSafe !== null && winterRec.kmRelative !== null && (
-                    <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                    <p className="mt-1 text-xs text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                       {t.pump.pureE85Safe
                         .replace('{odo}', winterRec.kmSafe.toLocaleString('fr-FR'))
                         .replace('{rel}', winterRec.kmRelative.toLocaleString('fr-FR'))}
@@ -265,14 +265,14 @@ export function PumpFillDialog({ vehicleId, onClose }: PumpFillDialogProps) {
                 </div>
               )}
               {winterRec?.type === 'blend' && (
-                <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm dark:border-emerald-800 dark:bg-emerald-950">
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-300">
+                <div className="rounded-md border border-[var(--ethanol)]/40 bg-[var(--tag-ethanol-bg)] p-3 text-sm">
+                  <p className="font-semibold text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                     {t.pump.blend
                       .replace('{liters}', winterRec.dilutantLiters.toFixed(1))
                       .replace('{label}', dilutantLabel)
                       .replace('{e85}', winterRec.e85Liters.toFixed(1))}
                   </p>
-                  <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-400">
+                  <p className="mt-1 text-xs text-[var(--tag-ethanol-text)] dark:text-[var(--ethanol)]">
                     {t.pump.result
                       .replace('{pct}', winterRec.resultPct.toFixed(1))
                       .replace('{target}', String(target))

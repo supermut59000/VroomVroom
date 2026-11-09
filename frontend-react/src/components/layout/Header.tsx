@@ -22,7 +22,12 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-[var(--sat,env(safe-area-inset-top,0px))] z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      {/* Un SEUL élément de verre couvre la bande de la barre de statut ET le
+          header : le backdrop-filter est rogné à la boîte de l'élément, deux
+          éléments empilés créaient une coupure visible du flou à leur jonction.
+          pt = hauteur de la bande OS (--sat) ; l'horloge/icônes sont dessinées
+          par Android au-dessus du WebView, donc restent nettes. */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 pt-[var(--sat,env(safe-area-inset-top,0px))] backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
             <Car className="h-6 w-6 text-primary" />

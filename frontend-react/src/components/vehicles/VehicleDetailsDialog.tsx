@@ -144,7 +144,7 @@ export function VehicleDetailsDialog({
                       Suivi kilométrique assurance
                     </h4>
                     {vehicle.insurance_unlimited ? (
-                      <Badge className="border-0 bg-blue-100 text-blue-700">
+                      <Badge className="border-0 bg-[var(--tag-info-bg)] text-[var(--tag-info-text)]">
                         Kilométrage illimité
                       </Badge>
                     ) : stats?.current_insurance_km_limit != null ? (
@@ -167,11 +167,11 @@ export function VehicleDetailsDialog({
                           </Badge>
                         ) : stats.insurance_km_remaining != null &&
                           stats.insurance_km_remaining <= stats.current_insurance_km_limit * 0.1 ? (
-                          <Badge className="mt-2 border-0 bg-orange-100 text-orange-700">
+                          <Badge className="mt-2 border-0 bg-[var(--tag-partial-bg)] text-[var(--tag-partial-text)]">
                             Attention : proche de la limite
                           </Badge>
                         ) : (
-                          <Badge className="mt-2 border-0 bg-green-100 text-green-700">
+                          <Badge className="mt-2 border-0 bg-[var(--tag-ethanol-bg)] text-[var(--tag-ethanol-text)]">
                             OK
                           </Badge>
                         )}

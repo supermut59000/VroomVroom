@@ -92,12 +92,12 @@ export function RangeChart({ dataPoints, tankCapacity }: RangeChartProps) {
                 return [`${value} km · ${item.consumption.toFixed(2)} L/100km`, 'Autonomie']
               }}
             />
-            <ReferenceLine y={average} stroke="hsl(25, 95%, 53%)" strokeDasharray="5 5" />
+            <ReferenceLine y={average} stroke="var(--partial)" strokeDasharray="5 5" />
             <Line
               type="monotone"
               dataKey="range"
               name="Autonomie"
-              stroke="hsl(217, 91%, 60%)"
+              stroke="var(--c-blue)"
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}

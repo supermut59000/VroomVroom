@@ -65,7 +65,7 @@ export function StationsMapView({ origin, stations }: StationsMapViewProps) {
 
         <MapMarker longitude={origin.lon} latitude={origin.lat}>
           <MarkerContent>
-            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-blue-500 shadow-md ring-4 ring-blue-500/25" />
+            <div className="h-3.5 w-3.5 rounded-full border-2 border-white bg-[var(--c-blue)] shadow-md ring-4 ring-[var(--c-blue)]/25" />
           </MarkerContent>
           <MarkerPopup>
             <p className="text-sm font-medium">{origin.label}</p>
@@ -77,7 +77,7 @@ export function StationsMapView({ origin, stations }: StationsMapViewProps) {
             <MarkerContent>
               <div
                 className={`flex h-6 w-6 items-center justify-center rounded-full border-2 border-white shadow-lg ${
-                  s.isCheapest ? 'bg-green-600' : s.isFavorite ? 'bg-yellow-500' : 'bg-primary'
+                  s.isCheapest ? 'bg-[var(--ethanol)]' : s.isFavorite ? 'bg-[var(--partial)]' : 'bg-primary'
                 }`}
               >
                 <span className="text-xs text-white">&#9981;</span>

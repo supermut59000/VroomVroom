@@ -60,8 +60,8 @@ export function VehicleTimelineSheet({
                         <div
                           className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                             isFuel
-                              ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400'
-                              : 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400'
+                              ? 'bg-[var(--tag-info-bg)] text-[var(--tag-info-text)]'
+                              : 'bg-[var(--tag-partial-bg)] text-[var(--tag-partial-text)]'
                           }`}
                         >
                           {isFuel ? (

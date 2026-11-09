@@ -204,7 +204,7 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
                   {testResult && (
                     <span
                       className={`flex items-center gap-1 text-xs ${
-                        testResult.ok ? 'text-green-600' : 'text-destructive'
+                        testResult.ok ? 'text-[var(--tag-ethanol-text)]' : 'text-destructive'
                       }`}
                     >
                       {testResult.ok ? (
