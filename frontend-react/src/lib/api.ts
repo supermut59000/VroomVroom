@@ -1,3 +1,4 @@
+import { Capacitor, CapacitorHttp } from '@capacitor/core'
 import { ApiError } from './api-error'
 import { loadModeConfig } from './local/config'
 import { localRequest } from './local/local-api'
@@ -80,14 +81,79 @@ function fetchWithTimeout(url: string, options: RequestInit): Promise<Response> 
 function remoteCall<T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T> {
   const cfg = loadModeConfig()
   const url = `${getApiUrl(cfg).replace(/\/$/, '')}${path}`
+  const headers = getHeaders(body !== undefined, cfg)
+
+  // Application native (Android/iOS) : requêtes via la couche HTTP native.
+  // Le WebView est une origine distincte (https://localhost) : un fetch
+  // cross-origin déclenche un preflight CORS que le backend doit autoriser.
+  // CapacitorHttp passe par le code natif -> pas de CORS du tout, donc le mode
+  // serveur fonctionne quel que soit le réseau (LAN, VPN) sans toucher au
+  // backend. Le navigateur (PWA) garde le fetch classique et a besoin, lui,
+  // des origines autorisées côté serveur (BACKEND_CORS_ORIGINS).
+  if (Capacitor.isNativePlatform()) {
+    return CapacitorHttp.request({
+      url,
+      method,
+      headers,
+      data: body,
+      connectTimeout: REQUEST_TIMEOUT_MS,
+      readTimeout: REQUEST_TIMEOUT_MS,
+    }).then((res) => {
+      const ok = res.status >= 200 && res.status < 300
+      if (!ok) {
+        const detail = (res.data as { detail?: string } | undefined)?.detail
+        throw new ApiError(res.status, detail || `Erreur ${res.status}`)
+      }
+      // CapacitorHttp renvoie un objet déjà désérialisé pour le JSON.
+      if (typeof res.data === 'string') {
+        try {
+          return JSON.parse(res.data) as T
+        } catch {
+          return res.data as T
+        }
+      }
+      return res.data as T
+    })
+  }
+
   const options: RequestInit = { method }
-  options.headers = getHeaders(body !== undefined, cfg)
+  options.headers = headers
   if (body !== undefined) options.body = JSON.stringify(body)
   return fetchWithTimeout(url, options).then((r) => handleResponse<T>(r))
 }
 
-/** Same interface in both modes — the hooks don't know which one is active. */
-export const api: Api = {
+/** Sonde de joignabilité pour l'écran de réglages du mode serveur.
+ *  Renvoie le statut HTTP, ou 0 si la requête échoue au niveau réseau.
+ *  Passe par la couche native sur mobile (pas de CORS, cf. remoteCall). */
+export async function probeServer(url: string, apiKey?: string): Promise<number> {
+  const target = `${normalizeServerUrl(url)}/vehicles/`
+  const headers: Record<string, string> = {}
+  if (apiKey?.trim()) headers['X-API-Key'] = apiKey.trim()
+
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const res = await CapacitorHttp.request({
+        url: target,
+        method: 'GET',
+        headers,
+        connectTimeout: REQUEST_TIMEOUT_MS,
+        readTimeout: REQUEST_TIMEOUT_MS,
+      })
+      return res.status
+    } catch {
+      return 0
+    }
+  }
+
+  try {
+    const res = await fetchWithTimeout(target, { headers })
+    return res.status
+  } catch {
+    return 0
+  }
+}
+
+/** Same interface in both modes — the hooks don't know which one is active. */export const api: Api = {
   get<T>(path: string) {
     return loadModeConfig()?.mode === 'local'
       ? localRequest<T>('GET', path)

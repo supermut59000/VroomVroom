@@ -19,12 +19,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import { loadModeConfig, saveModeConfig } from '@/lib/local/config'
-import { normalizeServerUrl } from '@/lib/api'
+import { probeServer } from '@/lib/api'
 import { startTutorial } from '@/lib/tutorial'
 
 // Donation link (PayPal.Me) — the panel shows the link when set.
 const DONATION_URL = 'https://paypal.me/wiwibaguette'
-const APP_VERSION = '1.0.7'
+const APP_VERSION = '1.0.8'
 const UNLOCK_KEY = 'vv_server_unlocked'
 
 interface SettingsDialogProps {
@@ -96,18 +96,20 @@ export function SettingsDialog({ open, onClose }: SettingsDialogProps) {
     setTesting(true)
     setTestResult(null)
     try {
-      const base = normalizeServerUrl(serverUrl)
-      const res = await fetch(`${base}/vehicles/`, {
-        headers: apiKey.trim() ? { 'X-API-Key': apiKey.trim() } : undefined,
-      })
-      if (res.status === 401 || res.status === 403) {
+      const status = await probeServer(serverUrl, apiKey)
+      if (status === 0) {
+        setTestResult({
+          ok: false,
+          msg: 'Serveur injoignable (réseau/VPN, certificat, ou CORS)',
+        })
+      } else if (status === 401 || status === 403) {
         setTestResult({ ok: false, msg: 'Clé API refusée (401/403)' })
-      } else if (res.ok) {
+      } else if (status >= 200 && status < 300) {
         setTestResult({ ok: true, msg: 'Connexion réussie' })
-      } else if (res.status === 404) {
+      } else if (status === 404) {
         setTestResult({ ok: false, msg: '404 : API introuvable à cette URL (vérifie le domaine et le chemin /api/v1)' })
       } else {
-        setTestResult({ ok: false, msg: `Réponse inattendue (${res.status})` })
+        setTestResult({ ok: false, msg: `Réponse inattendue (${status})` })
       }
     } catch {
       setTestResult({
